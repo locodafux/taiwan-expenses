@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Taiwan Fund Planner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    color-scheme: light;
+    --page:        #f9f9f7;
+    --surface:     #fcfcfb;
+    --surface-2:   #f2f1ec;
+    --surface-3:   #e9e7df;
+    --ink:         #0b0b0b;
+    --ink-2:       #52514e;
+    --ink-muted:   #898781;
+    --gridline:    #e1e0d9;
+    --baseline:    #c3c2b7;
+    --border:      rgba(11,11,11,0.10);
+    --accent:      #4a3aa7;
+    --accent-soft: rgba(74,58,167,0.10);
+
+    --cat-expenses:  #2a78d6;
+    --cat-debt:      #eb6834;
+    --cat-taiwan:    #1baf7a;
+    --cat-emergency: #eda100;
+    --cat-savings:   #e87ba4;
+    --cat-pinatubo:  #008300;
+    --cat-excess:    #4a3aa7;
+
+    --status-good:     #0ca30c;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      color-scheme: dark;
+      --page:        #0d0d0d;
+      --surface:     #1a1a19;
+      --surface-2:   #211f1c;
+      --surface-3:   #2a2825;
+      --ink:         #ffffff;
+      --ink-2:       #c3c2b7;
+      --ink-muted:   #898781;
+      --gridline:    #2c2c2a;
+      --baseline:    #383835;
+      --border:      rgba(255,255,255,0.10);
+      --accent:      #9085e9;
+      --accent-soft: rgba(144,133,233,0.14);
+
+      --cat-expenses:  #3987e5;
+      --cat-debt:      #d95926;
+      --cat-taiwan:    #199e70;
+      --cat-emergency: #c98500;
+      --cat-savings:   #d55181;
+      --cat-pinatubo:  #008300;
+      --cat-excess:    #9085e9;
+    }
+  }
+  :root[data-theme="dark"]{
+    color-scheme: dark;
+    --page:        #0d0d0d;
+    --surface:     #1a1a19;
+    --surface-2:   #211f1c;
+    --surface-3:   #2a2825;
+    --ink:         #ffffff;
+    --ink-2:       #c3c2b7;
+    --ink-muted:   #898781;
+    --gridline:    #2c2c2a;
+    --baseline:    #383835;
+    --border:      rgba(255,255,255,0.10);
+    --accent:      #9085e9;
+    --accent-soft: rgba(144,133,233,0.14);
+
+    --cat-expenses:  #3987e5;
+    --cat-debt:      #d95926;
+    --cat-taiwan:    #199e70;
+    --cat-emergency: #c98500;
+    --cat-savings:   #d55181;
+    --cat-pinatubo:  #008300;
+    --cat-excess:    #9085e9;
+  }
+
+  *{ box-sizing:border-box; }
+  body{
+    margin:0;
+    background:var(--page);
+    color:var(--ink);
+    font-family:"Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    padding:0 20px;
+  }
+  .wrap{ max-width:920px; margin:0 auto; padding-block:30px 64px; }
+
+  h1,h2,h3{ font-family:"Bricolage Grotesque", system-ui, sans-serif; text-wrap:balance; margin:0; }
+  .figure{ font-family:"IBM Plex Mono", ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+
+  /* ---------- header ---------- */
+  .top{
+    display:flex; flex-wrap:wrap; gap:16px; align-items:flex-end; justify-content:space-between;
+    padding-bottom:18px; margin-bottom:20px;
+  }
+  .eyebrow{
+    font-size:12px; letter-spacing:0.09em; text-transform:uppercase; color:var(--accent);
+    font-weight:600; margin:0 0 6px;
+  }
+  h1{ font-size:clamp(24px,4vw,32px); font-weight:700; line-height:1.1; }
+
+  /* ---------- tabs ---------- */
+  .tabbar{
+    display:flex; gap:4px; background:var(--surface-2); border:1px solid var(--border);
+    border-radius:12px; padding:4px; margin-bottom:28px;
+  }
+  .tab-btn{
+    flex:1; border:none; background:none; font-family:"Public Sans",sans-serif; font-weight:600;
+    font-size:13.5px; color:var(--ink-2); padding:10px 12px; border-radius:9px; cursor:pointer;
+    transition:background .12s, color .12s;
+  }
+  .tab-btn.active{ background:var(--surface); color:var(--ink); box-shadow:0 1px 2px var(--border); }
+  .tab-btn:not(.active):hover{ color:var(--ink); }
+  .tabpane{ display:none; }
+  .tabpane.active{ display:block; }
+
+  section{ margin-bottom:36px; }
+  .section-head{ margin-bottom:14px; }
+  .section-head h2{ font-size:18px; font-weight:600; }
+  .section-note{ font-size:13px; color:var(--ink-muted); margin-top:4px; }
+
+  /* ---------- split-grid stat cards ---------- */
+  .split-grid{ display:grid; grid-template-columns:repeat(5,1fr); gap:12px; }
+  @media (max-width:900px){ .split-grid{ grid-template-columns:repeat(3,1fr); } }
+  @media (max-width:560px){ .split-grid{ grid-template-columns:repeat(2,1fr); } }
+  .split-item{ background:var(--surface-2); border-radius:12px; padding:16px 16px; }
+  .split-item .amt{ font-size:19px; font-weight:600; }
+  .split-item .name{ font-size:12.5px; color:var(--ink-2); margin-top:4px; line-height:1.4; }
+
+  /* ---------- table ---------- */
+  .table-wrap{ overflow-x:auto; background:var(--surface); border:1px solid var(--border); border-radius:14px; }
+  table{ width:100%; border-collapse:collapse; font-size:13px; }
+  th,td{ text-align:right; padding:10px 12px; border-bottom:1px solid var(--gridline); font-family:"IBM Plex Mono",monospace; font-variant-numeric:tabular-nums; white-space:nowrap; }
+  th:first-child,td:first-child{ text-align:left; font-family:"Public Sans",sans-serif; }
+  thead th{ color:var(--ink-muted); font-weight:600; font-size:11.5px; text-transform:uppercase; letter-spacing:.04em; }
+  tfoot td{ font-weight:700; border-bottom:none; border-top:2px solid var(--baseline); }
+
+  /* ---------- calendar ---------- */
+  .cal-card{ background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:18px 20px 20px; }
+  .cal-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+  .cal-head h3{ font-size:19px; font-weight:700; }
+  .cal-nav{ display:flex; gap:6px; }
+  .cal-nav button{
+    width:32px; height:32px; border-radius:9px; border:1px solid var(--border); background:var(--surface-2);
+    color:var(--ink); font-size:15px; cursor:pointer; display:flex; align-items:center; justify-content:center;
+  }
+  .cal-nav button:disabled{ opacity:.35; cursor:not-allowed; }
+  .cal-nav button:not(:disabled):hover{ background:var(--surface-3); }
+  .cal-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:4px; }
+  .cal-dow{ text-align:center; font-size:11px; color:var(--ink-muted); font-weight:600; padding-bottom:6px; text-transform:uppercase; letter-spacing:.03em; }
+  .cal-day{
+    aspect-ratio:1; border-radius:9px; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    font-size:13px; font-family:"IBM Plex Mono",monospace; position:relative; background:var(--surface-2);
+    gap:2px;
+  }
+  .cal-day.blank{ background:transparent; }
+  .cal-day.payday{ background:var(--accent-soft); color:var(--accent); font-weight:700; }
+  .cal-day .tag{ font-size:8.5px; letter-spacing:.02em; text-transform:uppercase; font-family:"Public Sans",sans-serif; font-weight:700; }
+  .cal-day.trip{ background:var(--cat-pinatubo); color:#fff; font-weight:700; }
+  .cal-day.milestone{ background:var(--surface); border:2px solid var(--accent); color:var(--accent); font-weight:700; }
+  .cal-legend{ display:flex; flex-wrap:wrap; gap:14px; margin-top:14px; padding-top:12px; border-top:1px solid var(--border); font-size:12px; color:var(--ink-2); }
+  .cal-legend span{ display:inline-flex; align-items:center; gap:6px; }
+  .dot{ width:9px; height:9px; border-radius:50%; display:inline-block; }
+
+  /* ---------- month summary ---------- */
+  .month-tiles{ display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:2px; background:var(--border); border:1px solid var(--border); border-radius:12px; overflow:hidden; margin-top:20px; }
+  .month-tile{ background:var(--surface); padding:13px 14px; }
+  .month-tile .l{ font-size:11.5px; color:var(--ink-muted); margin-bottom:5px; }
+  .month-tile .v{ font-size:16px; font-weight:600; }
+
+  /* ---------- checklist ---------- */
+  .checklist-card{ background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:18px 20px 20px; margin-top:20px; }
+  .progress-row{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:8px; flex-wrap:wrap; }
+  .progress-label{ font-size:13px; color:var(--ink-2); }
+  .progress-label b{ color:var(--ink); }
+  .progress-track{ height:8px; border-radius:5px; background:var(--surface-3); overflow:hidden; margin-bottom:18px; }
+  .progress-fill{ height:100%; background:var(--status-good); border-radius:5px; transition:width .2s; }
+
+  .check-group{ margin-bottom:16px; }
+  .check-group:last-child{ margin-bottom:0; }
+  .check-group h4{
+    font-family:"Public Sans",sans-serif; font-size:13px; text-transform:none; letter-spacing:0;
+    color:var(--ink); font-weight:700; margin-bottom:2px;
+  }
+  .payday-note{ font-size:12px; color:var(--ink-muted); margin:0 0 8px; }
+
+  .callout{
+    display:flex; gap:10px; align-items:flex-start; background:var(--accent-soft); border:1px solid var(--border);
+    border-radius:12px; padding:14px 16px; margin-top:16px; font-size:13px; color:var(--ink-2); line-height:1.55;
+  }
+  .callout b{ color:var(--ink); }
+  .check-row{
+    display:flex; align-items:center; gap:11px; padding:9px 4px; border-bottom:1px solid var(--gridline);
+    cursor:pointer; user-select:none;
+  }
+  .check-row:last-child{ border-bottom:none; }
+  .check-row input[type=checkbox]{
+    width:18px; height:18px; flex-shrink:0; accent-color:var(--status-good); cursor:pointer;
+  }
+  .check-row .clabel{ flex:1; font-size:13.5px; }
+  .check-row.checked .clabel{ color:var(--ink-muted); text-decoration:line-through; }
+  .check-row .camt{ font-size:13px; color:var(--ink-2); }
+  .check-row .cswatch{ width:9px; height:9px; border-radius:3px; flex-shrink:0; }
+
+  footer{ margin-top:44px; padding-top:18px; border-top:1px solid var(--border); font-size:12px; color:var(--ink-muted); line-height:1.6; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <div class="top">
+    <div>
+      <p class="eyebrow">Budget · Oct 2026 → Jul 17, 2027</p>
+      <h1>Taiwan Fund Planner</h1>
+    </div>
+  </div>
+
+  <div class="tabbar">
+    <button class="tab-btn active" data-tab="overview">Overview</button>
+    <button class="tab-btn" data-tab="monthly">Monthly breakdown</button>
+  </div>
+
+  <!-- ===================== TAB 1: OVERVIEW ===================== -->
+  <div class="tabpane active" id="tab-overview">
+
+    <section>
+      <div class="section-head">
+        <h2>Where the plan lands by July 17</h2>
+        <p class="section-note">Ten months of income, Oct 2026 – Jul 2027, split across debt, the Taiwan fund, the Pinatubo trip, and everything after</p>
+      </div>
+      <div class="split-grid">
+        <div class="split-item"><div class="amt figure" style="color:var(--cat-pinatubo)">₱15,000</div><div class="name">Pinatubo trip — ready by Nov 29</div></div>
+        <div class="split-item"><div class="amt figure" style="color:var(--cat-taiwan)">₱80,000</div><div class="name">Taiwan fund — complete by February</div></div>
+        <div class="split-item"><div class="amt figure" style="color:var(--cat-emergency)">≈ ₱48,804</div><div class="name">Emergency fund by July<br>(of a ₱100,000 target)</div></div>
+        <div class="split-item"><div class="amt figure" style="color:var(--cat-savings)">≈ ₱81,341</div><div class="name">Savings by July</div></div>
+        <div class="split-item"><div class="amt figure" style="color:var(--cat-excess)">≈ ₱32,535</div><div class="name">Excess by July</div></div>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <h2>Full numbers</h2>
+        <p class="section-note">Every month, Oct 2026 – Jul 2027</p>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Month</th><th>Income</th><th>Expenses</th><th>Debt</th><th>Taiwan fund</th><th>Pinatubo</th><th>Emergency fund</th><th>Savings</th><th>Excess</th></tr></thead>
+          <tbody id="overviewTableBody"></tbody>
+          <tfoot id="overviewTableFoot"></tfoot>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <!-- ===================== TAB 2: MONTHLY BREAKDOWN ===================== -->
+  <div class="tabpane" id="tab-monthly">
+
+    <section>
+      <div class="cal-card">
+        <div class="cal-head">
+          <h3 id="calMonthLabel">Oct 2026</h3>
+          <div class="cal-nav">
+            <button id="calPrev" aria-label="Previous month">‹</button>
+            <button id="calNext" aria-label="Next month">›</button>
+          </div>
+        </div>
+        <div class="cal-grid" id="calGrid"></div>
+        <div class="cal-legend">
+          <span><span class="dot" style="background:var(--accent)"></span>Payday (5th / 15th / 20th / 30th)</span>
+          <span><span class="dot" style="background:var(--cat-pinatubo)"></span>Pinatubo trip (Nov 29)</span>
+          <span><span class="dot" style="background:none; border:2px solid var(--accent)"></span>Plan window ends (Jul 17, 2027)</span>
+        </div>
+      </div>
+
+      <div class="month-tiles" id="monthTiles"></div>
+    </section>
+
+    <section>
+      <div class="checklist-card">
+        <div class="progress-row">
+          <span class="progress-label"><b id="progCount">0 / 0</b> items checked this month</span>
+          <span class="progress-label" id="progAmt">₱0 of ₱0 accounted for</span>
+        </div>
+        <div class="progress-track"><div class="progress-fill" id="progFill" style="width:0%"></div></div>
+        <div id="checklistBody"></div>
+      </div>
+      <div class="callout" id="cutAdvice"></div>
+    </section>
+  </div>
+
+  <footer id="footerNote"></footer>
+</div>
+
+<script>
+(function(){
+  var MONTHS = [
+    { label:"Oct '26", key:"2026-10", year:2026, jsMonth:9 },
+    { label:"Nov '26", key:"2026-11", year:2026, jsMonth:10 },
+    { label:"Dec '26", key:"2026-12", year:2026, jsMonth:11 },
+    { label:"Jan '27", key:"2027-01", year:2027, jsMonth:0 },
+    { label:"Feb '27", key:"2027-02", year:2027, jsMonth:1 },
+    { label:"Mar '27", key:"2027-03", year:2027, jsMonth:2 },
+    { label:"Apr '27", key:"2027-04", year:2027, jsMonth:3 },
+    { label:"May '27", key:"2027-05", year:2027, jsMonth:4 },
+    { label:"Jun '27", key:"2027-06", year:2027, jsMonth:5 },
+    { label:"Jul '27", key:"2027-07", year:2027, jsMonth:6 }
+  ];
+  var MONTH_FULL = ["Oct 2026","Nov 2026","Dec 2026","Jan 2027","Feb 2027","Mar 2027","Apr 2027","May 2027","Jun 2027","Jul 2027"];
+  var INCOME = 58000;
+  var PAYDAYS = [5,15,20,30];
+  var PLAN_END = { key:"2027-07", day:17 };
+
+  // ---- expense line items: steady every month, sum to ₱29,240. Each is
+  // tagged with the payday it's actually paid from, straight from the
+  // original per-payday budget. ----
+  var EXPENSE_ITEMS = [
+    { key:"house",      label:"House rent",         amount:4000,  payday:30 },
+    { key:"kuryente",   label:"Kuryente (electric)",amount:1500,  payday:30 },
+    { key:"water",      label:"Water",              amount:1500,  payday:15 },
+    { key:"internet15", label:"Internet",           amount:1000,  payday:15 },
+    { key:"internet20", label:"Internet",           amount:1600,  payday:20 },
+    { key:"food5",      label:"Food",               amount:5000,  payday:5 },
+    { key:"food20",     label:"Food",               amount:5000,  payday:20 },
+    { key:"moveit5",    label:"Move It fare",       amount:1420,  payday:5 },
+    { key:"moveit20",   label:"Move It fare",       amount:1420,  payday:20 },
+    { key:"bus5",       label:"Bus fare",           amount:360,   payday:5 },
+    { key:"bus20",      label:"Bus fare",           amount:360,   payday:20 },
+    { key:"jeep5",      label:"Jeepney fare",       amount:840,   payday:5 },
+    { key:"jeep20",     label:"Jeepney fare",       amount:840,   payday:20 },
+    { key:"claude",     label:"Claude subscription",amount:1500,  payday:20 },
+    { key:"netflix",    label:"Netflix",            amount:600,   payday:20 },
+    { key:"load",       label:"Mobile load",        amount:300,   payday:20 },
+    { key:"medicine",   label:"Medicine",           amount:2000,  payday:5 }
+  ];
+  var EXPENSES_TOTAL = EXPENSE_ITEMS.reduce(function(s,i){ return s+i.amount; }, 0);
+
+  // ---- debt line items per month index, each tagged with its payday ----
+  var DEBT_ITEMS_BY_MONTH = [
+    [ {key:"macbook",label:"Macbook",amount:3700,payday:15}, {key:"atome",label:"Atome",amount:4500,payday:5}, {key:"shopee",label:"Shopee",amount:3000,payday:15}, {key:"nano",label:"Nano",amount:2620,payday:20} ],
+    [ {key:"shopee",label:"Shopee",amount:3000,payday:15}, {key:"nano",label:"Nano",amount:2620,payday:20} ],
+    [ {key:"nano",label:"Nano",amount:2620,payday:20} ],
+    [ {key:"nano",label:"Nano",amount:2620,payday:20} ],
+    [ {key:"nano",label:"Nano",amount:2620,payday:20} ],
+    [ {key:"nano",label:"Nano",amount:2620,payday:20} ],
+    [], [], [], []
+  ];
+  var DEBT_TOTAL = DEBT_ITEMS_BY_MONTH.map(function(items){ return items.reduce(function(s,i){return s+i.amount;},0); });
+
+  // ---- fund contributions per month, computed the same way as the Countdown
+  // to Taiwan tracker (so extending this window further stays correct
+  // automatically instead of needing new hardcoded numbers each time). ----
+  var GOAL = 80000;
+  var PINATUBO = MONTHS.map(function(m){ return m.key === "2026-11" ? 15000 : 0; });
+  var available = MONTHS.map(function(m,i){ return INCOME - EXPENSES_TOTAL - DEBT_TOTAL[i]; });
+  var availAfterPinatubo = available.map(function(a,i){ return a - PINATUBO[i]; });
+
+  // Taiwan fund: water-filling, spread as evenly as possible across Oct-Feb
+  // (one month of safety margin before the Mar 5 deadline).
+  var SAVE_MONTHS = 5;
+  var TAIWAN = new Array(MONTHS.length).fill(0);
+  var pool = [];
+  for (var pIdx = 0; pIdx < SAVE_MONTHS; pIdx++) pool.push(pIdx);
+  var remainingGoal = GOAL;
+  var changed = true;
+  while (changed && pool.length){
+    changed = false;
+    var flat = remainingGoal / pool.length;
+    for (var pi = pool.length - 1; pi >= 0; pi--){
+      var idx = pool[pi];
+      if (availAfterPinatubo[idx] <= flat){
+        TAIWAN[idx] = availAfterPinatubo[idx];
+        remainingGoal -= availAfterPinatubo[idx];
+        pool.splice(pi, 1);
+        changed = true;
+      }
+    }
+  }
+  if (pool.length){
+    var evenShare = remainingGoal / pool.length;
+    pool.forEach(function(idx){ TAIWAN[idx] = Math.floor(evenShare); });
+    var assigned = pool.reduce(function(s, idx){ return s + TAIWAN[idx]; }, 0);
+    TAIWAN[pool[pool.length - 1]] += (remainingGoal - assigned);
+  }
+
+  // Three-way split of what's left after Taiwan + Pinatubo, ranked
+  // savings > emergency fund > excess: 30% emergency (capped at ₱100,000
+  // total — once full, its share redistributes to savings and excess in
+  // their normal 50:20 proportion instead of piling up), 50% savings,
+  // 20% excess.
+  var EMERGENCY_TARGET = 100000;
+  var EMERGENCY = [], SAVINGS = [], EXCESS = [];
+  var efSoFar = 0;
+  availAfterPinatubo.forEach(function(avail, i){
+    var remainder = avail - TAIWAN[i];
+    var efWant = Math.round(remainder * 0.3);
+    var room = Math.max(0, EMERGENCY_TARGET - efSoFar);
+    var ef = Math.min(efWant, room);
+    var overflow = efWant - ef; // emergency fund hit its cap — split between savings and excess
+    var savOverflow = Math.round(overflow * (50 / 70)); // savings:excess stays 50:20
+    var sav = Math.round(remainder * 0.5) + savOverflow;
+    var ex = remainder - ef - sav; // residual — automatically carries the rest of the overflow
+    EMERGENCY.push(ef);
+    SAVINGS.push(sav);
+    EXCESS.push(ex);
+    efSoFar += ef;
+  });
+
+  function peso(n){ return "₱" + Math.round(n).toLocaleString("en-PH"); }
+
+  // ================= PER-PAYDAY ALLOCATION =================
+  // Splits every month's Taiwan/Pinatubo/emergency/savings/excess totals
+  // across the four actual paydays (5th, 15th, 20th, 30th), proportional to
+  // how much cushion each payday has left after its own bills and debt —
+  // so a payday with more room to spare gets more of the fund contribution,
+  // and a payday running tight (or short) gets none. This is what answers
+  // "where should I cut": whichever payday has the biggest cushion is the
+  // one to trim first if cash gets tight.
+  var PAYDAY_TAKEHOME = { 5:20000, 15:9000, 20:20000, 30:9000 };
+  var EXPENSE_PAYDAY_TOTALS = (function(){
+    var t = {5:0,15:0,20:0,30:0};
+    EXPENSE_ITEMS.forEach(function(it){ t[it.payday] += it.amount; });
+    return t;
+  })();
+
+  function allocateProportional(total, weights){
+    var n = weights.length;
+    if (total <= 0) return weights.map(function(){ return 0; });
+    var sum = weights.reduce(function(a,b){ return a+b; }, 0);
+    var out;
+    if (sum <= 0){
+      var even = Math.floor(total / n);
+      out = weights.map(function(){ return even; });
+      out[n-1] += total - even*n;
+      return out;
+    }
+    out = weights.map(function(w){ return Math.round(total * w / sum); });
+    var diff = total - out.reduce(function(a,b){ return a+b; }, 0);
+    var maxI = 0;
+    for (var k = 1; k < weights.length; k++){ if (weights[k] > weights[maxI]) maxI = k; }
+    out[maxI] += diff;
+    return out;
+  }
+
+  var fundAllocationCache = [];
+  function fundAllocation(i){
+    if (fundAllocationCache[i]) return fundAllocationCache[i];
+    var debtByPayday = {5:0,15:0,20:0,30:0};
+    DEBT_ITEMS_BY_MONTH[i].forEach(function(it){ debtByPayday[it.payday] += it.amount; });
+
+    var leftoverBase = PAYDAYS.map(function(p){
+      return PAYDAY_TAKEHOME[p] - EXPENSE_PAYDAY_TOTALS[p] - debtByPayday[p];
+    });
+
+    var pinatuboAlloc = [0,0,0,0];
+    if (PINATUBO[i] > 0){
+      // the trip lands on Nov 29, so only paydays that arrive beforehand
+      // (5th, 15th, 20th — not the 30th) can fund it
+      var weights3 = [Math.max(0,leftoverBase[0]), Math.max(0,leftoverBase[1]), Math.max(0,leftoverBase[2])];
+      var alloc3 = allocateProportional(PINATUBO[i], weights3);
+      pinatuboAlloc = [alloc3[0], alloc3[1], alloc3[2], 0];
+    }
+    var leftoverAfter = leftoverBase.map(function(l, idx){ return l - pinatuboAlloc[idx]; });
+    var weights = leftoverAfter.map(function(l){ return Math.max(0, l); });
+
+    var result = {
+      leftoverBase: leftoverBase,
+      pinatubo: pinatuboAlloc,
+      leftoverAfter: leftoverAfter,
+      taiwan: allocateProportional(TAIWAN[i], weights),
+      emergency: allocateProportional(EMERGENCY[i], weights),
+      savings: allocateProportional(SAVINGS[i], weights),
+      excess: allocateProportional(EXCESS[i], weights)
+    };
+    fundAllocationCache[i] = result;
+    return result;
+  }
+
+  // ================= TAB SWITCHING =================
+  var tabBtns = document.querySelectorAll(".tab-btn");
+  tabBtns.forEach(function(btn){
+    btn.addEventListener("click", function(){
+      tabBtns.forEach(function(b){ b.classList.remove("active"); });
+      btn.classList.add("active");
+      document.querySelectorAll(".tabpane").forEach(function(p){ p.classList.remove("active"); });
+      document.getElementById("tab-" + btn.dataset.tab).classList.add("active");
+    });
+  });
+
+  // ================= OVERVIEW TABLE =================
+  (function renderOverviewTable(){
+    var rows = "";
+    var totals = { expenses:0, debt:0, taiwan:0, pinatubo:0, emergency:0, savings:0, excess:0 };
+    MONTHS.forEach(function(m, i){
+      rows += "<tr><td>" + m.label + "</td><td>" + peso(INCOME) + "</td><td>" + peso(EXPENSES_TOTAL) + "</td><td>" + peso(DEBT_TOTAL[i]) + "</td><td>" + peso(TAIWAN[i]) + "</td><td>" + peso(PINATUBO[i]) + "</td><td>" + peso(EMERGENCY[i]) + "</td><td>" + peso(SAVINGS[i]) + "</td><td>" + peso(EXCESS[i]) + "</td></tr>";
+      totals.expenses += EXPENSES_TOTAL;
+      totals.debt += DEBT_TOTAL[i];
+      totals.taiwan += TAIWAN[i];
+      totals.pinatubo += PINATUBO[i];
+      totals.emergency += EMERGENCY[i];
+      totals.savings += SAVINGS[i];
+      totals.excess += EXCESS[i];
+    });
+    document.getElementById("overviewTableBody").innerHTML = rows;
+    document.getElementById("overviewTableFoot").innerHTML =
+      "<tr><td>Total</td><td>" + peso(INCOME*MONTHS.length) + "</td><td>" + peso(totals.expenses) + "</td><td>" + peso(totals.debt) + "</td><td>" + peso(totals.taiwan) + "</td><td>" + peso(totals.pinatubo) + "</td><td>" + peso(totals.emergency) + "</td><td>" + peso(totals.savings) + "</td><td>" + peso(totals.excess) + "</td></tr>";
+  })();
+
+  // ================= CALENDAR + MONTH BREAKDOWN =================
+  var currentIndex = 0;
+
+  function renderCalendar(){
+    var m = MONTHS[currentIndex];
+    document.getElementById("calMonthLabel").textContent = MONTH_FULL[currentIndex];
+    document.getElementById("calPrev").disabled = currentIndex === 0;
+    document.getElementById("calNext").disabled = currentIndex === MONTHS.length - 1;
+
+    var grid = document.getElementById("calGrid");
+    grid.innerHTML = "";
+    ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].forEach(function(d){
+      var el = document.createElement("div");
+      el.className = "cal-dow";
+      el.textContent = d;
+      grid.appendChild(el);
+    });
+
+    var firstDow = new Date(m.year, m.jsMonth, 1).getDay();
+    var daysInMonth = new Date(m.year, m.jsMonth + 1, 0).getDate();
+
+    for (var b = 0; b < firstDow; b++){
+      var blank = document.createElement("div");
+      blank.className = "cal-day blank";
+      grid.appendChild(blank);
+    }
+    for (var day = 1; day <= daysInMonth; day++){
+      var cell = document.createElement("div");
+      cell.className = "cal-day";
+      var isPayday = PAYDAYS.indexOf(day) !== -1;
+      var isTrip = (m.key === "2026-11" && day === 29);
+      var isPlanEnd = (m.key === PLAN_END.key && day === PLAN_END.day);
+      if (isTrip){
+        cell.classList.add("trip");
+        cell.innerHTML = day + '<span class="tag">Trip</span>';
+      } else if (isPlanEnd){
+        cell.classList.add("milestone");
+        cell.innerHTML = day + '<span class="tag">Plan ends</span>';
+      } else if (isPayday){
+        cell.classList.add("payday");
+        cell.innerHTML = day + '<span class="tag">Payday</span>';
+      } else {
+        cell.textContent = day;
+      }
+      grid.appendChild(cell);
+    }
+  }
+
+  function renderMonthTiles(){
+    var i = currentIndex;
+    var tiles = [
+      { l:"Income", v:peso(INCOME) },
+      { l:"Expenses", v:peso(EXPENSES_TOTAL) },
+      { l:"Debt", v:peso(DEBT_TOTAL[i]) }
+    ];
+    if (TAIWAN[i] > 0) tiles.push({ l:"Taiwan fund", v:peso(TAIWAN[i]) });
+    if (PINATUBO[i] > 0) tiles.push({ l:"Pinatubo", v:peso(PINATUBO[i]) });
+    if (EMERGENCY[i] > 0) tiles.push({ l:"Emergency fund", v:peso(EMERGENCY[i]) });
+    if (SAVINGS[i] > 0) tiles.push({ l:"Savings", v:peso(SAVINGS[i]) });
+    if (EXCESS[i] > 0) tiles.push({ l:"Excess", v:peso(EXCESS[i]) });
+
+    document.getElementById("monthTiles").innerHTML = tiles.map(function(t){
+      return '<div class="month-tile"><div class="l">' + t.l + '</div><div class="v figure">' + t.v + '</div></div>';
+    }).join("");
+  }
+
+  // ================= CHECKLIST (saved to this browser via localStorage) =================
+  var STORAGE_KEY = "taiwanFundPlannerChecklist";
+  var checklistState = {};      // monthKey -> {itemKey: bool}
+
+  function loadState(){
+    try {
+      var raw = window.localStorage.getItem(STORAGE_KEY);
+      checklistState = raw ? JSON.parse(raw) : {};
+    } catch (e){ checklistState = {}; }
+  }
+  function saveState(){
+    try { window.localStorage.setItem(STORAGE_KEY, JSON.stringify(checklistState)); }
+    catch (e){ /* storage unavailable (private browsing, etc) — checks still work this session */ }
+  }
+  loadState();
+
+  function itemsForPayday(i, p){
+    var pIdx = PAYDAYS.indexOf(p);
+    var fd = fundAllocation(i);
+    var items = [];
+    EXPENSE_ITEMS.filter(function(it){ return it.payday === p; }).forEach(function(it){
+      items.push({ key:"exp_"+it.key, label:it.label, amount:it.amount, color:"var(--cat-expenses)" });
+    });
+    DEBT_ITEMS_BY_MONTH[i].filter(function(it){ return it.payday === p; }).forEach(function(it){
+      items.push({ key:"debt_"+it.key, label:it.label, amount:it.amount, color:"var(--cat-debt)" });
+    });
+    if (fd.taiwan[pIdx] > 0)    items.push({ key:"fund_taiwan_"+p,    label:"Taiwan fund",    amount:fd.taiwan[pIdx],    color:"var(--cat-taiwan)" });
+    if (fd.pinatubo[pIdx] > 0)  items.push({ key:"fund_pinatubo_"+p,  label:"Pinatubo trip",  amount:fd.pinatubo[pIdx],  color:"var(--cat-pinatubo)" });
+    if (fd.emergency[pIdx] > 0) items.push({ key:"fund_emergency_"+p, label:"Emergency fund", amount:fd.emergency[pIdx], color:"var(--cat-emergency)" });
+    if (fd.savings[pIdx] > 0)   items.push({ key:"fund_savings_"+p,   label:"Savings",        amount:fd.savings[pIdx],   color:"var(--cat-savings)" });
+    if (fd.excess[pIdx] > 0)    items.push({ key:"fund_excess_"+p,    label:"Excess",         amount:fd.excess[pIdx],    color:"var(--cat-excess)" });
+    return items;
+  }
+
+  function allItemsFor(i){
+    var out = [];
+    PAYDAYS.forEach(function(p){ out = out.concat(itemsForPayday(i, p)); });
+    return out;
+  }
+
+  function renderChecklist(){
+    var i = currentIndex;
+    var monthKey = MONTHS[i].key;
+    var state = checklistState[monthKey] || {};
+    var fd = fundAllocation(i);
+
+    var html = "";
+    PAYDAYS.forEach(function(p, pIdx){
+      // unchecked items stay on top; checked ones sink to the bottom of
+      // their group so what's still left to do is always easiest to see
+      var items = itemsForPayday(i, p).slice().sort(function(a, b){
+        return (state[a.key] ? 1 : 0) - (state[b.key] ? 1 : 0);
+      });
+      var base = fd.leftoverBase[pIdx];
+      var note;
+      if (base < 0){
+        note = "short " + peso(Math.abs(base)) + " on its own — covered by other paydays this month";
+      } else {
+        var after = fd.leftoverAfter[pIdx];
+        note = peso(after) + " left over" + (fd.pinatubo[pIdx] > 0 ? " after bills and the Pinatubo set-aside" : " after bills");
+      }
+      html += '<div class="check-group"><h4>' + p + 'th payday · ' + peso(PAYDAY_TAKEHOME[p]) + ' take-home</h4>' +
+        '<p class="payday-note">' + note + '</p>';
+      items.forEach(function(it){
+        var checked = !!state[it.key];
+        html += '<div class="check-row' + (checked ? ' checked' : '') + '" data-key="' + it.key + '">' +
+          '<input type="checkbox" ' + (checked ? "checked" : "") + ' />' +
+          '<span class="cswatch" style="background:' + it.color + '"></span>' +
+          '<span class="clabel">' + it.label + '</span>' +
+          '<span class="camt figure">' + peso(it.amount) + '</span>' +
+          '</div>';
+      });
+      html += '</div>';
+    });
+    document.getElementById("checklistBody").innerHTML = html;
+
+    var items = allItemsFor(i);
+    var totalCount = items.length;
+    var checkedCount = items.filter(function(it){ return state[it.key]; }).length;
+    var totalAmt = items.reduce(function(s,it){ return s+it.amount; }, 0);
+    var checkedAmt = items.filter(function(it){ return state[it.key]; }).reduce(function(s,it){ return s+it.amount; }, 0);
+
+    document.getElementById("progCount").textContent = checkedCount + " / " + totalCount;
+    document.getElementById("progAmt").textContent = peso(checkedAmt) + " of " + peso(totalAmt) + " accounted for";
+    document.getElementById("progFill").style.width = (totalAmt ? (checkedAmt/totalAmt*100) : 0) + "%";
+
+    document.querySelectorAll(".check-row").forEach(function(row){
+      row.addEventListener("click", function(){
+        toggleItem(monthKey, row.dataset.key);
+      });
+    });
+
+    renderCutAdvice(i, fd);
+  }
+
+  function renderCutAdvice(i, fd){
+    var el = document.getElementById("cutAdvice");
+    if (!el) return;
+    var hasDiscretionary = (TAIWAN[i] + EMERGENCY[i] + SAVINGS[i] + EXCESS[i]) > 0;
+    if (!hasDiscretionary){
+      el.innerHTML = "<span>✂️</span><span>Every peso this month is already spoken for — Taiwan and Pinatubo take it all, so there's nothing to trim.</span>";
+      return;
+    }
+    var idxMax = 0, idxMin = 0;
+    fd.leftoverAfter.forEach(function(v, idx){
+      if (v > fd.leftoverAfter[idxMax]) idxMax = idx;
+      if (v < fd.leftoverAfter[idxMin]) idxMin = idx;
+    });
+    var maxPayday = PAYDAYS[idxMax], minPayday = PAYDAYS[idxMin];
+    var maxVal = fd.leftoverAfter[idxMax], minVal = fd.leftoverAfter[idxMin];
+
+    var msg = "If cash gets tight this month, trim the <b>" + maxPayday + "th</b> payday first — it carries the most cushion (" + peso(maxVal) + "). Cut excess before savings, and savings before the emergency fund; leave the Taiwan fund alone since it's on a deadline.";
+    if (minVal < 0){
+      msg += " The <b>" + minPayday + "th</b> payday runs " + peso(Math.abs(minVal)) + " short of its own bills this month — that gets absorbed by the other paydays, so there's nothing left to trim there.";
+    } else if (idxMin !== idxMax) {
+      msg += " The <b>" + minPayday + "th</b> payday has the least room (" + peso(minVal) + "), so avoid cutting further there.";
+    }
+    el.innerHTML = '<span>✂️</span><span>' + msg + '</span>';
+  }
+
+  function toggleItem(monthKey, key){
+    var current = checklistState[monthKey] || {};
+    var updated = Object.assign({}, current);
+    updated[key] = !current[key];
+    checklistState[monthKey] = updated;
+    saveState();
+    renderChecklist();
+  }
+
+  function goToMonth(i){
+    currentIndex = Math.max(0, Math.min(MONTHS.length - 1, i));
+    renderCalendar();
+    renderMonthTiles();
+    renderChecklist();
+  }
+
+  document.getElementById("calPrev").addEventListener("click", function(){ goToMonth(currentIndex - 1); });
+  document.getElementById("calNext").addEventListener("click", function(){ goToMonth(currentIndex + 1); });
+
+  goToMonth(0);
+
+  document.getElementById("footerNote").textContent =
+    "Assumptions: window shown is October 2026 – July 17, 2027. Expenses (₱29,240/mo) and debt totals match the Countdown to Taiwan tracker. Nano (the last debt) ends in March, so April through July are debt-free — the full ₱28,760 left over each of those months keeps splitting 30% emergency fund / 50% savings / 20% excess, same rule as December–March. The emergency fund is capped at ₱100,000 (not reached in this window); past that cap it stops growing and its share redistributes to savings and excess in their normal 50:20 proportion. Checked items are saved in this browser (localStorage), so they'll still be there next time you open this same file here — but they won't follow you to a different browser or device.";
+})();
+</script>
+</body>
+</html>
