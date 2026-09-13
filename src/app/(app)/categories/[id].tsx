@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/ui/Button';
 import { Card, ListRow } from '@/components/ui/Card';
+import { fromDateOnly } from '@/lib/payday';
 import {
   useAddManualContribution,
   useBillItems,
@@ -38,6 +39,7 @@ export default function CategoryDetail() {
   const [amount, setAmount] = useState('');
   const [billLabel, setBillLabel] = useState('');
   const [billDay, setBillDay] = useState('5');
+  const [error, setError] = useState<string | null>(null);
 
   const balance = useMemo(
     () => (history ?? []).reduce((s, h) => s + h.amount, 0),
@@ -77,7 +79,7 @@ export default function CategoryDetail() {
           </Text>
           <Text className="mt-1 font-body text-xs text-ink-muted">
             {goal
-              ? `of ${formatPeso(goal)} goal${category.rule?.type === 'goal' && category.rule.target_date ? ` · complete by ${new Date(category.rule.target_date).toLocaleDateString(undefined, { month: 'long' })}` : ''}`
+              ? `of ${formatPeso(goal)} goal${category.rule?.type === 'goal' && category.rule.target_date ? ` · complete by ${fromDateOnly(category.rule.target_date).toLocaleDateString(undefined, { month: 'long' })}` : ''}`
               : category.kind === 'bill'
                 ? 'paid to date'
                 : 'all-time, no cap'}
@@ -103,8 +105,16 @@ export default function CategoryDetail() {
               keyboardType="numeric"
               className="rounded-md border border-border bg-page px-4 py-4 font-mono text-base text-ink"
             />
+            {error && <Text className="font-body text-sm text-accent">{error}</Text>}
             <View className="flex-row gap-3">
-              <Button variant="secondary" className="flex-1" onPress={() => setAdding(false)}>
+              <Button
+                variant="secondary"
+                className="flex-1"
+                onPress={() => {
+                  setAdding(false);
+                  setError(null);
+                }}
+              >
                 Cancel
               </Button>
               <Button
@@ -113,9 +123,18 @@ export default function CategoryDetail() {
                 disabled={!amount}
                 loading={addContribution.isPending}
                 onPress={async () => {
-                  await addContribution.mutateAsync({ amount: Number(amount) });
-                  setAmount('');
-                  setAdding(false);
+                  const parsedAmount = Number(amount);
+                  if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+                    return setError('Enter a valid amount');
+                  }
+                  setError(null);
+                  try {
+                    await addContribution.mutateAsync({ amount: parsedAmount });
+                    setAmount('');
+                    setAdding(false);
+                  } catch (e) {
+                    setError(e instanceof Error ? e.message : 'Could not save contribution');
+                  }
                 }}
               >
                 Save
@@ -148,8 +167,16 @@ export default function CategoryDetail() {
               keyboardType="numeric"
               className="rounded-md border border-border bg-page px-4 py-4 font-mono text-base text-ink"
             />
+            {error && <Text className="font-body text-sm text-accent">{error}</Text>}
             <View className="flex-row gap-3">
-              <Button variant="secondary" className="flex-1" onPress={() => setAdding(false)}>
+              <Button
+                variant="secondary"
+                className="flex-1"
+                onPress={() => {
+                  setAdding(false);
+                  setError(null);
+                }}
+              >
                 Cancel
               </Button>
               <Button
@@ -158,14 +185,27 @@ export default function CategoryDetail() {
                 disabled={!billLabel || !amount}
                 loading={createBillItem.isPending}
                 onPress={async () => {
-                  await createBillItem.mutateAsync({
-                    label: billLabel,
-                    amount: Number(amount),
-                    recurring_day: Number(billDay) || 1,
-                  });
-                  setBillLabel('');
-                  setAmount('');
-                  setAdding(false);
+                  const parsedAmount = Number(amount);
+                  const parsedDay = Number(billDay);
+                  if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+                    return setError('Enter a valid amount');
+                  }
+                  if (!Number.isInteger(parsedDay) || parsedDay < 1 || parsedDay > 31) {
+                    return setError('Recurring day must be between 1 and 31');
+                  }
+                  setError(null);
+                  try {
+                    await createBillItem.mutateAsync({
+                      label: billLabel,
+                      amount: parsedAmount,
+                      recurring_day: parsedDay,
+                    });
+                    setBillLabel('');
+                    setAmount('');
+                    setAdding(false);
+                  } catch (e) {
+                    setError(e instanceof Error ? e.message : 'Could not save item');
+                  }
                 }}
               >
                 Save
@@ -202,7 +242,7 @@ export default function CategoryDetail() {
             {(history ?? []).map((h, i) => (
               <ListRow key={h.id} isLast={i === (history?.length ?? 0) - 1}>
                 <Text className="flex-1 font-body text-sm text-ink">
-                  {new Date(h.payday_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}{' '}
+                  {fromDateOnly(h.payday_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}{' '}
                   <Text className="text-ink-muted">· {memberName(h.checked_by)}</Text>
                 </Text>
                 <Text className="font-mono text-sm text-status-good">+{formatPeso(h.amount)}</Text>

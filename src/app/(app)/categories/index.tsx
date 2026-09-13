@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/ui/Button';
 import { Card, ListRow } from '@/components/ui/Card';
+import { fromDateOnly } from '@/lib/payday';
 import { useCategories, useCategoryBalances, useHouseholdBillItems, useHouseholdMembership } from '@/lib/queries';
 
 function describeCategory(
@@ -16,7 +17,7 @@ function describeCategory(
   }
   if (c.rule?.type === 'goal') {
     const target = c.rule.target_amount;
-    return `Goal · target ₱${target.toLocaleString()}${c.rule.target_date ? ` by ${new Date(c.rule.target_date).toLocaleDateString(undefined, { month: 'short' })}` : ''}`;
+    return `Goal · target ₱${target.toLocaleString()}${c.rule.target_date ? ` by ${fromDateOnly(c.rule.target_date).toLocaleDateString(undefined, { month: 'short' })}` : ''}`;
   }
   if (c.rule?.type === 'capped_percent') {
     return `${c.rule.percent}% of leftover${c.rule.cap ? ` · capped ₱${c.rule.cap.toLocaleString()}` : ''}`;

@@ -25,21 +25,33 @@ export default function IncomeManagement() {
   const [label, setLabel] = useState('');
   const [amount, setAmount] = useState('');
   const [day, setDay] = useState('');
+  const [error, setError] = useState<string | null>(null);
 
   const combined = (incomes ?? []).filter((i) => i.active).reduce((s, i) => s + i.amount, 0);
 
   async function handleAdd() {
     if (!member || !label || !amount || !day) return;
-    await createIncome.mutateAsync({
-      member_id: member.id,
-      label,
-      amount: Number(amount),
-      recurring_day: Number(day),
-    });
-    setLabel('');
-    setAmount('');
-    setDay('');
-    setAdding(false);
+    const parsedAmount = Number(amount);
+    const parsedDay = Number(day);
+    if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) return setError('Enter a valid amount');
+    if (!Number.isInteger(parsedDay) || parsedDay < 1 || parsedDay > 31) {
+      return setError('Recurring day must be between 1 and 31');
+    }
+    setError(null);
+    try {
+      await createIncome.mutateAsync({
+        member_id: member.id,
+        label,
+        amount: parsedAmount,
+        recurring_day: parsedDay,
+      });
+      setLabel('');
+      setAmount('');
+      setDay('');
+      setAdding(false);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not save income');
+    }
   }
 
   return (
@@ -76,8 +88,16 @@ export default function IncomeManagement() {
               keyboardType="numeric"
               className="rounded-md border border-border bg-page px-4 py-4 font-mono text-base text-ink"
             />
+            {error && <Text className="font-body text-sm text-accent">{error}</Text>}
             <View className="flex-row gap-3">
-              <Button variant="secondary" className="flex-1" onPress={() => setAdding(false)}>
+              <Button
+                variant="secondary"
+                className="flex-1"
+                onPress={() => {
+                  setAdding(false);
+                  setError(null);
+                }}
+              >
                 Cancel
               </Button>
               <Button variant="primary" className="flex-1" loading={createIncome.isPending} onPress={handleAdd}>
