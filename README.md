@@ -36,7 +36,7 @@ Checklist state (which items are checked off) is saved via the browser's `localS
 
 ## Planned rework
 
-The captain has approved a plan to rebuild this as a full-stack couple's finance app. This is **plan-stage only** — no app code exists yet, and everything above still describes how the tool works today. A separate build task will implement the following:
+The captain has approved a plan to rebuild this as a full-stack couple's finance app. The Supabase backend (schema, RLS, allocation engine — see `supabase/migrations/`) is built; the React Native/Expo frontend is a separate future task and doesn't exist yet, so everything above still describes how the tool works today. The rework will implement the following:
 
 See [docs/plan.md](docs/plan.md) and [docs/techspec.md](docs/techspec.md) for the full design and technical spec.
 
