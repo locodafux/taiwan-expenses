@@ -38,6 +38,8 @@ Checklist state (which items are checked off) is saved via the browser's `localS
 
 The captain has approved a plan to rebuild this as a full-stack couple's finance app. This is **plan-stage only** — no app code exists yet, and everything above still describes how the tool works today. A separate build task will implement the following:
 
+See [docs/plan.md](docs/plan.md) and [docs/techspec.md](docs/techspec.md) for the full design and technical spec.
+
 - **React Native (Expo) mobile app**, installable on Android, backed by Supabase's free tier (Postgres + Auth + Storage + Realtime) instead of a static HTML file with `localStorage`.
 - **Shared household budget**: two people's incomes pool into one budget. Each person signs in separately (including Google sign-in) but both see and edit the same shared data.
 - **Fully editable categories**: expenses, savings, the Taiwan fund, etc. become configurable in-app instead of hardcoded, using three rule types — *goal*, *capped-percent*, and *remainder* — matching the same proportional payday-split math this tool uses today.
