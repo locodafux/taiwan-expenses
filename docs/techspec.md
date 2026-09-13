@@ -17,7 +17,7 @@
 | Styling | NativeWind (Tailwind) + gluestack-ui v2 | `nativewind@4.2.6`, `tailwindcss@4.3.3` |
 | Data/Auth backend | Supabase (cloud free-tier project, not local Docker) | `@supabase/supabase-js@2.116.0` |
 | Session storage | `@react-native-async-storage/async-storage` (per official Supabase pattern) | `@react-native-async-storage/async-storage@3.1.1` |
-| Server-state caching | TanStack Query on top of supabase-js, plain refetch (no Realtime) | `@tanstack/react-query@5.102.8` |
+| Server-state caching | TanStack Query on top of supabase-js, with Supabase Realtime for live partner updates | `@tanstack/react-query@5.102.8` |
 | Dev-time install | Expo Go (Play Store or `expo.dev/go` direct link) | — |
 | Permanent install | EAS Build, `internal` distribution profile, Android APK via QR | free tier: 15 builds/mo |
 
@@ -71,7 +71,7 @@ Source: `supabase.com/pricing` (fetched directly), cross-checked against several
   })
   ```
 - **AsyncStorage vs `expo-secure-store`:** Supabase's own docs recommend AsyncStorage for this exact use case. `expo-secure-store` is backed by iOS Keychain, which has a practical ~2 KB item-size limit — smaller than a Supabase session (JWT + refresh token), so it can't hold the session directly without a custom encrypt-then-store-key-in-SecureStore workaround. For a household expense app (not health/payment-credential data), plain AsyncStorage is the documented, lower-effort choice. If the captain wants belt-and-suspenders later, the upgrade path is: encrypt the session blob, store the encryption key in SecureStore, store ciphertext in AsyncStorage — not needed to start.
-- **Realtime vs refetch:** Supabase Realtime (Postgres change subscriptions) is not worth it here. It adds non-trivial code (per-row `applyChange` reducers, `useEffect` subscription cleanup to avoid leaking listeners, careful handling to avoid O(n²) re-renders on bulk changes) for a 2-user app where "Ann adds an expense and I see it a few seconds later" is fine. **Recommendation: TanStack Query with `refetchOnWindowFocus`/a short `staleTime`, no Realtime channel.** This is a place the sibling plan/captain may want a say: if "see your partner's entry appear live while both are looking at the screen together" is an explicit desired feel, Realtime is easy to bolt on later (it's additive, not a rearchitecture).
+- **Realtime — decided:** the captain has decided live partner updates are a wanted feel — subscribe to Supabase Realtime (Postgres change subscriptions) on the ledger/category tables so a partner's entries appear live, rather than relying on refetch alone. This is additive on top of the TanStack Query setup in §5 (Realtime events feeding into the query cache), not a rearchitecture.
 
 ## 4. Auth / RLS pattern — two auth users, one shared household row
 
@@ -143,6 +143,8 @@ Reasoning:
 - This is a 2-person household app with no offline-development requirement and no CI pipeline running migrations yet; a shared cloud dev project avoids all of that overhead, is genuinely free at this scale (§2), and means the captain and Ann are testing against the exact same environment (including RLS behavior with real `auth.uid()`s) rather than a local approximation.
 - The Supabase CLI is still worth installing for one purpose regardless of where Postgres runs: `supabase migration new` / `supabase db push` to keep schema changes as versioned SQL files rather than hand-edited via the dashboard — this matters once the sibling plan's data model is finalized and a future ship task needs to apply it.
 
+**Current interim state:** the captain hasn't created the actual free-tier cloud Supabase project yet, so development and testing happen against a local/stub Postgres instead for now — not a change to the recommendation above, just where things stand today.
+
 **One real gotcha this creates (see §8):** a Free-tier project **pauses after 7 days of no activity** — since this is dev-stage with no production data yet, an idle week during planning would pause the project and require an unpause click in the dashboard before the next dev session. Not a blocker, just something to expect.
 
 ## 8. Blockers / what could go wrong
@@ -158,7 +160,7 @@ Reasoning:
 
 ## Open questions for the sibling plan task / captain (not decided here)
 
-- Whether "live" partner updates (Realtime) are a wanted *feel*, even though refetch-based caching is the simpler default (§3).
+- ~~Whether "live" partner updates (Realtime) are a wanted *feel*~~ — **Resolved:** yes, use Realtime so partner entries appear live (see §3).
 - Whether receipt-photo storage (Supabase Storage) is actually in scope — if so, still trivially within the 1 GB free tier, just confirming it's wanted before wiring it up.
 - Soft-delete / undo affordance in the data model, given Free tier has no backups (§8.2).
 
