@@ -7,6 +7,7 @@ export function ChecklistRow({
   checked,
   onToggle,
   onAmountPress,
+  onLabelPress,
 }: {
   label: string;
   amount: string;
@@ -14,6 +15,7 @@ export function ChecklistRow({
   checked: boolean;
   onToggle: () => void;
   onAmountPress?: () => void;
+  onLabelPress?: () => void;
 }) {
   return (
     <View className="flex-row items-center gap-3 border-b border-gridline py-3">
@@ -37,6 +39,11 @@ export function ChecklistRow({
       <Pressable onPress={onAmountPress} disabled={!onAmountPress}>
         <Text className="font-mono text-sm text-ink-2">{amount}</Text>
       </Pressable>
+      {onLabelPress && (
+        <Pressable onPress={onLabelPress} hitSlop={8}>
+          <Text className="text-ink-muted">›</Text>
+        </Pressable>
+      )}
     </View>
   );
 }

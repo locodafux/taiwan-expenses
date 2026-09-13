@@ -1,11 +1,12 @@
 import { useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
 
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
+import { Card } from '@/components/ui/Card';
 import { useCategories, useCategoryBalances, useHouseholdMembers, useHouseholdMembership, useIncomes } from '@/lib/queries';
 import { daysUntil, nextPayday } from '@/lib/payday';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -47,7 +48,6 @@ export default function Dashboard() {
   const { data: categories, isLoading: categoriesLoading } = useCategories(householdId);
   const { data: balances } = useCategoryBalances(householdId);
   const { data: incomes } = useIncomes(householdId);
-  const [openId, setOpenId] = useState<string | null>(null);
 
   const payday = useMemo(() => {
     const activeDays = (incomes ?? []).filter((i) => i.active).map((i) => i.recurring_day);
@@ -67,8 +67,12 @@ export default function Dashboard() {
     );
   }
 
-  const openCategory = categories?.find((c) => c.id === openId);
-  const openBalance = openId ? (balances?.[openId] ?? 0) : 0;
+  const setupSteps = [
+    { label: 'Add your income', done: (incomes ?? []).length > 0, href: '/(app)/income' as const },
+    { label: 'Add your categories', done: (categories ?? []).length > 0, href: '/(app)/categories' as const },
+    { label: 'Invite your partner', done: (members ?? []).length > 1, href: '/(app)/settings' as const },
+  ];
+  const setupComplete = setupSteps.every((s) => s.done);
 
   return (
     <SafeAreaView className="flex-1 bg-page" edges={['top']}>
@@ -92,6 +96,33 @@ export default function Dashboard() {
             </Text>
           </View>
         </View>
+
+        {!setupComplete && (
+          <Card className="gap-1 p-5">
+            <Text className="mb-2 font-body-bold text-sm text-ink">Get set up</Text>
+            {setupSteps.map((step) => (
+              <Pressable
+                key={step.label}
+                onPress={() => router.push(step.href)}
+                className="flex-row items-center gap-3 py-2"
+              >
+                <View
+                  className={`h-5 w-5 items-center justify-center rounded-full border ${
+                    step.done ? 'border-status-good bg-status-good' : 'border-border'
+                  }`}
+                >
+                  {step.done && <Text className="text-xs text-white">✓</Text>}
+                </View>
+                <Text
+                  className={`flex-1 font-body text-sm ${step.done ? 'text-ink-muted line-through' : 'text-ink'}`}
+                >
+                  {step.label}
+                </Text>
+                {!step.done && <Text className="text-ink-muted">›</Text>}
+              </Pressable>
+            ))}
+          </Card>
+        )}
 
         {payday && (
           <View className="flex-row items-center justify-between rounded-xl border border-border bg-surface p-5">
@@ -119,7 +150,7 @@ export default function Dashboard() {
               return (
                 <Pressable
                   key={c.id}
-                  onPress={() => setOpenId(c.id)}
+                  onPress={() => router.push(`/(app)/categories/${c.id}`)}
                   className="flex-row items-center gap-4 rounded-md border border-border bg-surface p-4"
                 >
                   <Ring pct={goal ? balance / goal : 1} color={c.color ?? '#999'} trackColor={vars['--surface-3']} />
@@ -147,25 +178,6 @@ export default function Dashboard() {
           </View>
         </View>
       </ScrollView>
-
-      {openCategory && (
-        <Pressable
-          onPress={() => setOpenId(null)}
-          className="absolute inset-0 justify-end bg-black/30"
-        >
-          <View className="gap-4 rounded-t-2xl bg-surface p-6">
-            <View className="self-center h-1 w-9 rounded-full bg-baseline" />
-            <View className="flex-row items-center gap-3">
-              <View className="h-3 w-3 rounded" style={{ backgroundColor: openCategory.color ?? '#999' }} />
-              <Text className="font-display-semibold text-lg text-ink">{openCategory.name}</Text>
-            </View>
-            <Text className="font-mono text-2xl text-ink">{formatPeso(openBalance)}</Text>
-            <Button variant="secondary" onPress={() => setOpenId(null)}>
-              Close
-            </Button>
-          </View>
-        </Pressable>
-      )}
     </SafeAreaView>
   );
 }

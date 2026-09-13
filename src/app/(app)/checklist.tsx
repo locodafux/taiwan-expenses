@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, ScrollView, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -23,6 +24,7 @@ function formatPeso(n: number) {
 }
 
 export default function PaydayChecklist() {
+  const router = useRouter();
   const { data: member } = useHouseholdMembership();
   const householdId = member?.household_id;
   const { data: incomes } = useIncomes(householdId);
@@ -76,12 +78,18 @@ export default function PaydayChecklist() {
     .filter((i) => i.active && i.recurring_day === paydayDay)
     .reduce((s, i) => s + i.amount, 0);
 
+  const outgoing = (entries ?? []).filter((e) => e.categories?.kind !== 'fund');
+  const staying = (entries ?? []).filter((e) => e.categories?.kind === 'fund');
+
   return (
     <SafeAreaView className="flex-1 bg-page" edges={['top']}>
       <ScrollView contentContainerClassName="gap-5 px-7 py-6" className="flex-1">
-        <Text className="font-display-semibold text-lg text-ink">
-          {paydayDay}th payday checklist
-        </Text>
+        <View>
+          <Text className="font-display-semibold text-lg text-ink">
+            {paydayDay}th payday checklist
+          </Text>
+          <Text className="mt-1 font-body text-xs text-ink-muted">{formatPeso(takeHome)} take-home</Text>
+        </View>
 
         {total > 0 && (
           <ProgressBar
@@ -92,30 +100,53 @@ export default function PaydayChecklist() {
         )}
 
         <View className="rounded-lg border border-border bg-surface px-6 py-5">
-          <ChecklistGroup
-            heading={`${paydayDay}th payday · ${formatPeso(takeHome)} take-home`}
-          >
-            {(entries ?? []).map((entry) => (
-              <ChecklistRow
-                key={entry.id}
-                label={entry.bill_items?.label ?? entry.categories?.name ?? 'Item'}
-                amount={formatPeso(entry.amount)}
-                color={entry.categories?.color ?? '#999'}
-                checked={entry.status === 'checked'}
-                onToggle={() => checkEntry.mutate({ id: entry.id, checked: entry.status !== 'checked' })}
-                onAmountPress={() => {
-                  setEditingId(entry.id);
-                  setEditAmount(String(entry.amount));
-                  setEditError(null);
-                }}
-              />
-            ))}
-            {total === 0 && (
-              <Text className="py-4 font-body text-sm text-ink-muted">
-                Nothing to check off for this payday yet.
-              </Text>
-            )}
-          </ChecklistGroup>
+          {total === 0 && (
+            <Text className="py-4 font-body text-sm text-ink-muted">
+              Nothing to check off for this payday yet.
+            </Text>
+          )}
+
+          {outgoing.length > 0 && (
+            <ChecklistGroup heading="Money leaving" note="Bills and debt payments due this payday.">
+              {outgoing.map((entry) => (
+                <ChecklistRow
+                  key={entry.id}
+                  label={entry.bill_items?.label ?? entry.categories?.name ?? 'Item'}
+                  amount={formatPeso(entry.amount)}
+                  color={entry.categories?.color ?? '#999'}
+                  checked={entry.status === 'checked'}
+                  onToggle={() => checkEntry.mutate({ id: entry.id, checked: entry.status !== 'checked' })}
+                  onAmountPress={() => {
+                    setEditingId(entry.id);
+                    setEditAmount(String(entry.amount));
+                    setEditError(null);
+                  }}
+                  onLabelPress={() => router.push(`/(app)/categories/${entry.category_id}`)}
+                />
+              ))}
+            </ChecklistGroup>
+          )}
+
+          {staying.length > 0 && (
+            <ChecklistGroup heading="Money staying" note="Fund contributions kept in the household.">
+              {staying.map((entry) => (
+                <ChecklistRow
+                  key={entry.id}
+                  label={entry.bill_items?.label ?? entry.categories?.name ?? 'Item'}
+                  amount={formatPeso(entry.amount)}
+                  color={entry.categories?.color ?? '#999'}
+                  checked={entry.status === 'checked'}
+                  onToggle={() => checkEntry.mutate({ id: entry.id, checked: entry.status !== 'checked' })}
+                  onAmountPress={() => {
+                    setEditingId(entry.id);
+                    setEditAmount(String(entry.amount));
+                    setEditError(null);
+                  }}
+                  onLabelPress={() => router.push(`/(app)/categories/${entry.category_id}`)}
+                />
+              ))}
+            </ChecklistGroup>
+          )}
         </View>
 
         {editingId && (
