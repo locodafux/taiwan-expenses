@@ -7,7 +7,16 @@ import Svg, { Circle } from 'react-native-svg';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
-import { useCategories, useCategoryBalances, useHouseholdMembers, useHouseholdMembership, useIncomes } from '@/lib/queries';
+import { ErrorState } from '@/components/ui/ErrorState';
+import {
+  combineQueryState,
+  useCategories,
+  useCategoryBalances,
+  useHouseholdMembers,
+  useHouseholdMembership,
+  useIncomes,
+} from '@/lib/queries';
+import { formatPeso } from '@/lib/format';
 import { daysUntil, nextPayday } from '@/lib/payday';
 import { useTheme } from '@/theme/ThemeProvider';
 
@@ -35,19 +44,29 @@ function Ring({ pct, color, trackColor }: { pct: number; color: string; trackCol
   );
 }
 
-function formatPeso(n: number) {
-  return '₱' + Math.round(n).toLocaleString();
-}
-
 export default function Dashboard() {
   const router = useRouter();
   const { vars } = useTheme();
-  const { data: member } = useHouseholdMembership();
+  const membershipQuery = useHouseholdMembership();
+  const member = membershipQuery.data;
   const householdId = member?.household_id;
-  const { data: members } = useHouseholdMembers(householdId);
-  const { data: categories, isLoading: categoriesLoading } = useCategories(householdId);
-  const { data: balances } = useCategoryBalances(householdId);
-  const { data: incomes } = useIncomes(householdId);
+  const membersQuery = useHouseholdMembers(householdId);
+  const members = membersQuery.data;
+  const categoriesQuery = useCategories(householdId);
+  const categories = categoriesQuery.data;
+  const categoriesLoading = categoriesQuery.isLoading;
+  const balancesQuery = useCategoryBalances(householdId);
+  const balances = balancesQuery.data;
+  const incomesQuery = useIncomes(householdId);
+  const incomes = incomesQuery.data;
+
+  const { isError, refetch } = combineQueryState(
+    membershipQuery,
+    membersQuery,
+    categoriesQuery,
+    balancesQuery,
+    incomesQuery,
+  );
 
   const payday = useMemo(() => {
     const activeDays = (incomes ?? []).filter((i) => i.active).map((i) => i.recurring_day);
@@ -58,6 +77,14 @@ export default function Dashboard() {
       .reduce((s, i) => s + i.amount, 0);
     return { date, amount, daysAway: daysUntil(date) };
   }, [incomes]);
+
+  if (isError) {
+    return (
+      <SafeAreaView className="flex-1 bg-page">
+        <ErrorState onRetry={refetch} />
+      </SafeAreaView>
+    );
+  }
 
   if (categoriesLoading) {
     return (
@@ -83,7 +110,7 @@ export default function Dashboard() {
               <Avatar
                 key={m.id}
                 initial={m.display_name[0]?.toUpperCase() ?? '?'}
-                color={i === 0 ? vars['--accent'] : vars['--cat-taiwan']}
+                color={m.color ?? vars['--accent']}
                 size={30}
                 style={i > 0 ? { marginLeft: -10, borderWidth: 2, borderColor: vars['--surface'] } : undefined}
               />
@@ -147,13 +174,20 @@ export default function Dashboard() {
             {(categories ?? []).map((c) => {
               const balance = balances?.[c.id] ?? 0;
               const goal = c.rule?.type === 'goal' ? c.rule.target_amount : null;
+              const target = goal ?? (c.rule?.type === 'capped_percent' ? c.rule.cap ?? null : null);
               return (
                 <Pressable
                   key={c.id}
                   onPress={() => router.push(`/(app)/categories/${c.id}`)}
                   className="flex-row items-center gap-4 rounded-md border border-border bg-surface p-4"
                 >
-                  <Ring pct={goal ? balance / goal : 1} color={c.color ?? '#999'} trackColor={vars['--surface-3']} />
+                  {target != null ? (
+                    <Ring pct={balance / target} color={c.color ?? '#999'} trackColor={vars['--surface-3']} />
+                  ) : (
+                    <View className="h-[42px] w-[42px] items-center justify-center">
+                      <View className="h-3 w-3 rounded-full" style={{ backgroundColor: c.color ?? '#999' }} />
+                    </View>
+                  )}
                   <View className="flex-1">
                     <Text className="font-body-semibold text-base text-ink">{c.name}</Text>
                     <Text className="font-body text-xs text-ink-muted">

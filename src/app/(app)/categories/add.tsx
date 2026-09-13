@@ -19,18 +19,18 @@ export default function AddCategorySheet() {
   const createCategory = useCreateCategory(member?.household_id);
 
   const colorOptions = [
-    vars['--cat-expenses'],
-    vars['--cat-debt'],
-    vars['--cat-taiwan'],
-    vars['--cat-emergency'],
-    vars['--cat-savings'],
-    vars['--cat-pinatubo'],
-    vars['--cat-excess'],
+    { value: vars['--cat-expenses'], name: 'Blue' },
+    { value: vars['--cat-debt'], name: 'Rust' },
+    { value: vars['--cat-taiwan'], name: 'Teal' },
+    { value: vars['--cat-emergency'], name: 'Gold' },
+    { value: vars['--cat-savings'], name: 'Pink' },
+    { value: vars['--cat-pinatubo'], name: 'Green' },
+    { value: vars['--cat-excess'], name: 'Brown' },
   ];
 
   const [name, setName] = useState('');
   const [kind, setKind] = useState<Kind>('fund');
-  const [color, setColor] = useState(colorOptions[4]);
+  const [color, setColor] = useState(colorOptions[4].value);
   const [target, setTarget] = useState('');
   const [amount, setAmount] = useState('');
   const [payday, setPayday] = useState(5);
@@ -104,15 +104,17 @@ export default function AddCategorySheet() {
 
         <View>
           <Text className="mb-2 font-body text-xs text-ink-muted">Color</Text>
-          <View className="flex-row gap-3">
+          <View className="flex-row flex-wrap gap-3">
             {colorOptions.map((c) => (
               <Pressable
-                key={c}
-                onPress={() => setColor(c)}
-                className="h-7 w-7 rounded-full items-center justify-center"
+                key={c.value}
+                onPress={() => setColor(c.value)}
+                accessibilityLabel={c.name}
+                accessibilityRole="button"
+                className="h-14 w-14 items-center justify-center rounded-full"
                 style={{
-                  backgroundColor: c,
-                  borderWidth: color === c ? 3 : 0,
+                  backgroundColor: c.value,
+                  borderWidth: color === c.value ? 3 : 0,
                   borderColor: vars['--ink'],
                 }}
               />
@@ -167,7 +169,7 @@ export default function AddCategorySheet() {
           </View>
         )}
 
-        {error && <Text className="font-body text-sm text-accent">{error}</Text>}
+        {error && <Text className="font-body text-sm text-status-bad">{error}</Text>}
 
         <View className="flex-row gap-3">
           <Button variant="secondary" className="flex-1" onPress={() => router.back()}>

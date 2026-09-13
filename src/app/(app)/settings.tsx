@@ -60,7 +60,7 @@ export default function Settings() {
                 Generate a one-time code your partner can enter when they sign up.
               </Text>
             )}
-            {inviteError && <Text className="font-body text-sm text-accent">{inviteError}</Text>}
+            {inviteError && <Text className="font-body text-sm text-status-bad">{inviteError}</Text>}
             <Button
               variant="secondary"
               loading={createInvite.isPending}

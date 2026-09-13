@@ -19,62 +19,64 @@ export default function Onboarding() {
   const [displayName, setDisplayName] = useState('');
   const [householdName, setHouseholdName] = useState('');
   const [inviteCode, setInviteCode] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [errors, setErrors] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
   async function handleCreate() {
-    const err =
-      validateEmail(email) || validatePassword(password) || validateDisplayName(displayName);
-    if (err) return setError(err);
-    setError(null);
+    const errs = [validateDisplayName(displayName), validateEmail(email), validatePassword(password)].filter(
+      (e): e is string => !!e,
+    );
+    if (errs.length) return setErrors(errs);
+    setErrors([]);
     setSubmitting(true);
     try {
       await signUp(email, password, { displayName, householdName: householdName || 'Our household' });
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Something went wrong');
+      setErrors([e instanceof Error ? e.message : 'Something went wrong']);
     } finally {
       setSubmitting(false);
     }
   }
 
   async function handleJoin() {
-    const err =
-      validateEmail(email) ||
-      validatePassword(password) ||
-      validateDisplayName(displayName) ||
-      validateInviteCode(inviteCode);
-    if (err) return setError(err);
-    setError(null);
+    const errs = [
+      validateDisplayName(displayName),
+      validateEmail(email),
+      validatePassword(password),
+      validateInviteCode(inviteCode),
+    ].filter((e): e is string => !!e);
+    if (errs.length) return setErrors(errs);
+    setErrors([]);
     setSubmitting(true);
     try {
       await signUp(email, password, { displayName, inviteCode });
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Something went wrong');
+      setErrors([e instanceof Error ? e.message : 'Something went wrong']);
     } finally {
       setSubmitting(false);
     }
   }
 
   async function handleSignIn() {
-    const err = validateEmail(email) || validatePassword(password);
-    if (err) return setError(err);
-    setError(null);
+    const errs = [validateEmail(email), validatePassword(password)].filter((e): e is string => !!e);
+    if (errs.length) return setErrors(errs);
+    setErrors([]);
     setSubmitting(true);
     try {
       await signIn(email, password);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Something went wrong');
+      setErrors([e instanceof Error ? e.message : 'Something went wrong']);
     } finally {
       setSubmitting(false);
     }
   }
 
   async function handleGoogle() {
-    setError(null);
+    setErrors([]);
     try {
       await signInWithGoogle();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Google sign-in failed');
+      setErrors([e instanceof Error ? e.message : 'Google sign-in failed']);
     }
   }
 
@@ -150,6 +152,7 @@ export default function Onboarding() {
             value={password}
             onChangeText={setPassword}
             secureTextEntry
+            accessibilityLabel="Password"
             className={inputClass}
           />
         </View>
@@ -177,7 +180,15 @@ export default function Onboarding() {
           </View>
         )}
 
-        {error && <Text className="font-body text-sm text-accent">{error}</Text>}
+        {errors.length > 0 && (
+          <View className="gap-1">
+            {errors.map((e) => (
+              <Text key={e} className="font-body text-sm text-status-bad">
+                {e}
+              </Text>
+            ))}
+          </View>
+        )}
 
         <Button variant="primary" loading={submitting} onPress={submitHandlers[step]}>
           {submitLabels[step]}
@@ -185,12 +196,12 @@ export default function Onboarding() {
         <Button variant="ghost" onPress={handleGoogle}>
           Continue with Google
         </Button>
-        <Pressable onPress={() => setStep('welcome')}>
+        <Pressable onPress={() => setStep('welcome')} hitSlop={13} className="self-start py-3">
           <Text className="font-body text-sm text-ink-muted">‹ Back</Text>
         </Pressable>
         {step === 'create' && (
           <Text className="font-body text-xs text-ink-muted">
-            First sign-up creates your household. You'll get an invite code to share next.
+            First sign-up creates your household. You&apos;ll get an invite code to share next.
           </Text>
         )}
       </View>

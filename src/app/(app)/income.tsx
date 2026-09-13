@@ -1,16 +1,15 @@
 import { useState } from 'react';
-import { ScrollView, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import { Card, ListRow } from '@/components/ui/Card';
+import { formatPeso } from '@/lib/format';
 import { useCreateIncome, useHouseholdMembership, useIncomes, useUpdateIncome } from '@/lib/queries';
 import type { Income } from '@/lib/database.types';
 
-function formatPeso(n: number) {
-  return '₱' + Math.round(n).toLocaleString();
-}
+const RECURRING_DAYS = [5, 15, 20, 30];
 
 function ordinal(day: number) {
   return `${day}th`;
@@ -26,7 +25,7 @@ export default function IncomeManagement() {
   const [adding, setAdding] = useState(false);
   const [label, setLabel] = useState('');
   const [amount, setAmount] = useState('');
-  const [day, setDay] = useState('');
+  const [day, setDay] = useState<number>(RECURRING_DAYS[0]);
   const [error, setError] = useState<string | null>(null);
 
   const [editing, setEditing] = useState<Income | null>(null);
@@ -37,24 +36,20 @@ export default function IncomeManagement() {
   const combined = (incomes ?? []).filter((i) => i.active).reduce((s, i) => s + i.amount, 0);
 
   async function handleAdd() {
-    if (!member || !label || !amount || !day) return;
+    if (!member || !label || !amount) return;
     const parsedAmount = Number(amount);
-    const parsedDay = Number(day);
     if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) return setError('Enter a valid amount');
-    if (!Number.isInteger(parsedDay) || parsedDay < 1 || parsedDay > 31) {
-      return setError('Recurring day must be between 1 and 31');
-    }
     setError(null);
     try {
       await createIncome.mutateAsync({
         member_id: member.id,
         label,
         amount: parsedAmount,
-        recurring_day: parsedDay,
+        recurring_day: day,
       });
       setLabel('');
       setAmount('');
-      setDay('');
+      setDay(RECURRING_DAYS[0]);
       setAdding(false);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not save income');
@@ -119,14 +114,21 @@ export default function IncomeManagement() {
               keyboardType="numeric"
               className="rounded-md border border-border bg-page px-4 py-4 font-mono text-base text-ink"
             />
-            <Text className="font-body text-xs text-ink-muted">Recurring day (1-31)</Text>
-            <TextInput
-              value={day}
-              onChangeText={setDay}
-              keyboardType="numeric"
-              className="rounded-md border border-border bg-page px-4 py-4 font-mono text-base text-ink"
-            />
-            {error && <Text className="font-body text-sm text-accent">{error}</Text>}
+            <Text className="font-body text-xs text-ink-muted">Recurring day</Text>
+            <View className="flex-row gap-2">
+              {RECURRING_DAYS.map((p) => (
+                <Pressable
+                  key={p}
+                  onPress={() => setDay(p)}
+                  className={`rounded-md border px-3 py-3 ${
+                    day === p ? 'border-accent bg-accent-soft' : 'border-border'
+                  }`}
+                >
+                  <Text className="font-body text-sm text-ink">{p}th</Text>
+                </Pressable>
+              ))}
+            </View>
+            {error && <Text className="font-body text-sm text-status-bad">{error}</Text>}
             <View className="flex-row gap-3">
               <Button
                 variant="secondary"

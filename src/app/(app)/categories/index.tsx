@@ -4,8 +4,15 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/ui/Button';
 import { Card, ListRow } from '@/components/ui/Card';
+import { ErrorState } from '@/components/ui/ErrorState';
 import { fromDateOnly } from '@/lib/payday';
-import { useCategories, useCategoryBalances, useHouseholdBillItems, useHouseholdMembership } from '@/lib/queries';
+import {
+  combineQueryState,
+  useCategories,
+  useCategoryBalances,
+  useHouseholdBillItems,
+  useHouseholdMembership,
+} from '@/lib/queries';
 
 function describeCategory(
   c: { kind: string; rule: any },
@@ -30,16 +37,35 @@ function describeCategory(
 
 export default function CategoryManagement() {
   const router = useRouter();
-  const { data: member } = useHouseholdMembership();
+  const membershipQuery = useHouseholdMembership();
+  const member = membershipQuery.data;
   const householdId = member?.household_id;
-  const { data: categories } = useCategories(householdId);
-  const { data: billItems } = useHouseholdBillItems(householdId);
-  const { data: balances } = useCategoryBalances(householdId);
+  const categoriesQuery = useCategories(householdId);
+  const categories = categoriesQuery.data;
+  const billItemsQuery = useHouseholdBillItems(householdId);
+  const billItems = billItemsQuery.data;
+  const balancesQuery = useCategoryBalances(householdId);
+  const balances = balancesQuery.data;
+
+  const { isError, refetch } = combineQueryState(
+    membershipQuery,
+    categoriesQuery,
+    billItemsQuery,
+    balancesQuery,
+  );
 
   const billCountByCategory = (billItems ?? []).reduce<Record<string, number>>((acc, b) => {
     acc[b.category_id] = (acc[b.category_id] ?? 0) + 1;
     return acc;
   }, {});
+
+  if (isError) {
+    return (
+      <SafeAreaView className="flex-1 bg-page">
+        <ErrorState onRetry={refetch} />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView className="flex-1 bg-page" edges={['top']}>

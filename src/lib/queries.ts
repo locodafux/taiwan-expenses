@@ -5,6 +5,16 @@ import { toDateOnly } from './payday';
 import { supabase } from './supabase';
 import type { Category, CategoryRule, Income } from './database.types';
 
+// Combines several TanStack Query results into one isError/refetch pair, so
+// a screen backed by multiple queries can wire a single retry-on-error state
+// instead of checking each hook separately (UX review finding #2).
+export function combineQueryState(...queries: { isError: boolean; refetch: () => unknown }[]) {
+  return {
+    isError: queries.some((q) => q.isError),
+    refetch: () => queries.forEach((q) => q.refetch()),
+  };
+}
+
 // --- Household membership -------------------------------------------------
 
 export function useHouseholdMembership() {
