@@ -237,7 +237,14 @@ export default function CategoryDetail() {
         )}
 
         <View>
-          <Text className="mb-3 font-body-bold text-sm text-ink">History</Text>
+          <View className="mb-3 flex-row items-center justify-between">
+            <Text className="font-body-bold text-sm text-ink">History</Text>
+            {category.kind === 'bill' && (
+              <Pressable onPress={() => router.push('/(app)/checklist')}>
+                <Text className="font-body text-xs text-ink-2">This payday's checklist ›</Text>
+              </Pressable>
+            )}
+          </View>
           <Card>
             {(history ?? []).map((h, i) => (
               <ListRow key={h.id} isLast={i === (history?.length ?? 0) - 1}>

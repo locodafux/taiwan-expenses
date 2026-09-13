@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from './auth';
 import { toDateOnly } from './payday';
 import { supabase } from './supabase';
-import type { Category, CategoryRule } from './database.types';
+import type { Category, CategoryRule, Income } from './database.types';
 
 // --- Household membership -------------------------------------------------
 
@@ -142,6 +142,18 @@ export function useCreateIncome(householdId: string | undefined) {
       recurring_day: number;
     }) => {
       const { data, error } = await supabase.from('incomes').insert(input).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['incomes', householdId] }),
+  });
+}
+
+export function useUpdateIncome(householdId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ...patch }: Partial<Income> & { id: string }) => {
+      const { data, error } = await supabase.from('incomes').update(patch).eq('id', id).select().single();
       if (error) throw error;
       return data;
     },

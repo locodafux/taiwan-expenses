@@ -25,7 +25,7 @@ function buildChain(result: { data: unknown; error: null }) {
   mockFrom.mockReturnValue({ update: mockUpdate });
 }
 
-import { useCheckLedgerEntry } from '../queries';
+import { useCheckLedgerEntry, useUpdateIncome } from '../queries';
 
 function wrapper({ children }: { children: ReactNode }) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -63,5 +63,35 @@ describe('useCheckLedgerEntry (checklist check-off -> ledger post)', () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
     expect(mockUpdate).toHaveBeenCalledWith({ status: 'pending', checked_by: null, checked_at: null });
+  });
+});
+
+describe('useUpdateIncome (edit/deactivate an existing income)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('soft-deactivates via the active flag rather than deleting the row', async () => {
+    buildChain({ data: { id: 'income-1', active: false }, error: null });
+    const { result } = await renderHook(() => useUpdateIncome('household-1'), { wrapper });
+
+    result.current.mutate({ id: 'income-1', active: false });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(mockFrom).toHaveBeenCalledWith('incomes');
+    expect(mockUpdate).toHaveBeenCalledWith({ active: false });
+    expect(mockEq).toHaveBeenCalledWith('id', 'income-1');
+  });
+
+  it('patches label/amount/recurring_day on edit', async () => {
+    buildChain({ data: { id: 'income-1' }, error: null });
+    const { result } = await renderHook(() => useUpdateIncome('household-1'), { wrapper });
+
+    result.current.mutate({ id: 'income-1', label: '5th payday', amount: 30000, recurring_day: 5 });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(mockUpdate).toHaveBeenCalledWith({ label: '5th payday', amount: 30000, recurring_day: 5 });
   });
 });
