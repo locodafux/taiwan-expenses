@@ -238,7 +238,7 @@ export default function CategoryDetail() {
             <Text className="font-body-bold text-sm text-ink">History</Text>
             {category.kind === 'bill' && (
               <Pressable onPress={() => router.push('/(app)/checklist')}>
-                <Text className="font-body text-xs text-ink-2">This payday's checklist ›</Text>
+                <Text className="font-body text-xs text-ink-2">This payday&apos;s checklist ›</Text>
               </Pressable>
             )}
           </View>
