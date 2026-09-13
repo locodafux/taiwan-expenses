@@ -5,7 +5,13 @@
 -- only by supabase/tests/run.sh against a plain local Postgres, because this
 -- sandbox has no Docker to run the real local stack.
 
-create extension if not exists pgcrypto;
+-- Real Supabase projects pre-provision the `extensions` schema and put it on
+-- the default search_path, so pgcrypto/uuid-ossp resolve unqualified in
+-- table defaults but a SECURITY DEFINER function's `set search_path = ''`
+-- still needs `extensions.<fn>` qualification. Mirror that here.
+create schema extensions;
+alter database taiwan_expenses_test set search_path = "$user", public, extensions;
+create extension if not exists pgcrypto with schema extensions;
 
 create role anon nologin noinherit;
 create role authenticated nologin noinherit;

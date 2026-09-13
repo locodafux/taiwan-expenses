@@ -3,7 +3,7 @@
 -- incomes and ledger_entries (populated by trigger from their parent row) so
 -- every table can share one flat RLS predicate instead of a join chain.
 
-create extension if not exists pgcrypto;
+create extension if not exists pgcrypto with schema extensions;
 
 create table public.households (
   id uuid primary key default gen_random_uuid(),

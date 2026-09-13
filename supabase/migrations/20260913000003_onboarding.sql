@@ -74,7 +74,7 @@ begin
   end if;
 
   insert into public.household_invites (household_id, code, created_by, expires_at)
-  values (v_household_id, encode(gen_random_bytes(6), 'hex'), auth.uid(), now() + p_ttl)
+  values (v_household_id, encode(extensions.gen_random_bytes(6), 'hex'), auth.uid(), now() + p_ttl)
   returning * into v_row;
 
   return v_row;
