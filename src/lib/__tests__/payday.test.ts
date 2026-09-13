@@ -1,4 +1,17 @@
-import { clampDayToMonth, daysUntil, leftoverByPaydayInMonth, nextPayday, toDateOnly } from '../payday';
+import { clampDayToMonth, daysUntil, fromDateOnly, leftoverByPaydayInMonth, nextPayday, toDateOnly } from '../payday';
+
+describe('fromDateOnly', () => {
+  it('round-trips with toDateOnly regardless of local timezone', () => {
+    expect(toDateOnly(fromDateOnly('2026-09-14'))).toBe('2026-09-14');
+  });
+
+  it('reads back the same calendar day new Date(string) can get wrong near UTC midnight', () => {
+    const d = fromDateOnly('2026-01-01');
+    expect(d.getFullYear()).toBe(2026);
+    expect(d.getMonth()).toBe(0);
+    expect(d.getDate()).toBe(1);
+  });
+});
 
 describe('clampDayToMonth', () => {
   it('clamps day 31 into a 30-day month', () => {

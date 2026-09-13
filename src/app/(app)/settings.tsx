@@ -23,6 +23,7 @@ export default function Settings() {
   const { data: members } = useHouseholdMembers(member?.household_id);
   const createInvite = useCreateInvite();
   const [invite, setInvite] = useState<string | null>(null);
+  const [inviteError, setInviteError] = useState<string | null>(null);
 
   return (
     <SafeAreaView className="flex-1 bg-page" edges={['top']}>
@@ -59,12 +60,18 @@ export default function Settings() {
                 Generate a one-time code your partner can enter when they sign up.
               </Text>
             )}
+            {inviteError && <Text className="font-body text-sm text-accent">{inviteError}</Text>}
             <Button
               variant="secondary"
               loading={createInvite.isPending}
               onPress={async () => {
-                const result = await createInvite.mutateAsync();
-                setInvite(result.code);
+                setInviteError(null);
+                try {
+                  const result = await createInvite.mutateAsync();
+                  setInvite(result.code);
+                } catch (e) {
+                  setInviteError(e instanceof Error ? e.message : 'Could not generate invite code');
+                }
               }}
             >
               {invite ? 'Generate a new code' : 'Generate invite code'}

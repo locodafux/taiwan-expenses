@@ -170,8 +170,8 @@ export default function Onboarding() {
             <TextInput
               value={inviteCode}
               onChangeText={setInviteCode}
-              placeholder="TAIWAN-4F82"
-              autoCapitalize="characters"
+              placeholder="e.g. bcea6b01dbd4"
+              autoCapitalize="none"
               className={`${inputClass} font-mono`}
             />
           </View>

@@ -18,6 +18,14 @@ export function toDateOnly(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
+// Inverse of toDateOnly - `new Date("YYYY-MM-DD")` parses as UTC midnight,
+// which getDate()/getMonth() then read back shifted by a day in any
+// timezone behind UTC. Construct the local Date directly instead.
+export function fromDateOnly(dateOnly: string): Date {
+  const [y, m, d] = dateOnly.split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+
 export function nextPayday(recurringDays: number[], from: Date = new Date()): Date {
   const uniqueDays = Array.from(new Set(recurringDays));
   if (uniqueDays.length === 0) throw new Error('No active incomes to compute a payday from');
@@ -64,7 +72,7 @@ export function leftoverByPaydayInMonth(
         .filter((b) => {
           if (clampDayToMonth(b.recurring_day, monthStart).getDate() !== day) return false;
           if (!b.end_date) return true;
-          return new Date(b.end_date) >= clampDayToMonth(day, monthStart);
+          return fromDateOnly(b.end_date) >= clampDayToMonth(day, monthStart);
         })
         .reduce((s, b) => s + b.amount, 0);
       return { day, leftover: income - billTotal };

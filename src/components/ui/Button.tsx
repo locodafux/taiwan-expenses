@@ -39,15 +39,16 @@ export function Button({
   className,
   ...pressableProps
 }: ButtonProps) {
-  const { theme } = useTheme();
+  const { theme, vars } = useTheme();
   const gradient = variant === 'primary' ? GRADIENT_ACCENT[theme] : null;
   const isDisabled = disabled || loading;
   const v = variantClasses[variant];
+  const indicatorColor = variant === 'primary' ? '#fff9f4' : vars['--ink'];
 
   const content = (
     <>
       {loading ? (
-        <ActivityIndicator color={variant === 'primary' ? '#fff9f4' : undefined} />
+        <ActivityIndicator color={indicatorColor} />
       ) : (
         <Text className={`font-body-semibold ${textSizeClasses[size]} ${v.text} text-center`}>
           {children}
@@ -63,12 +64,19 @@ export function Button({
         className={`rounded-md overflow-hidden ${isDisabled ? 'opacity-50' : ''} ${className ?? ''}`}
         {...pressableProps}
       >
-        <LinearGradient colors={gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-          <Text
-            className={`font-body-semibold ${textSizeClasses[size]} text-white text-center ${sizeClasses[size]}`}
-          >
-            {loading ? '…' : children}
-          </Text>
+        <LinearGradient
+          colors={gradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          className={`items-center justify-center ${sizeClasses[size]}`}
+        >
+          {loading ? (
+            <ActivityIndicator color="#fff9f4" />
+          ) : (
+            <Text className={`font-body-semibold ${textSizeClasses[size]} text-white text-center`}>
+              {children}
+            </Text>
+          )}
         </LinearGradient>
       </Pressable>
     );

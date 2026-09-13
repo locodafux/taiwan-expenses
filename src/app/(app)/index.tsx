@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -38,6 +39,7 @@ function formatPeso(n: number) {
 }
 
 export default function Dashboard() {
+  const router = useRouter();
   const { vars } = useTheme();
   const { data: member } = useHouseholdMembership();
   const householdId = member?.household_id;
@@ -102,7 +104,9 @@ export default function Dashboard() {
                 {payday.date.getDate()}th · in {payday.daysAway} day{payday.daysAway === 1 ? '' : 's'}
               </Text>
             </View>
-            <Button size="sm">Review</Button>
+            <Button size="sm" onPress={() => router.push('/(app)/checklist')}>
+              Review
+            </Button>
           </View>
         )}
 
