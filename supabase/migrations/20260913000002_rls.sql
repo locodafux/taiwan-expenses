@@ -49,19 +49,14 @@ create policy "members read household_members" on public.household_members
   for select to authenticated
   using (household_id in (select private.user_household_ids()));
 
--- household_invites: members can create/view/revoke invites for their own
--- household. Redemption itself happens through the SECURITY DEFINER signup
--- trigger, not a client update, since the redeeming user isn't a member yet.
+-- household_invites: members can view/revoke invites for their own household.
+-- Creation and redemption both happen through SECURITY DEFINER functions
+-- (create_household_invite / the signup trigger), never a client insert —
+-- a client insert policy would let a member hand-roll a weak/guessable code,
+-- bypassing create_household_invite()'s gen_random_bytes(6) generation.
 create policy "members read household_invites" on public.household_invites
   for select to authenticated
   using (household_id in (select private.user_household_ids()));
-
-create policy "members create household_invites" on public.household_invites
-  for insert to authenticated
-  with check (
-    household_id in (select private.user_household_ids())
-    and created_by = (select auth.uid())
-  );
 
 create policy "members revoke household_invites" on public.household_invites
   for delete to authenticated
@@ -77,8 +72,10 @@ create policy "members update categories" on public.categories
   for update to authenticated
   using (household_id in (select private.user_household_ids()))
   with check (household_id in (select private.user_household_ids()));
-create policy "members delete categories" on public.categories
-  for delete to authenticated using (household_id in (select private.user_household_ids()));
+-- Deliberately no DELETE policy: categories carry ledger_entries history via
+-- ON DELETE CASCADE, and hard-deleting one would destroy real financial
+-- history with no undo. Removal from use is done via the existing
+-- `archived` flag (docs/plan.md §1), not deletion.
 
 create policy "members read incomes" on public.incomes
   for select to authenticated using (household_id in (select private.user_household_ids()));

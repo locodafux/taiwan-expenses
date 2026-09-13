@@ -123,9 +123,31 @@ begin
 end;
 $$;
 
+-- bill_items must attach to a kind='bill' category: payday_leftover() and
+-- materialize_payday()'s bill loop both filter on c.kind = 'bill', so a bill
+-- attached to a fund category would silently never be tracked or paid.
+create function public.set_household_id_from_bill_category()
+returns trigger
+language plpgsql
+as $$
+declare
+  v_kind text;
+begin
+  select household_id, kind into new.household_id, v_kind
+    from public.categories where id = new.category_id;
+  if new.household_id is null then
+    raise exception 'category % not found', new.category_id;
+  end if;
+  if v_kind <> 'bill' then
+    raise exception 'bill_items.category_id must reference a bill category, got kind %', v_kind;
+  end if;
+  return new;
+end;
+$$;
+
 create trigger bill_items_set_household_id
   before insert or update of category_id on public.bill_items
-  for each row execute function public.set_household_id_from_category();
+  for each row execute function public.set_household_id_from_bill_category();
 
 create trigger ledger_entries_set_household_id
   before insert or update of category_id on public.ledger_entries
