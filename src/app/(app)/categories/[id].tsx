@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/ui/Button';
 import { Card, ListRow } from '@/components/ui/Card';
+import { formatPeso } from '@/lib/format';
 import { fromDateOnly } from '@/lib/payday';
 import {
   useAddManualContribution,
@@ -15,10 +16,6 @@ import {
   useHouseholdMembers,
   useHouseholdMembership,
 } from '@/lib/queries';
-
-function formatPeso(n: number) {
-  return '₱' + Math.round(n).toLocaleString();
-}
 
 export default function CategoryDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -59,7 +56,7 @@ export default function CategoryDetail() {
   return (
     <SafeAreaView className="flex-1 bg-page" edges={['top']}>
       <ScrollView contentContainerClassName="gap-5 px-7 py-6" className="flex-1">
-        <Pressable onPress={() => router.back()}>
+        <Pressable onPress={() => router.back()} hitSlop={13} className="self-start py-3">
           <Text className="font-body text-sm text-ink-2">‹ Categories</Text>
         </Pressable>
 
@@ -105,7 +102,7 @@ export default function CategoryDetail() {
               keyboardType="numeric"
               className="rounded-md border border-border bg-page px-4 py-4 font-mono text-base text-ink"
             />
-            {error && <Text className="font-body text-sm text-accent">{error}</Text>}
+            {error && <Text className="font-body text-sm text-status-bad">{error}</Text>}
             <View className="flex-row gap-3">
               <Button
                 variant="secondary"
@@ -167,7 +164,7 @@ export default function CategoryDetail() {
               keyboardType="numeric"
               className="rounded-md border border-border bg-page px-4 py-4 font-mono text-base text-ink"
             />
-            {error && <Text className="font-body text-sm text-accent">{error}</Text>}
+            {error && <Text className="font-body text-sm text-status-bad">{error}</Text>}
             <View className="flex-row gap-3">
               <Button
                 variant="secondary"
@@ -252,7 +249,14 @@ export default function CategoryDetail() {
                   {fromDateOnly(h.payday_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}{' '}
                   <Text className="text-ink-muted">· {memberName(h.checked_by)}</Text>
                 </Text>
-                <Text className="font-mono text-sm text-status-good">+{formatPeso(h.amount)}</Text>
+                <Text
+                  className={`font-mono text-sm ${
+                    category.kind === 'bill' ? 'text-status-bad' : 'text-status-good'
+                  }`}
+                >
+                  {category.kind === 'bill' ? '−' : '+'}
+                  {formatPeso(h.amount)}
+                </Text>
               </ListRow>
             ))}
             {(history ?? []).length === 0 && (

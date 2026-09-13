@@ -7,8 +7,10 @@ import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
 import { Card } from '@/components/ui/Card';
 import { ChecklistGroup, ChecklistRow } from '@/components/ui/Checklist';
+import { ErrorState } from '@/components/ui/ErrorState';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import {
+  combineQueryState,
   useCheckLedgerEntry,
   useHouseholdBillItems,
   useHouseholdMembership,
@@ -17,18 +19,18 @@ import {
   useMaterializePayday,
   useUpdateLedgerAmount,
 } from '@/lib/queries';
+import { formatPeso } from '@/lib/format';
 import { fromDateOnly, leftoverByPaydayInMonth, nextPayday, toDateOnly } from '@/lib/payday';
-
-function formatPeso(n: number) {
-  return '₱' + Math.round(n).toLocaleString();
-}
 
 export default function PaydayChecklist() {
   const router = useRouter();
-  const { data: member } = useHouseholdMembership();
+  const membershipQuery = useHouseholdMembership();
+  const member = membershipQuery.data;
   const householdId = member?.household_id;
-  const { data: incomes } = useIncomes(householdId);
-  const { data: bills } = useHouseholdBillItems(householdId);
+  const incomesQuery = useIncomes(householdId);
+  const incomes = incomesQuery.data;
+  const billsQuery = useHouseholdBillItems(householdId);
+  const bills = billsQuery.data;
 
   const paydayDate = useMemo(() => {
     const activeDays = (incomes ?? []).filter((i) => i.active).map((i) => i.recurring_day);
@@ -37,9 +39,13 @@ export default function PaydayChecklist() {
   }, [incomes]);
 
   const materialize = useMaterializePayday(householdId);
-  const { data: entries, isLoading } = useLedgerEntriesForPayday(householdId, paydayDate);
+  const entriesQuery = useLedgerEntriesForPayday(householdId, paydayDate);
+  const entries = entriesQuery.data;
+  const isLoading = entriesQuery.isLoading || incomesQuery.isLoading || membershipQuery.isLoading;
   const checkEntry = useCheckLedgerEntry(householdId, paydayDate);
   const updateAmount = useUpdateLedgerAmount(householdId, paydayDate);
+
+  const { isError, refetch } = combineQueryState(membershipQuery, incomesQuery, billsQuery, entriesQuery);
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editAmount, setEditAmount] = useState('');
@@ -59,10 +65,31 @@ export default function PaydayChecklist() {
     return `If cash gets tight this month, trim the ${worst.day}th payday first — it carries the least cushion.`;
   }, [incomes, bills]);
 
-  if (isLoading || !paydayDate) {
+  if (isError) {
+    return (
+      <SafeAreaView className="flex-1 bg-page">
+        <ErrorState onRetry={refetch} />
+      </SafeAreaView>
+    );
+  }
+
+  if (isLoading) {
     return (
       <SafeAreaView className="flex-1 items-center justify-center bg-page">
         <ActivityIndicator color="#c1552f" />
+      </SafeAreaView>
+    );
+  }
+
+  if (!paydayDate) {
+    return (
+      <SafeAreaView className="flex-1 items-center justify-center gap-4 bg-page px-10">
+        <Text className="text-center font-body text-sm text-ink-muted">
+          Add an income first to see your payday checklist.
+        </Text>
+        <Button variant="secondary" size="sm" onPress={() => router.push('/(app)/income')}>
+          Go to Income
+        </Button>
       </SafeAreaView>
     );
   }
@@ -159,7 +186,7 @@ export default function PaydayChecklist() {
               keyboardType="numeric"
               className="rounded-md border border-border bg-page px-4 py-4 font-mono text-base text-ink"
             />
-            {editError && <Text className="font-body text-sm text-accent">{editError}</Text>}
+            {editError && <Text className="font-body text-sm text-status-bad">{editError}</Text>}
             <View className="flex-row gap-3">
               <Button variant="secondary" className="flex-1" onPress={() => setEditingId(null)}>
                 Cancel

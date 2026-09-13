@@ -21,7 +21,7 @@ export function ChecklistRow({
     <View className="flex-row items-center gap-3 border-b border-gridline py-3">
       <Pressable
         onPress={onToggle}
-        hitSlop={8}
+        hitSlop={13}
         className={`h-[18px] w-[18px] items-center justify-center rounded-[4px] border ${
           checked ? 'border-status-good bg-status-good' : 'border-border'
         }`}

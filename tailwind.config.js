@@ -26,6 +26,7 @@ module.exports = {
         'accent-soft': 'var(--accent-soft)',
         'accent-2': 'var(--accent-2)',
         'status-good': 'var(--status-good)',
+        'status-bad': 'var(--status-bad)',
         'cat-expenses': 'var(--cat-expenses)',
         'cat-debt': 'var(--cat-debt)',
         'cat-taiwan': 'var(--cat-taiwan)',
