@@ -33,3 +33,13 @@ Checklist state (which items are checked off) is saved via the browser's `localS
 - Make it installable on Android as a PWA.
 - Add real persistent, synced data storage in place of `localStorage`.
 - Potentially generalize it into a broader personal-finance app built around this same idea.
+
+## Planned rework
+
+The captain has approved a plan to rebuild this as a full-stack couple's finance app. This is **plan-stage only** — no app code exists yet, and everything above still describes how the tool works today. A separate build task will implement the following:
+
+- **React Native (Expo) mobile app**, installable on Android, backed by Supabase's free tier (Postgres + Auth + Storage + Realtime) instead of a static HTML file with `localStorage`.
+- **Shared household budget**: two people's incomes pool into one budget. Each person signs in separately (including Google sign-in) but both see and edit the same shared data.
+- **Fully editable categories**: expenses, savings, the Taiwan fund, etc. become configurable in-app instead of hardcoded, using three rule types — *goal*, *capped-percent*, and *remainder* — matching the same proportional payday-split math this tool uses today.
+- **Real ledger transactions**: checking off an item posts an actual transaction and builds that category's running balance over time, instead of just toggling a saved checkbox.
+- **Three switchable UI themes**: an evolution of the original palette, a warm couple-oriented theme, and a bold playful-fintech look (the default).
