@@ -1,0 +1,88 @@
+// Mirrors the design system's tokens/colors.css. Keep in sync with that file
+// if the captain ever swaps the Warm/Playful palette (readme.md caveat #1).
+export const THEME_NAMES = ['original', 'warm', 'playful'] as const;
+export type ThemeName = (typeof THEME_NAMES)[number];
+export const DEFAULT_THEME: ThemeName = 'warm';
+
+export type ThemeVars = Record<string, string>;
+
+export const THEMES: Record<ThemeName, ThemeVars> = {
+  warm: {
+    '--page': '#faf4ee',
+    '--surface': '#fffdfb',
+    '--surface-2': '#f3e8dd',
+    '--surface-3': '#ead9c8',
+    '--ink': '#2b1d16',
+    '--ink-2': '#6b5648',
+    '--ink-muted': '#9c8776',
+    '--gridline': '#e8d9c9',
+    '--baseline': '#d4bfa9',
+    '--border': 'rgba(43,29,22,0.12)',
+    '--accent': '#c1552f',
+    '--accent-soft': 'rgba(193,85,47,0.12)',
+    '--accent-2': '#1f5c56',
+    '--status-good': '#3f7d3a',
+    '--cat-expenses': '#3f7ea0',
+    '--cat-debt': '#c1552f',
+    '--cat-taiwan': '#1f5c56',
+    '--cat-emergency': '#c08a2e',
+    '--cat-savings': '#b5486b',
+    '--cat-pinatubo': '#5b7c3f',
+    '--cat-excess': '#8a5a44',
+  },
+  original: {
+    '--page': '#f9f9f7',
+    '--surface': '#fcfcfb',
+    '--surface-2': '#f2f1ec',
+    '--surface-3': '#e9e7df',
+    '--ink': '#0b0b0b',
+    '--ink-2': '#52514e',
+    '--ink-muted': '#898781',
+    '--gridline': '#e1e0d9',
+    '--baseline': '#c3c2b7',
+    '--border': 'rgba(11,11,11,0.10)',
+    '--accent': '#4a3aa7',
+    '--accent-soft': 'rgba(74,58,167,0.10)',
+    '--accent-2': '#4a3aa7',
+    '--status-good': '#0ca30c',
+    '--cat-expenses': '#2a78d6',
+    '--cat-debt': '#eb6834',
+    '--cat-taiwan': '#1baf7a',
+    '--cat-emergency': '#eda100',
+    '--cat-savings': '#e87ba4',
+    '--cat-pinatubo': '#008300',
+    '--cat-excess': '#4a3aa7',
+  },
+  playful: {
+    '--page': '#f6f4fb',
+    '--surface': '#ffffff',
+    '--surface-2': '#efe9fb',
+    '--surface-3': '#e3d9f7',
+    '--ink': '#181022',
+    '--ink-2': '#544a66',
+    '--ink-muted': '#8c81a0',
+    '--gridline': '#e6ddf5',
+    '--baseline': '#cbb9ec',
+    '--border': 'rgba(24,16,34,0.10)',
+    '--accent': '#7c3aed',
+    '--accent-soft': 'rgba(124,58,237,0.12)',
+    '--accent-2': '#ec4899',
+    '--status-good': '#16a34a',
+    '--cat-expenses': '#2f6fed',
+    '--cat-debt': '#f0592e',
+    '--cat-taiwan': '#0d9488',
+    '--cat-emergency': '#f5a300',
+    '--cat-savings': '#ec4899',
+    '--cat-pinatubo': '#22c55e',
+    '--cat-excess': '#7c3aed',
+  },
+};
+
+// RN has no CSS gradient background; playful's "bold gradient accent" is
+// applied via expo-linear-gradient using these two stops where it appears
+// (see components/core/Button.tsx primary variant).
+export const GRADIENT_ACCENT: Record<ThemeName, [string, string] | null> = {
+  warm: null,
+  original: null,
+  playful: ['#7c3aed', '#ec4899'],
+};

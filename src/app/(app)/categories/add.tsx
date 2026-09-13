@@ -1,0 +1,188 @@
+import { useRouter } from 'expo-router';
+import { useState } from 'react';
+import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+import { Button } from '@/components/ui/Button';
+import { supabase } from '@/lib/supabase';
+import { useCreateCategory, useHouseholdMembership } from '@/lib/queries';
+import { useTheme } from '@/theme/ThemeProvider';
+
+type Kind = 'fund' | 'bill';
+
+const inputClass = 'mt-2 rounded-md border border-border bg-page px-4 py-4 font-body text-base text-ink';
+
+export default function AddCategorySheet() {
+  const router = useRouter();
+  const { vars } = useTheme();
+  const { data: member } = useHouseholdMembership();
+  const createCategory = useCreateCategory(member?.household_id);
+
+  const colorOptions = [
+    vars['--cat-expenses'],
+    vars['--cat-debt'],
+    vars['--cat-taiwan'],
+    vars['--cat-emergency'],
+    vars['--cat-savings'],
+    vars['--cat-pinatubo'],
+    vars['--cat-excess'],
+  ];
+
+  const [name, setName] = useState('');
+  const [kind, setKind] = useState<Kind>('fund');
+  const [color, setColor] = useState(colorOptions[4]);
+  const [target, setTarget] = useState('');
+  const [amount, setAmount] = useState('');
+  const [payday, setPayday] = useState(5);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSave() {
+    if (!name.trim()) return setError('Name is required');
+    if (kind === 'bill' && !amount) return setError('Amount is required for a bill');
+    setError(null);
+    try {
+      const category = await createCategory.mutateAsync({
+        name: name.trim(),
+        kind,
+        color,
+        rule:
+          kind === 'fund'
+            ? ({
+                type: target ? 'goal' : 'remainder',
+                target_amount: Number(target) || 0,
+                percent: target ? undefined : 20,
+              } as any)
+            : undefined,
+      });
+      if (kind === 'bill') {
+        const { error: billError } = await supabase.from('bill_items').insert({
+          category_id: category.id,
+          label: name.trim(),
+          amount: Number(amount),
+          recurring_day: payday,
+        });
+        if (billError) throw billError;
+      }
+      router.back();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not save category');
+    }
+  }
+
+  return (
+    <SafeAreaView className="flex-1 justify-end bg-black/30">
+      <View className="gap-5 rounded-t-2xl bg-surface p-6">
+        <View className="self-center h-1 w-9 rounded-full bg-baseline" />
+        <Text className="font-display-semibold text-lg text-ink">New category</Text>
+
+        <View>
+          <Text className="font-body text-xs text-ink-muted">Name</Text>
+          <TextInput
+            value={name}
+            onChangeText={setName}
+            placeholder="e.g. New laptop fund"
+            className={inputClass}
+          />
+        </View>
+
+        <View>
+          <Text className="mb-2 font-body text-xs text-ink-muted">Type</Text>
+          <View className="flex-row gap-1 rounded-md border border-border bg-surface-2 p-1">
+            {(['fund', 'bill'] as const).map((k) => (
+              <Pressable
+                key={k}
+                onPress={() => setKind(k)}
+                className={`flex-1 items-center rounded-sm px-2 py-3 ${kind === k ? 'bg-surface' : ''}`}
+              >
+                <Text className={`font-body-semibold text-xs ${kind === k ? 'text-ink' : 'text-ink-2'}`}>
+                  {k === 'fund' ? 'Fund (savings goal)' : 'Bill (recurring expense)'}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+
+        <View>
+          <Text className="mb-2 font-body text-xs text-ink-muted">Color</Text>
+          <View className="flex-row gap-3">
+            {colorOptions.map((c) => (
+              <Pressable
+                key={c}
+                onPress={() => setColor(c)}
+                className="h-7 w-7 rounded-full items-center justify-center"
+                style={{
+                  backgroundColor: c,
+                  borderWidth: color === c ? 3 : 0,
+                  borderColor: vars['--ink'],
+                }}
+              />
+            ))}
+          </View>
+        </View>
+
+        {kind === 'bill' && (
+          <View className="flex-row gap-3">
+            <View className="flex-1">
+              <Text className="font-body text-xs text-ink-muted">Amount</Text>
+              <TextInput
+                value={amount}
+                onChangeText={setAmount}
+                placeholder="₱0"
+                keyboardType="numeric"
+                className={`${inputClass} font-mono`}
+              />
+            </View>
+            <View className="flex-1">
+              <Text className="font-body text-xs text-ink-muted">Paid from</Text>
+              <ScrollView horizontal className="mt-2">
+                {[5, 15, 20, 30].map((p) => (
+                  <Pressable
+                    key={p}
+                    onPress={() => setPayday(p)}
+                    className={`mr-2 rounded-md border px-3 py-3 ${
+                      payday === p ? 'border-accent bg-accent-soft' : 'border-border'
+                    }`}
+                  >
+                    <Text className="font-body text-sm text-ink">{p}th</Text>
+                  </Pressable>
+                ))}
+              </ScrollView>
+            </View>
+          </View>
+        )}
+        {kind === 'fund' && (
+          <View>
+            <Text className="font-body text-xs text-ink-muted">Target amount (optional)</Text>
+            <TextInput
+              value={target}
+              onChangeText={setTarget}
+              placeholder="Leave blank for no limit"
+              keyboardType="numeric"
+              className={`${inputClass} font-mono`}
+            />
+            <Text className="mt-1 font-body text-xs leading-[1.4] text-ink-muted">
+              Set it and this category stops taking a share once full. Leave blank and it keeps its
+              percentage share indefinitely.
+            </Text>
+          </View>
+        )}
+
+        {error && <Text className="font-body text-sm text-accent">{error}</Text>}
+
+        <View className="flex-row gap-3">
+          <Button variant="secondary" className="flex-1" onPress={() => router.back()}>
+            Cancel
+          </Button>
+          <Button
+            variant="primary"
+            className="flex-1"
+            loading={createCategory.isPending}
+            onPress={handleSave}
+          >
+            Add category
+          </Button>
+        </View>
+      </View>
+    </SafeAreaView>
+  );
+}

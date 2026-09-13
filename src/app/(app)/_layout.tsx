@@ -1,0 +1,52 @@
+import { Redirect, Tabs } from 'expo-router';
+import { Text, type ColorValue } from 'react-native';
+
+import { useAuth } from '@/lib/auth';
+import { THEMES } from '@/theme/tokens';
+import { useTheme } from '@/theme/ThemeProvider';
+
+function TabIcon({ symbol, color }: { symbol: string; color: ColorValue }) {
+  return <Text style={{ fontSize: 18, color }}>{symbol}</Text>;
+}
+
+export default function AppLayout() {
+  const { session, initializing } = useAuth();
+  const { theme } = useTheme();
+  if (initializing) return null;
+  if (!session) return <Redirect href="/(auth)" />;
+
+  const vars = THEMES[theme];
+
+  return (
+    <Tabs
+      screenOptions={{
+        headerShown: false,
+        tabBarActiveTintColor: vars['--accent'],
+        tabBarInactiveTintColor: vars['--ink-muted'],
+        tabBarStyle: { backgroundColor: vars['--surface'], borderTopColor: vars['--border'] },
+        tabBarLabelStyle: { fontFamily: 'PublicSans_600SemiBold', fontSize: 11 },
+      }}
+    >
+      <Tabs.Screen
+        name="index"
+        options={{ title: 'Dashboard', tabBarIcon: ({ color }) => <TabIcon symbol="⌂" color={color} /> }}
+      />
+      <Tabs.Screen
+        name="checklist"
+        options={{ title: 'Checklist', tabBarIcon: ({ color }) => <TabIcon symbol="✓" color={color} /> }}
+      />
+      <Tabs.Screen
+        name="categories"
+        options={{ title: 'Categories', tabBarIcon: ({ color }) => <TabIcon symbol="▤" color={color} /> }}
+      />
+      <Tabs.Screen
+        name="income"
+        options={{ title: 'Income', tabBarIcon: ({ color }) => <TabIcon symbol="₱" color={color} /> }}
+      />
+      <Tabs.Screen
+        name="settings"
+        options={{ title: 'Settings', tabBarIcon: ({ color }) => <TabIcon symbol="⚙" color={color} /> }}
+      />
+    </Tabs>
+  );
+}
