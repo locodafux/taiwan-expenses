@@ -45,7 +45,19 @@ run "$ROOT/supabase/seed.sql"
 
 for f in "$ROOT"/supabase/tests/0*.sql; do
   echo "== test: $(basename "$f")"
-  run "$f"
+  # Some checks in these files are a soft `\if ... \echo 'FAIL: ...' \quit 1
+  # \endif` rather than a raised SQL error (see e.g. 01_rls_isolation.sql) -
+  # this sandbox's psql 16 silently ignores \quit's exit-code argument
+  # ("\quit: extra argument "1" ignored", exit 0 regardless), so a soft
+  # failure would otherwise print FAIL and still let the suite report
+  # success. Treat a FAIL: line in the output as a real failure regardless of
+  # psql's own exit code.
+  output="$(run "$f" 2>&1)"
+  echo "$output"
+  if grep -q '^FAIL:' <<<"$output"; then
+    echo "TEST SUITE FAILED: $(basename "$f")" >&2
+    exit 1
+  fi
 done
 
 echo "ALL TESTS PASSED"

@@ -57,3 +57,10 @@ grant select on auth.users to anon, authenticated, service_role;
 alter default privileges in schema public grant select, insert, update, delete on tables to authenticated, service_role;
 alter default privileges in schema public grant select on tables to anon;
 grant usage on schema public to anon, authenticated, service_role;
+
+-- Every real Supabase project pre-provisions this publication; migrations
+-- only ever `alter publication ... add table` onto it (see
+-- 20260913000005_realtime.sql). A plain Postgres cluster has no publication
+-- at all yet, so that migration would otherwise fail with
+-- "publication \"supabase_realtime\" does not exist" before any test runs.
+create publication supabase_realtime;
