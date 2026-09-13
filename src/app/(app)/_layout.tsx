@@ -2,6 +2,8 @@ import { Redirect, Tabs } from 'expo-router';
 import { Text, type ColorValue } from 'react-native';
 
 import { useAuth } from '@/lib/auth';
+import { useHouseholdMembership } from '@/lib/queries';
+import { useRealtimeSync } from '@/lib/realtime';
 import { THEMES } from '@/theme/tokens';
 import { useTheme } from '@/theme/ThemeProvider';
 
@@ -12,6 +14,8 @@ function TabIcon({ symbol, color }: { symbol: string; color: ColorValue }) {
 export default function AppLayout() {
   const { session, initializing } = useAuth();
   const { theme } = useTheme();
+  const { data: member } = useHouseholdMembership();
+  useRealtimeSync(member?.household_id);
   if (initializing) return null;
   if (!session) return <Redirect href="/(auth)" />;
 

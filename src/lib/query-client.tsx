@@ -1,7 +1,8 @@
 import { QueryClient, QueryClientProvider as TanstackProvider } from '@tanstack/react-query';
 
-// Plain refetch, no Realtime channel - docs/techspec.md §3's explicit
-// recommendation for a 2-user household ("a few seconds later is fine").
+// Realtime (src/lib/realtime.ts) invalidates these queries on change;
+// staleTime/refetchOnWindowFocus remain as a fallback for when a client
+// reconnects or the channel hasn't delivered an event yet.
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
