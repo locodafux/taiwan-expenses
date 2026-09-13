@@ -1,0 +1,73 @@
+// Mirrors supabase/migrations/20260913000004_allocation.sql's
+// clamp_day_to_month / next_payday - the client needs the same "what's the
+// next payday" answer to know which date to materialize/display without a
+// round trip for every render.
+export function clampDayToMonth(day: number, monthStart: Date): Date {
+  const year = monthStart.getFullYear();
+  const month = monthStart.getMonth();
+  const lastDay = new Date(year, month + 1, 0).getDate();
+  return new Date(year, month, Math.min(day, lastDay));
+}
+
+// Local calendar date, not the UTC instant - toISOString() would shift the
+// date near midnight in any timezone ahead of/behind UTC.
+export function toDateOnly(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+export function nextPayday(recurringDays: number[], from: Date = new Date()): Date {
+  const uniqueDays = Array.from(new Set(recurringDays));
+  if (uniqueDays.length === 0) throw new Error('No active incomes to compute a payday from');
+
+  const fromMonthStart = new Date(from.getFullYear(), from.getMonth(), 1);
+  const nextMonthStart = new Date(from.getFullYear(), from.getMonth() + 1, 1);
+  const fromDateOnly = new Date(from.getFullYear(), from.getMonth(), from.getDate());
+
+  const candidates = [
+    ...uniqueDays.map((d) => clampDayToMonth(d, fromMonthStart)),
+    ...uniqueDays.map((d) => clampDayToMonth(d, nextMonthStart)),
+  ].filter((d) => d.getTime() >= fromDateOnly.getTime());
+
+  candidates.sort((a, b) => a.getTime() - b.getTime());
+  return candidates[0];
+}
+
+export function daysUntil(target: Date, from: Date = new Date()): number {
+  const a = new Date(from.getFullYear(), from.getMonth(), from.getDate());
+  const b = new Date(target.getFullYear(), target.getMonth(), target.getDate());
+  return Math.round((b.getTime() - a.getTime()) / 86_400_000);
+}
+
+type IncomeLike = { amount: number; recurring_day: number; active: boolean };
+type BillLike = { amount: number; recurring_day: number; end_date: string | null };
+
+// Mirrors private.payday_leftover: that payday's income minus bills/debts due
+// the same day, for every active payday in the given month - the basis for
+// the checklist's "cut advice" callout (docs/plan.md §3).
+export function leftoverByPaydayInMonth(
+  incomes: IncomeLike[],
+  bills: BillLike[],
+  monthStart: Date,
+): { day: number; leftover: number }[] {
+  const activeDays = Array.from(new Set(incomes.filter((i) => i.active).map((i) => i.recurring_day)));
+  return activeDays
+    .map((day) => clampDayToMonth(day, monthStart).getDate())
+    .filter((day, i, arr) => arr.indexOf(day) === i)
+    .map((day) => {
+      const income = incomes
+        .filter((i) => i.active && clampDayToMonth(i.recurring_day, monthStart).getDate() === day)
+        .reduce((s, i) => s + i.amount, 0);
+      const billTotal = bills
+        .filter((b) => {
+          if (clampDayToMonth(b.recurring_day, monthStart).getDate() !== day) return false;
+          if (!b.end_date) return true;
+          return new Date(b.end_date) >= clampDayToMonth(day, monthStart);
+        })
+        .reduce((s, b) => s + b.amount, 0);
+      return { day, leftover: income - billTotal };
+    })
+    .sort((a, b) => a.day - b.day);
+}
