@@ -126,6 +126,23 @@ describe('CategoryDetail', () => {
     );
   });
 
+  it('scopes a bill category\'s headline total to the current month, not all-time', async () => {
+    jest.useFakeTimers().setSystemTime(new Date(2026, 8, 14));
+    mockParams.id = 'cat-bill';
+    mockUseCategoryHistory.mockReturnValue({
+      data: [
+        { id: 'h1', amount: 5000, payday_date: '2026-09-05', checked_by: 'user-1' },
+        { id: 'h2', amount: 3000, payday_date: '2026-08-05', checked_by: null },
+      ],
+    });
+
+    const { getByText } = await renderWithTheme(<CategoryDetail />);
+
+    await waitFor(() => expect(getByText('₱ 5,000')).toBeTruthy());
+    expect(getByText('paid this month')).toBeTruthy();
+    jest.useRealTimers();
+  });
+
   it('navigates back to the category list', async () => {
     const { getByText } = await renderWithTheme(<CategoryDetail />);
     await fireEvent.press(await waitFor(() => getByText('‹ Categories')));

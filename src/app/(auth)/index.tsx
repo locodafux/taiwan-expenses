@@ -21,6 +21,7 @@ export default function Onboarding() {
   const [inviteCode, setInviteCode] = useState('');
   const [errors, setErrors] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   async function handleCreate() {
     const errs = [validateDisplayName(displayName), validateEmail(email), validatePassword(password)].filter(
@@ -147,14 +148,28 @@ export default function Onboarding() {
           />
         </View>
         <View>
-          <Text className="font-body text-xs text-ink-muted">Password</Text>
-          <TextInput
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            accessibilityLabel="Password"
-            className={inputClass}
-          />
+          <View className="flex-row items-center justify-between">
+            <Text className="font-body text-xs text-ink-muted">Password</Text>
+            {!isSignIn && <Text className="font-body text-xs text-ink-muted">Min 8 characters</Text>}
+          </View>
+          <View className="relative justify-center">
+            <TextInput
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={!showPassword}
+              accessibilityLabel="Password"
+              className={`${inputClass} pr-16`}
+            />
+            <Pressable
+              onPress={() => setShowPassword((v) => !v)}
+              hitSlop={13}
+              className="absolute right-4"
+            >
+              <Text className="font-body-semibold text-sm text-accent">
+                {showPassword ? 'Hide' : 'Show'}
+              </Text>
+            </Pressable>
+          </View>
         </View>
         {step === 'create' && (
           <View>

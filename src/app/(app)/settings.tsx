@@ -79,9 +79,11 @@ export default function Settings() {
           </Card>
         </View>
 
-        <Button variant="ghost" onPress={() => signOut()}>
-          Sign out
-        </Button>
+        <View className="border-t border-border pt-6">
+          <Button variant="ghost" onPress={() => signOut()}>
+            Sign out
+          </Button>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );

@@ -31,7 +31,7 @@ export default function IncomeManagement() {
   const [editing, setEditing] = useState<Income | null>(null);
   const [editLabel, setEditLabel] = useState('');
   const [editAmount, setEditAmount] = useState('');
-  const [editDay, setEditDay] = useState('');
+  const [editDay, setEditDay] = useState<number>(RECURRING_DAYS[0]);
 
   const combined = (incomes ?? []).filter((i) => i.active).reduce((s, i) => s + i.amount, 0);
 
@@ -61,16 +61,16 @@ export default function IncomeManagement() {
     setEditing(income);
     setEditLabel(income.label);
     setEditAmount(String(income.amount));
-    setEditDay(String(income.recurring_day));
+    setEditDay(income.recurring_day);
   }
 
   async function handleSaveEdit() {
-    if (!editing || !editLabel || !editAmount || !editDay) return;
+    if (!editing || !editLabel || !editAmount) return;
     await updateIncome.mutateAsync({
       id: editing.id,
       label: editLabel,
       amount: Number(editAmount),
-      recurring_day: Number(editDay),
+      recurring_day: editDay,
     });
     setEditing(null);
   }
@@ -164,13 +164,22 @@ export default function IncomeManagement() {
               keyboardType="numeric"
               className="rounded-md border border-border bg-page px-4 py-4 font-mono text-base text-ink"
             />
-            <Text className="font-body text-xs text-ink-muted">Recurring day (1-31)</Text>
-            <TextInput
-              value={editDay}
-              onChangeText={setEditDay}
-              keyboardType="numeric"
-              className="rounded-md border border-border bg-page px-4 py-4 font-mono text-base text-ink"
-            />
+            <Text className="font-body text-xs text-ink-muted">Recurring day</Text>
+            <View className="flex-row flex-wrap gap-2">
+              {(RECURRING_DAYS.includes(editDay) ? RECURRING_DAYS : [...RECURRING_DAYS, editDay].sort((a, b) => a - b)).map(
+                (p) => (
+                  <Pressable
+                    key={p}
+                    onPress={() => setEditDay(p)}
+                    className={`rounded-md border px-3 py-3 ${
+                      editDay === p ? 'border-accent bg-accent-soft' : 'border-border'
+                    }`}
+                  >
+                    <Text className="font-body text-sm text-ink">{p}th</Text>
+                  </Pressable>
+                ),
+              )}
+            </View>
             <View className="flex-row gap-3">
               <Button variant="secondary" className="flex-1" onPress={() => setEditing(null)}>
                 Cancel
