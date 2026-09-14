@@ -11,6 +11,7 @@ const mockUseHouseholdMembership = jest.fn();
 const mockUseHouseholdMembers = jest.fn();
 const mockUseCategories = jest.fn();
 const mockUseCategoryBalances = jest.fn();
+const mockUseCategoryBalancesThisMonth = jest.fn();
 const mockUseIncomes = jest.fn();
 
 jest.mock('@/lib/queries', () => ({
@@ -19,6 +20,7 @@ jest.mock('@/lib/queries', () => ({
   useHouseholdMembers: (...args: unknown[]) => mockUseHouseholdMembers(...args),
   useCategories: (...args: unknown[]) => mockUseCategories(...args),
   useCategoryBalances: (...args: unknown[]) => mockUseCategoryBalances(...args),
+  useCategoryBalancesThisMonth: (...args: unknown[]) => mockUseCategoryBalancesThisMonth(...args),
   useIncomes: (...args: unknown[]) => mockUseIncomes(...args),
 }));
 
@@ -45,6 +47,7 @@ beforeEach(() => {
   mockUseHouseholdMembers.mockReturnValue(okQuery(members));
   mockUseCategories.mockReturnValue(okQuery(categories));
   mockUseCategoryBalances.mockReturnValue(okQuery({ 'cat-fund': 12000, 'cat-bill': 0 }));
+  mockUseCategoryBalancesThisMonth.mockReturnValue(okQuery({ 'cat-bill': 3500 }));
   mockUseIncomes.mockReturnValue(okQuery(incomes));
 });
 
@@ -56,6 +59,7 @@ describe('Dashboard', () => {
     expect(getByText('Rent')).toBeTruthy();
     expect(getByText(/Leo & Alex/)).toBeTruthy();
     expect(getByText(/₱\s?12,000/)).toBeTruthy();
+    expect(getByText(/₱\s?3,500 this month/)).toBeTruthy();
     expect(getByText('Next payday')).toBeTruthy();
   });
 

@@ -122,6 +122,22 @@ describe('Onboarding', () => {
     await waitFor(() => expect(mockSignInWithGoogle).toHaveBeenCalled());
   });
 
+  it('shows the min-length hint upfront and toggles password visibility', async () => {
+    const { getByText, getByLabelText } = await renderWithTheme(<Onboarding />);
+
+    await fireEvent.press(getByText('Sign up'));
+    expect(getByText('Min 8 characters')).toBeTruthy();
+
+    const passwordInput = getByLabelText('Password');
+    expect(passwordInput.props.secureTextEntry).toBe(true);
+
+    await fireEvent.press(getByText('Show'));
+    expect(passwordInput.props.secureTextEntry).toBe(false);
+
+    await fireEvent.press(getByText('Hide'));
+    expect(passwordInput.props.secureTextEntry).toBe(true);
+  });
+
   it('goes back to the welcome step', async () => {
     const { getByText } = await renderWithTheme(<Onboarding />);
 

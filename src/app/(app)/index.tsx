@@ -12,6 +12,7 @@ import {
   combineQueryState,
   useCategories,
   useCategoryBalances,
+  useCategoryBalancesThisMonth,
   useHouseholdMembers,
   useHouseholdMembership,
   useIncomes,
@@ -57,6 +58,8 @@ export default function Dashboard() {
   const categoriesLoading = categoriesQuery.isLoading;
   const balancesQuery = useCategoryBalances(householdId);
   const balances = balancesQuery.data;
+  const balancesThisMonthQuery = useCategoryBalancesThisMonth(householdId);
+  const balancesThisMonth = balancesThisMonthQuery.data;
   const incomesQuery = useIncomes(householdId);
   const incomes = incomesQuery.data;
 
@@ -65,6 +68,7 @@ export default function Dashboard() {
     membersQuery,
     categoriesQuery,
     balancesQuery,
+    balancesThisMonthQuery,
     incomesQuery,
   );
 
@@ -194,10 +198,14 @@ export default function Dashboard() {
                       {c.kind === 'bill' ? 'Recurring bills' : goal ? `Goal · ${formatPeso(goal)}` : 'No cap'}
                     </Text>
                   </View>
-                  {c.kind === 'fund' && (
+                  {c.kind === 'fund' ? (
                     <Text className="font-mono text-sm text-ink">
                       {formatPeso(balance)}
                       {goal ? ` / ${formatPeso(goal)}` : ''}
+                    </Text>
+                  ) : (
+                    <Text className="font-mono text-sm text-ink">
+                      {formatPeso(balancesThisMonth?.[c.id] ?? 0)} this month
                     </Text>
                   )}
                   <Text className="text-ink-muted">›</Text>

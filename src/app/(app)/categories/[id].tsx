@@ -42,6 +42,15 @@ export default function CategoryDetail() {
     () => (history ?? []).reduce((s, h) => s + h.amount, 0),
     [history],
   );
+  const paidThisMonth = useMemo(() => {
+    const now = new Date();
+    return (history ?? [])
+      .filter((h) => {
+        const d = fromDateOnly(h.payday_date);
+        return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+      })
+      .reduce((s, h) => s + h.amount, 0);
+  }, [history]);
 
   function memberName(userId: string | null) {
     if (!userId) return 'Manual entry';
@@ -72,13 +81,13 @@ export default function CategoryDetail() {
 
         <Card className="p-5">
           <Text className="font-mono text-2xl" style={{ color: category.color ?? undefined }}>
-            {formatPeso(balance)}
+            {formatPeso(category.kind === 'bill' ? paidThisMonth : balance)}
           </Text>
           <Text className="mt-1 font-body text-xs text-ink-muted">
             {goal
               ? `of ${formatPeso(goal)} goal${category.rule?.type === 'goal' && category.rule.target_date ? ` · complete by ${fromDateOnly(category.rule.target_date).toLocaleDateString(undefined, { month: 'long' })}` : ''}`
               : category.kind === 'bill'
-                ? 'paid to date'
+                ? 'paid this month'
                 : 'all-time, no cap'}
           </Text>
           {pct !== null && (

@@ -325,6 +325,34 @@ export function useCategoryBalances(householdId: string | undefined) {
   });
 }
 
+// Same shape as useCategoryBalances, scoped to the current calendar month -
+// what a bill category's dashboard row needs to show "due/paid this month"
+// rather than an all-time cumulative total.
+export function useCategoryBalancesThisMonth(householdId: string | undefined) {
+  return useQuery({
+    queryKey: ['category-balances-this-month', householdId],
+    enabled: !!householdId,
+    queryFn: async () => {
+      const now = new Date();
+      const monthStart = toDateOnly(new Date(now.getFullYear(), now.getMonth(), 1));
+      const nextMonthStart = toDateOnly(new Date(now.getFullYear(), now.getMonth() + 1, 1));
+      const { data, error } = await supabase
+        .from('ledger_entries')
+        .select('category_id, amount')
+        .eq('household_id', householdId as string)
+        .eq('status', 'checked')
+        .gte('payday_date', monthStart)
+        .lt('payday_date', nextMonthStart);
+      if (error) throw error;
+      const balances: Record<string, number> = {};
+      for (const row of data) {
+        balances[row.category_id] = (balances[row.category_id] ?? 0) + row.amount;
+      }
+      return balances;
+    },
+  });
+}
+
 // --- Category detail / history ----------------------------------------------
 
 export function useCategoryHistory(categoryId: string | undefined) {
