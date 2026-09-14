@@ -1,6 +1,16 @@
-import { focusManager, QueryClient, QueryClientProvider as TanstackProvider } from '@tanstack/react-query';
+import NetInfo from '@react-native-community/netinfo';
+import { focusManager, onlineManager, QueryClient, QueryClientProvider as TanstackProvider } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { AppState, type AppStateStatus, Platform } from 'react-native';
+
+// Mirrors TanStack's official RN guide: NetInfo is the only way to detect a
+// dropped connection without backgrounding (AppState alone misses that case -
+// see the focusManager wiring below, which only covers foreground/background).
+if (Platform.OS !== 'web') {
+  onlineManager.setEventListener((setOnline) =>
+    NetInfo.addEventListener((state) => setOnline(!!state.isConnected))
+  );
+}
 
 // Realtime (src/lib/realtime.ts) invalidates these queries on change;
 // staleTime/refetchOnWindowFocus remain as a fallback for when a client
