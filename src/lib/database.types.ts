@@ -52,6 +52,7 @@ export type Category = {
   sort_order: number;
   rule: CategoryRule | null;
   archived: boolean;
+  goal_celebrated_at: string | null;
   created_at: string;
 };
 

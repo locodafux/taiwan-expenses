@@ -124,6 +124,29 @@ export function useUpdateCategory(householdId: string | undefined) {
   });
 }
 
+// Claims the one-time goal-celebration for a category: the `.is(...)` guard
+// means only the first caller to reach this (across devices/household
+// members) gets a non-null row back, so the celebration modal shows exactly
+// once even if both partners' apps notice the crossed threshold at the same
+// time.
+export function useMarkGoalCelebrated(householdId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (categoryId: string) => {
+      const { data, error } = await supabase
+        .from('categories')
+        .update({ goal_celebrated_at: new Date().toISOString() })
+        .eq('id', categoryId)
+        .is('goal_celebrated_at', null)
+        .select()
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['categories', householdId] }),
+  });
+}
+
 // --- Incomes ------------------------------------------------------------------
 
 export function useIncomes(householdId: string | undefined) {
