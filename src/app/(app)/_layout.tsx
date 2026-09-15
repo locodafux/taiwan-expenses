@@ -1,6 +1,7 @@
 import { Redirect, Tabs } from 'expo-router';
 import { Text, type ColorValue } from 'react-native';
 
+import { GoalCelebration } from '@/components/GoalCelebration';
 import { useAuth } from '@/lib/auth';
 import { useHouseholdMembership } from '@/lib/queries';
 import { useRealtimeSync } from '@/lib/realtime';
@@ -22,35 +23,38 @@ export default function AppLayout() {
   const vars = THEMES[theme];
 
   return (
-    <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarActiveTintColor: vars['--accent'],
-        tabBarInactiveTintColor: vars['--ink-muted'],
-        tabBarStyle: { backgroundColor: vars['--surface'], borderTopColor: vars['--border'] },
-        tabBarLabelStyle: { fontFamily: 'PublicSans_600SemiBold', fontSize: 11 },
-      }}
-    >
-      <Tabs.Screen
-        name="index"
-        options={{ title: 'Dashboard', tabBarIcon: ({ color }) => <TabIcon symbol="⌂" color={color} /> }}
-      />
-      <Tabs.Screen
-        name="checklist"
-        options={{ title: 'Checklist', tabBarIcon: ({ color }) => <TabIcon symbol="✓" color={color} /> }}
-      />
-      <Tabs.Screen
-        name="categories"
-        options={{ title: 'Categories', tabBarIcon: ({ color }) => <TabIcon symbol="▤" color={color} /> }}
-      />
-      <Tabs.Screen
-        name="income"
-        options={{ title: 'Income', tabBarIcon: ({ color }) => <TabIcon symbol="₱" color={color} /> }}
-      />
-      <Tabs.Screen
-        name="settings"
-        options={{ title: 'Settings', tabBarIcon: ({ color }) => <TabIcon symbol="⚙" color={color} /> }}
-      />
-    </Tabs>
+    <>
+      <GoalCelebration householdId={member?.household_id} />
+      <Tabs
+        screenOptions={{
+          headerShown: false,
+          tabBarActiveTintColor: vars['--accent'],
+          tabBarInactiveTintColor: vars['--ink-muted'],
+          tabBarStyle: { backgroundColor: vars['--surface'], borderTopColor: vars['--border'] },
+          tabBarLabelStyle: { fontFamily: 'PublicSans_600SemiBold', fontSize: 11 },
+        }}
+      >
+        <Tabs.Screen
+          name="index"
+          options={{ title: 'Dashboard', tabBarIcon: ({ color }) => <TabIcon symbol="⌂" color={color} /> }}
+        />
+        <Tabs.Screen
+          name="checklist"
+          options={{ title: 'Checklist', tabBarIcon: ({ color }) => <TabIcon symbol="✓" color={color} /> }}
+        />
+        <Tabs.Screen
+          name="categories"
+          options={{ title: 'Categories', tabBarIcon: ({ color }) => <TabIcon symbol="▤" color={color} /> }}
+        />
+        <Tabs.Screen
+          name="income"
+          options={{ title: 'Income', tabBarIcon: ({ color }) => <TabIcon symbol="₱" color={color} /> }}
+        />
+        <Tabs.Screen
+          name="settings"
+          options={{ title: 'Settings', tabBarIcon: ({ color }) => <TabIcon symbol="⚙" color={color} /> }}
+        />
+      </Tabs>
+    </>
   );
 }
