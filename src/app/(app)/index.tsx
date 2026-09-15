@@ -16,6 +16,8 @@ import {
   useHouseholdMembers,
   useHouseholdMembership,
   useIncomes,
+  usePaydayStreak,
+  useSavedThisQuarter,
 } from '@/lib/queries';
 import { formatPeso } from '@/lib/format';
 import { daysUntil, nextPayday } from '@/lib/payday';
@@ -62,6 +64,10 @@ export default function Dashboard() {
   const balancesThisMonth = balancesThisMonthQuery.data;
   const incomesQuery = useIncomes(householdId);
   const incomes = incomesQuery.data;
+  const savedThisQuarterQuery = useSavedThisQuarter(householdId);
+  const savedThisQuarter = savedThisQuarterQuery.data;
+  const streakQuery = usePaydayStreak(householdId);
+  const streak = streakQuery.data;
 
   const { isError, refetch } = combineQueryState(
     membershipQuery,
@@ -70,6 +76,8 @@ export default function Dashboard() {
     balancesQuery,
     balancesThisMonthQuery,
     incomesQuery,
+    savedThisQuarterQuery,
+    streakQuery,
   );
 
   const payday = useMemo(() => {
@@ -153,6 +161,27 @@ export default function Dashboard() {
               </Pressable>
             ))}
           </Card>
+        )}
+
+        {savedThisQuarter !== undefined && streak !== undefined && (
+          <View className="flex-row items-center gap-4 rounded-xl border border-border bg-surface p-5">
+            <Ring
+              pct={setupSteps.filter((s) => s.done).length / setupSteps.length}
+              color={vars['--accent']}
+              trackColor={vars['--surface-3']}
+            />
+            <View className="flex-1">
+              <Text className="font-body text-xs uppercase tracking-wide text-ink-muted">
+                Saved this quarter
+              </Text>
+              <Text className="mt-1 font-mono text-xl text-ink">{formatPeso(savedThisQuarter)}</Text>
+            </View>
+            <View className="rounded-full bg-page px-3 py-1.5">
+              <Text className="font-body-bold text-xs text-ink">
+                {streak > 0 ? `🔥 ${streak}-payday streak` : 'Start your streak'}
+              </Text>
+            </View>
+          </View>
         )}
 
         {payday && (

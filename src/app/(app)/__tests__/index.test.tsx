@@ -13,6 +13,8 @@ const mockUseCategories = jest.fn();
 const mockUseCategoryBalances = jest.fn();
 const mockUseCategoryBalancesThisMonth = jest.fn();
 const mockUseIncomes = jest.fn();
+const mockUseSavedThisQuarter = jest.fn();
+const mockUsePaydayStreak = jest.fn();
 
 jest.mock('@/lib/queries', () => ({
   ...jest.requireActual('@/lib/queries'),
@@ -22,6 +24,8 @@ jest.mock('@/lib/queries', () => ({
   useCategoryBalances: (...args: unknown[]) => mockUseCategoryBalances(...args),
   useCategoryBalancesThisMonth: (...args: unknown[]) => mockUseCategoryBalancesThisMonth(...args),
   useIncomes: (...args: unknown[]) => mockUseIncomes(...args),
+  useSavedThisQuarter: (...args: unknown[]) => mockUseSavedThisQuarter(...args),
+  usePaydayStreak: (...args: unknown[]) => mockUsePaydayStreak(...args),
 }));
 
 import Dashboard from '../index';
@@ -49,6 +53,8 @@ beforeEach(() => {
   mockUseCategoryBalances.mockReturnValue(okQuery({ 'cat-fund': 12000, 'cat-bill': 0 }));
   mockUseCategoryBalancesThisMonth.mockReturnValue(okQuery({ 'cat-bill': 3500 }));
   mockUseIncomes.mockReturnValue(okQuery(incomes));
+  mockUseSavedThisQuarter.mockReturnValue(okQuery(18500));
+  mockUsePaydayStreak.mockReturnValue(okQuery(3));
 });
 
 describe('Dashboard', () => {
@@ -101,5 +107,28 @@ describe('Dashboard', () => {
     const { getByText } = await renderWithTheme(<Dashboard />);
     await fireEvent.press(await waitFor(() => getByText('Review')));
     expect(mockPush).toHaveBeenCalledWith('/(app)/checklist');
+  });
+
+  it('renders the momentum row (saved-this-quarter stat + streak chip) when data is present', async () => {
+    const { getByText } = await renderWithTheme(<Dashboard />);
+
+    expect(await waitFor(() => getByText('Saved this quarter'))).toBeTruthy();
+    expect(getByText(/₱\s?18,500/)).toBeTruthy();
+    expect(getByText('🔥 3-payday streak')).toBeTruthy();
+  });
+
+  it('shows a start-streak chip instead of a count when there is no streak yet', async () => {
+    mockUsePaydayStreak.mockReturnValue(okQuery(0));
+    const { getByText } = await renderWithTheme(<Dashboard />);
+
+    expect(await waitFor(() => getByText('Start your streak'))).toBeTruthy();
+  });
+
+  it('omits the momentum row while its data is still loading', async () => {
+    mockUseSavedThisQuarter.mockReturnValue({ data: undefined, isLoading: true, isError: false, refetch: jest.fn() });
+    const { queryByText } = await renderWithTheme(<Dashboard />);
+
+    await waitFor(() => expect(queryByText('Taiwan fund')).toBeTruthy());
+    expect(queryByText('Saved this quarter')).toBeNull();
   });
 });

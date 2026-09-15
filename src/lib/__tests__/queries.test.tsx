@@ -25,7 +25,21 @@ function buildChain(result: { data: unknown; error: null }) {
   mockFrom.mockReturnValue({ update: mockUpdate });
 }
 
-import { useCheckLedgerEntry, useUpdateIncome } from '../queries';
+// Chainable + thenable read-query mock: .select().eq().eq().gte()/.order(),
+// awaitable directly at any point in the chain like the real postgrest-js builder.
+function buildSelectChain(result: { data: unknown; error: null }) {
+  const chain: any = {
+    select: jest.fn(() => chain),
+    eq: jest.fn(() => chain),
+    gte: jest.fn(() => chain),
+    order: jest.fn(() => chain),
+    then: (resolve: (value: unknown) => unknown) => Promise.resolve(result).then(resolve),
+  };
+  mockFrom.mockReturnValue(chain);
+  return chain;
+}
+
+import { useCheckLedgerEntry, usePaydayStreak, useSavedThisQuarter, useUpdateIncome } from '../queries';
 
 function wrapper({ children }: { children: ReactNode }) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -93,5 +107,89 @@ describe('useUpdateIncome (edit/deactivate an existing income)', () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
     expect(mockUpdate).toHaveBeenCalledWith({ label: '5th payday', amount: 30000, recurring_day: 5 });
+  });
+});
+
+describe('useSavedThisQuarter (dashboard momentum stat)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('sums checked ledger amounts across all categories in the trailing window', async () => {
+    const chain = buildSelectChain({
+      data: [{ amount: 5000 }, { amount: 2500 }, { amount: 1250 }],
+      error: null,
+    });
+    const { result } = await renderHook(() => useSavedThisQuarter('household-1'), { wrapper });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(result.current.data).toBe(8750);
+    expect(mockFrom).toHaveBeenCalledWith('ledger_entries');
+    expect(chain.eq).toHaveBeenCalledWith('status', 'checked');
+    expect(chain.gte).toHaveBeenCalledWith('payday_date', expect.any(String));
+  });
+
+  it('returns 0 when nothing has been checked in the window', async () => {
+    buildSelectChain({ data: [], error: null });
+    const { result } = await renderHook(() => useSavedThisQuarter('household-1'), { wrapper });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(result.current.data).toBe(0);
+  });
+});
+
+describe('usePaydayStreak (dashboard momentum chip)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('counts consecutive fully-checked past paydays, most recent first', async () => {
+    buildSelectChain({
+      data: [
+        { payday_date: '2026-09-05', status: 'checked' },
+        { payday_date: '2026-08-20', status: 'checked' },
+        { payday_date: '2026-08-20', status: 'checked' },
+        { payday_date: '2026-08-05', status: 'checked' },
+      ],
+      error: null,
+    });
+    const { result } = await renderHook(() => usePaydayStreak('household-1'), { wrapper });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(result.current.data).toBe(3);
+  });
+
+  it('stops at the first payday with any unchecked entry', async () => {
+    buildSelectChain({
+      data: [
+        { payday_date: '2026-09-05', status: 'checked' },
+        { payday_date: '2026-08-20', status: 'pending' },
+        { payday_date: '2026-08-05', status: 'checked' },
+      ],
+      error: null,
+    });
+    const { result } = await renderHook(() => usePaydayStreak('household-1'), { wrapper });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(result.current.data).toBe(1);
+  });
+
+  it('ignores a materialized-but-not-yet-due future payday', async () => {
+    buildSelectChain({
+      data: [
+        { payday_date: '2099-01-05', status: 'pending' },
+        { payday_date: '2026-08-20', status: 'checked' },
+      ],
+      error: null,
+    });
+    const { result } = await renderHook(() => usePaydayStreak('household-1'), { wrapper });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(result.current.data).toBe(1);
   });
 });

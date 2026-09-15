@@ -397,6 +397,64 @@ export function useCategoryBalancesThisMonth(householdId: string | undefined) {
   });
 }
 
+// Total across all categories (bill + fund) over a trailing 90-day window -
+// a rolling window is a single >= filter vs. calendar-quarter boundary math,
+// and close enough to the design brief's "this quarter" framing to keep this
+// simple and correct. Powers the dashboard's momentum stat (docs/plan.md's
+// "financial companion, not a financial mirror" framing).
+export function useSavedThisQuarter(householdId: string | undefined) {
+  return useQuery({
+    queryKey: ['saved-this-quarter', householdId],
+    enabled: !!householdId,
+    queryFn: async () => {
+      const since = toDateOnly(new Date(Date.now() - 90 * 86_400_000));
+      const { data, error } = await supabase
+        .from('ledger_entries')
+        .select('amount')
+        .eq('household_id', householdId as string)
+        .eq('status', 'checked')
+        .gte('payday_date', since);
+      if (error) throw error;
+      return data.reduce((sum, row) => sum + row.amount, 0);
+    },
+  });
+}
+
+// Consecutive fully-checked paydays, most recent first - counts backwards
+// from the latest payday that's actually due (skipping ones still in the
+// future) and stops at the first payday with any unchecked/pending entry.
+// ponytail: minimal version for the dashboard momentum chip; if the
+// checklist-celebration task's own streak calc lands separately, unify with
+// that rather than keeping two implementations.
+export function usePaydayStreak(householdId: string | undefined) {
+  return useQuery({
+    queryKey: ['payday-streak', householdId],
+    enabled: !!householdId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('ledger_entries')
+        .select('payday_date, status')
+        .eq('household_id', householdId as string)
+        .order('payday_date', { ascending: false });
+      if (error) throw error;
+      const allCheckedByPayday = new Map<string, boolean>();
+      for (const row of data) {
+        const soFar = allCheckedByPayday.get(row.payday_date) ?? true;
+        allCheckedByPayday.set(row.payday_date, soFar && row.status === 'checked');
+      }
+      const paydaysDesc = Array.from(allCheckedByPayday.keys()).sort((a, b) => (a < b ? 1 : -1));
+      const today = toDateOnly(new Date());
+      let streak = 0;
+      for (const payday of paydaysDesc) {
+        if (payday > today) continue;
+        if (!allCheckedByPayday.get(payday)) break;
+        streak++;
+      }
+      return streak;
+    },
+  });
+}
+
 // --- Category detail / history ----------------------------------------------
 
 export function useCategoryHistory(categoryId: string | undefined) {
