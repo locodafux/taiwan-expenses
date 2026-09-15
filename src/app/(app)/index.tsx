@@ -138,20 +138,25 @@ export default function Dashboard() {
 
         {!setupComplete && (
           <Card className="gap-1 p-5">
-            <Text className="mb-2 font-body-bold text-sm text-ink">Get set up</Text>
+            <View className="mb-2 flex-row items-center gap-3">
+              <Ring
+                pct={setupSteps.filter((s) => s.done).length / setupSteps.length}
+                color={vars['--accent']}
+                trackColor={vars['--surface-3']}
+              />
+              <View className="flex-1">
+                <Text className="font-body-bold text-sm text-ink">Get set up</Text>
+                <Text className="font-body text-xs text-ink-muted">
+                  {setupSteps.filter((s) => s.done).length} of {setupSteps.length} steps done
+                </Text>
+              </View>
+            </View>
             {setupSteps.map((step) => (
               <Pressable
                 key={step.label}
                 onPress={() => router.push(step.href)}
                 className="flex-row items-center gap-3 py-2"
               >
-                <View
-                  className={`h-5 w-5 items-center justify-center rounded-full border ${
-                    step.done ? 'border-status-good bg-status-good' : 'border-border'
-                  }`}
-                >
-                  {step.done && <Text className="text-xs text-white">✓</Text>}
-                </View>
                 <Text
                   className={`flex-1 font-body text-sm ${step.done ? 'text-ink-muted line-through' : 'text-ink'}`}
                 >
