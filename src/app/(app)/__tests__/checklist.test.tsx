@@ -14,6 +14,7 @@ const mockUseLedgerEntriesForPayday = jest.fn();
 const mockUseMaterializePayday = jest.fn();
 const mockUseCheckLedgerEntry = jest.fn();
 const mockUseUpdateLedgerAmount = jest.fn();
+const mockUsePaydayCompletionHistory = jest.fn();
 
 jest.mock('@/lib/queries', () => ({
   ...jest.requireActual('@/lib/queries'),
@@ -24,6 +25,7 @@ jest.mock('@/lib/queries', () => ({
   useMaterializePayday: (...args: unknown[]) => mockUseMaterializePayday(...args),
   useCheckLedgerEntry: (...args: unknown[]) => mockUseCheckLedgerEntry(...args),
   useUpdateLedgerAmount: (...args: unknown[]) => mockUseUpdateLedgerAmount(...args),
+  usePaydayCompletionHistory: (...args: unknown[]) => mockUsePaydayCompletionHistory(...args),
 }));
 
 import PaydayChecklist from '../checklist';
@@ -70,6 +72,7 @@ beforeEach(() => {
     mutateAsync: mockUpdateAmountMutateAsync.mockResolvedValue({}),
     isPending: false,
   });
+  mockUsePaydayCompletionHistory.mockReturnValue(okQuery([]));
 });
 
 describe('PaydayChecklist', () => {
@@ -121,6 +124,29 @@ describe('PaydayChecklist', () => {
     const { getByText } = await renderWithTheme(<PaydayChecklist />);
 
     await waitFor(() => expect(getByText('Nothing to check off for this payday yet.')).toBeTruthy());
+  });
+
+  it('does not show the celebration card while items are still unchecked', async () => {
+    const { getByText, queryByText } = await renderWithTheme(<PaydayChecklist />);
+
+    await waitFor(() => expect(getByText('Rent')).toBeTruthy());
+    expect(queryByText('Payday sorted')).toBeNull();
+  });
+
+  it('shows the celebration card, with streak, once every item is checked', async () => {
+    mockUseLedgerEntriesForPayday.mockReturnValue(
+      okQuery(entries.map((e) => ({ ...e, status: 'checked' }))),
+    );
+    mockUsePaydayCompletionHistory.mockReturnValue(
+      okQuery([
+        { payday_date: '2026-09-05', status: 'checked' },
+        { payday_date: '2026-08-05', status: 'checked' },
+      ]),
+    );
+    const { getByText } = await renderWithTheme(<PaydayChecklist />);
+
+    await waitFor(() => expect(getByText('Payday sorted')).toBeTruthy());
+    expect(getByText('🔥 3 paydays in a row')).toBeTruthy();
   });
 
   it('edits an item amount', async () => {
