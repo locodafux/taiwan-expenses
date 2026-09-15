@@ -8,6 +8,7 @@ import { Callout } from '@/components/ui/Callout';
 import { Card } from '@/components/ui/Card';
 import { ChecklistGroup, ChecklistRow } from '@/components/ui/Checklist';
 import { ErrorState } from '@/components/ui/ErrorState';
+import { PaydayCelebration } from '@/components/ui/PaydayCelebration';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import {
   combineQueryState,
@@ -17,10 +18,17 @@ import {
   useIncomes,
   useLedgerEntriesForPayday,
   useMaterializePayday,
+  usePaydayCompletionHistory,
   useUpdateLedgerAmount,
 } from '@/lib/queries';
 import { formatPeso } from '@/lib/format';
-import { fromDateOnly, leftoverByPaydayInMonth, nextPayday, toDateOnly } from '@/lib/payday';
+import {
+  completedPaydayStreak,
+  fromDateOnly,
+  leftoverByPaydayInMonth,
+  nextPayday,
+  toDateOnly,
+} from '@/lib/payday';
 
 export default function PaydayChecklist() {
   const router = useRouter();
@@ -44,6 +52,7 @@ export default function PaydayChecklist() {
   const isLoading = entriesQuery.isLoading || incomesQuery.isLoading || membershipQuery.isLoading;
   const checkEntry = useCheckLedgerEntry(householdId, paydayDate);
   const updateAmount = useUpdateLedgerAmount(householdId, paydayDate);
+  const completionHistoryQuery = usePaydayCompletionHistory(householdId);
 
   const { isError, refetch } = combineQueryState(membershipQuery, incomesQuery, billsQuery, entriesQuery);
 
@@ -108,6 +117,11 @@ export default function PaydayChecklist() {
   const outgoing = (entries ?? []).filter((e) => e.categories?.kind !== 'fund');
   const staying = (entries ?? []).filter((e) => e.categories?.kind === 'fund');
 
+  const allChecked = total > 0 && checked === total;
+  const streak = allChecked
+    ? completedPaydayStreak(completionHistoryQuery.data ?? [], paydayDate)
+    : 0;
+
   return (
     <SafeAreaView className="flex-1 bg-page" edges={['top']}>
       <ScrollView contentContainerClassName="gap-5 px-7 py-6" className="flex-1">
@@ -125,6 +139,8 @@ export default function PaydayChecklist() {
             percent={(checked / total) * 100}
           />
         )}
+
+        {allChecked && <PaydayCelebration streak={streak} />}
 
         <View className="rounded-lg border border-border bg-surface px-6 py-5">
           {total === 0 && (

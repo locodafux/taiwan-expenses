@@ -277,6 +277,27 @@ export function useCheckLedgerEntry(householdId: string | undefined, paydayDate:
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ledger-entries', householdId, paydayDate] });
       queryClient.invalidateQueries({ queryKey: ['category-history'] });
+      queryClient.invalidateQueries({ queryKey: ['ledger-payday-status', householdId] });
+    },
+  });
+}
+
+// payday_date/status for every past ledger entry, for the checklist's
+// completed-payday streak (completedPaydayStreak in payday.ts) - reads the
+// whole household history rather than a precomputed streak column since
+// there isn't one yet (fine at this household's scale, see
+// useCategoryBalances above).
+export function usePaydayCompletionHistory(householdId: string | undefined) {
+  return useQuery({
+    queryKey: ['ledger-payday-status', householdId],
+    enabled: !!householdId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('ledger_entries')
+        .select('payday_date, status')
+        .eq('household_id', householdId as string);
+      if (error) throw error;
+      return data;
     },
   });
 }

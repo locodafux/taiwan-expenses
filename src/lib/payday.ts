@@ -49,6 +49,30 @@ export function daysUntil(target: Date, from: Date = new Date()): number {
   return Math.round((b.getTime() - a.getTime()) / 86_400_000);
 }
 
+// How many consecutive paydays (most recent first, including the current
+// one) had every ledger entry checked - the celebration card's streak line.
+// `rows` only needs to cover payday_date < currentPaydayDate; the current
+// payday itself is assumed complete (the celebration only renders once it
+// is) so its status doesn't depend on the query having refetched yet.
+export function completedPaydayStreak(
+  rows: { payday_date: string; status: string }[],
+  currentPaydayDate: string,
+): number {
+  const complete = new Map<string, boolean>();
+  for (const r of rows) {
+    complete.set(r.payday_date, (complete.get(r.payday_date) ?? true) && r.status === 'checked');
+  }
+  complete.set(currentPaydayDate, true);
+
+  const dates = [...complete.keys()].sort().reverse();
+  let streak = 0;
+  for (const d of dates) {
+    if (!complete.get(d)) break;
+    streak++;
+  }
+  return streak;
+}
+
 type IncomeLike = { amount: number; recurring_day: number; active: boolean };
 type BillLike = { amount: number; recurring_day: number; end_date: string | null };
 
