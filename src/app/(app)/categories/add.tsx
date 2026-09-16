@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/ui/Button';
@@ -71,120 +71,126 @@ export default function AddCategorySheet() {
 
   return (
     <SafeAreaView className="flex-1 justify-end bg-black/30">
-      <View className="gap-5 rounded-t-2xl bg-surface p-6">
-        <View className="self-center h-1 w-9 rounded-full bg-baseline" />
-        <Text className="font-display-semibold text-lg text-ink">New category</Text>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <ScrollView
+          className="max-h-[90%] rounded-t-2xl bg-surface"
+          contentContainerClassName="gap-5 p-6"
+          keyboardShouldPersistTaps="handled"
+        >
+          <View className="self-center h-1 w-9 rounded-full bg-baseline" />
+          <Text className="font-display-semibold text-lg text-ink">New category</Text>
 
-        <View>
-          <Text className="font-body text-xs text-ink-muted">Name</Text>
-          <TextInput
-            value={name}
-            onChangeText={setName}
-            placeholder="e.g. New laptop fund"
-            className={inputClass}
-          />
-        </View>
-
-        <View>
-          <Text className="mb-2 font-body text-xs text-ink-muted">Type</Text>
-          <View className="flex-row gap-1 rounded-md border border-border bg-surface-2 p-1">
-            {(['fund', 'bill'] as const).map((k) => (
-              <Pressable
-                key={k}
-                onPress={() => setKind(k)}
-                className={`flex-1 items-center rounded-sm px-2 py-3 ${kind === k ? 'bg-surface' : ''}`}
-              >
-                <Text className={`font-body-semibold text-xs ${kind === k ? 'text-ink' : 'text-ink-2'}`}>
-                  {k === 'fund' ? 'Fund (savings goal)' : 'Bill (recurring expense)'}
-                </Text>
-              </Pressable>
-            ))}
+          <View>
+            <Text className="font-body text-xs text-ink-muted">Name</Text>
+            <TextInput
+              value={name}
+              onChangeText={setName}
+              placeholder="e.g. New laptop fund"
+              className={inputClass}
+            />
           </View>
-        </View>
 
-        <View>
-          <Text className="mb-2 font-body text-xs text-ink-muted">Color</Text>
-          <View className="flex-row flex-wrap gap-3">
-            {colorOptions.map((c) => (
-              <Pressable
-                key={c.value}
-                onPress={() => setColor(c.value)}
-                accessibilityLabel={c.name}
-                accessibilityRole="button"
-                className="h-14 w-14 items-center justify-center rounded-full"
-                style={{
-                  backgroundColor: c.value,
-                  borderWidth: color === c.value ? 3 : 0,
-                  borderColor: vars['--ink'],
-                }}
-              />
-            ))}
+          <View>
+            <Text className="mb-2 font-body text-xs text-ink-muted">Type</Text>
+            <View className="flex-row gap-1 rounded-md border border-border bg-surface-2 p-1">
+              {(['fund', 'bill'] as const).map((k) => (
+                <Pressable
+                  key={k}
+                  onPress={() => setKind(k)}
+                  className={`flex-1 items-center rounded-sm px-2 py-3 ${kind === k ? 'bg-surface' : ''}`}
+                >
+                  <Text className={`font-body-semibold text-xs ${kind === k ? 'text-ink' : 'text-ink-2'}`}>
+                    {k === 'fund' ? 'Fund (savings goal)' : 'Bill (recurring expense)'}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
           </View>
-        </View>
 
-        {kind === 'bill' && (
-          <View className="flex-row gap-3">
-            <View className="flex-1">
-              <Text className="font-body text-xs text-ink-muted">Amount</Text>
+          <View>
+            <Text className="mb-2 font-body text-xs text-ink-muted">Color</Text>
+            <View className="flex-row flex-wrap gap-3">
+              {colorOptions.map((c) => (
+                <Pressable
+                  key={c.value}
+                  onPress={() => setColor(c.value)}
+                  accessibilityLabel={c.name}
+                  accessibilityRole="button"
+                  className="h-14 w-14 items-center justify-center rounded-full"
+                  style={{
+                    backgroundColor: c.value,
+                    borderWidth: color === c.value ? 3 : 0,
+                    borderColor: vars['--ink'],
+                  }}
+                />
+              ))}
+            </View>
+          </View>
+
+          {kind === 'bill' && (
+            <View className="flex-row gap-3">
+              <View className="flex-1">
+                <Text className="font-body text-xs text-ink-muted">Amount</Text>
+                <TextInput
+                  value={amount}
+                  onChangeText={setAmount}
+                  placeholder="₱0"
+                  keyboardType="numeric"
+                  className={`${inputClass} font-mono`}
+                />
+              </View>
+              <View className="flex-1">
+                <Text className="font-body text-xs text-ink-muted">Paid from</Text>
+                <ScrollView horizontal className="mt-2">
+                  {[5, 15, 20, 30].map((p) => (
+                    <Pressable
+                      key={p}
+                      onPress={() => setPayday(p)}
+                      className={`mr-2 rounded-md border px-3 py-3 ${
+                        payday === p ? 'border-accent bg-accent-soft' : 'border-border'
+                      }`}
+                    >
+                      <Text className="font-body text-sm text-ink">{p}th</Text>
+                    </Pressable>
+                  ))}
+                </ScrollView>
+              </View>
+            </View>
+          )}
+          {kind === 'fund' && (
+            <View>
+              <Text className="font-body text-xs text-ink-muted">Target amount (optional)</Text>
               <TextInput
-                value={amount}
-                onChangeText={setAmount}
-                placeholder="₱0"
+                value={target}
+                onChangeText={setTarget}
+                placeholder="Leave blank for no limit"
                 keyboardType="numeric"
                 className={`${inputClass} font-mono`}
               />
+              <Text className="mt-1 font-body text-xs leading-[1.4] text-ink-muted">
+                Set it and this category stops taking a share once full. Leave blank and it keeps its
+                percentage share indefinitely.
+              </Text>
             </View>
-            <View className="flex-1">
-              <Text className="font-body text-xs text-ink-muted">Paid from</Text>
-              <ScrollView horizontal className="mt-2">
-                {[5, 15, 20, 30].map((p) => (
-                  <Pressable
-                    key={p}
-                    onPress={() => setPayday(p)}
-                    className={`mr-2 rounded-md border px-3 py-3 ${
-                      payday === p ? 'border-accent bg-accent-soft' : 'border-border'
-                    }`}
-                  >
-                    <Text className="font-body text-sm text-ink">{p}th</Text>
-                  </Pressable>
-                ))}
-              </ScrollView>
-            </View>
-          </View>
-        )}
-        {kind === 'fund' && (
-          <View>
-            <Text className="font-body text-xs text-ink-muted">Target amount (optional)</Text>
-            <TextInput
-              value={target}
-              onChangeText={setTarget}
-              placeholder="Leave blank for no limit"
-              keyboardType="numeric"
-              className={`${inputClass} font-mono`}
-            />
-            <Text className="mt-1 font-body text-xs leading-[1.4] text-ink-muted">
-              Set it and this category stops taking a share once full. Leave blank and it keeps its
-              percentage share indefinitely.
-            </Text>
-          </View>
-        )}
+          )}
 
-        {error && <Text className="font-body text-sm text-status-bad">{error}</Text>}
+          {error && <Text className="font-body text-sm text-status-bad">{error}</Text>}
 
-        <View className="flex-row gap-3">
-          <Button variant="secondary" className="flex-1" onPress={() => router.back()}>
-            Cancel
-          </Button>
-          <Button
-            variant="primary"
-            className="flex-1"
-            loading={createCategory.isPending}
-            onPress={handleSave}
-          >
-            Add category
-          </Button>
-        </View>
-      </View>
+          <View className="flex-row gap-3">
+            <Button variant="secondary" className="flex-1" onPress={() => router.back()}>
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              className="flex-1"
+              loading={createCategory.isPending}
+              onPress={handleSave}
+            >
+              Add category
+            </Button>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
