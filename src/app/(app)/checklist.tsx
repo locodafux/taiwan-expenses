@@ -124,7 +124,7 @@ export default function PaydayChecklist() {
 
   return (
     <SafeAreaView className="flex-1 bg-page" edges={['top']}>
-      <ScrollView contentContainerClassName="gap-5 px-7 py-6" className="flex-1">
+      <ScrollView contentContainerClassName="gap-4 px-6 py-5" className="flex-1">
         <View>
           <Text className="font-display-semibold text-lg text-ink">
             {paydayDay}th payday checklist
@@ -142,7 +142,7 @@ export default function PaydayChecklist() {
 
         {allChecked && <PaydayCelebration streak={streak} />}
 
-        <View className="rounded-lg border border-border bg-surface px-6 py-5">
+        <Card className="px-5 py-4">
           {total === 0 && (
             <Text className="py-4 font-body text-sm text-ink-muted">
               Nothing to check off for this payday yet.
@@ -190,7 +190,7 @@ export default function PaydayChecklist() {
               ))}
             </ChecklistGroup>
           )}
-        </View>
+        </Card>
 
         {editingId && (
           <Card className="gap-3 p-5">

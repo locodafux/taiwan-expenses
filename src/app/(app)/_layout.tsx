@@ -30,7 +30,15 @@ export default function AppLayout() {
           headerShown: false,
           tabBarActiveTintColor: vars['--accent'],
           tabBarInactiveTintColor: vars['--ink-muted'],
-          tabBarStyle: { backgroundColor: vars['--surface'], borderTopColor: vars['--border'] },
+          tabBarStyle: {
+            backgroundColor: vars['--surface'],
+            borderTopColor: vars['--border'],
+            elevation: 8,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: -2 },
+            shadowOpacity: 0.05,
+            shadowRadius: 6,
+          },
           tabBarLabelStyle: { fontFamily: 'PublicSans_600SemiBold', fontSize: 11 },
         }}
       >
