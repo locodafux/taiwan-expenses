@@ -13,7 +13,7 @@ const inputClass =
 
 export default function Onboarding() {
   const [step, setStep] = useState<Step>('welcome');
-  const { signUp, signIn, signInWithGoogle } = useAuth();
+  const { signUp, signIn } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
@@ -69,15 +69,6 @@ export default function Onboarding() {
       setErrors([e instanceof Error ? e.message : 'Something went wrong']);
     } finally {
       setSubmitting(false);
-    }
-  }
-
-  async function handleGoogle() {
-    setErrors([]);
-    try {
-      await signInWithGoogle();
-    } catch (e) {
-      setErrors([e instanceof Error ? e.message : 'Google sign-in failed']);
     }
   }
 
@@ -207,9 +198,6 @@ export default function Onboarding() {
 
         <Button variant="primary" loading={submitting} onPress={submitHandlers[step]}>
           {submitLabels[step]}
-        </Button>
-        <Button variant="ghost" onPress={handleGoogle}>
-          Continue with Google
         </Button>
         <Pressable onPress={() => setStep('welcome')} hitSlop={13} className="self-start py-3">
           <Text className="font-body text-sm text-ink-muted">‹ Back</Text>

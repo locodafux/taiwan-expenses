@@ -4,13 +4,11 @@ import { renderWithTheme } from '@/test/renderWithTheme';
 
 const mockSignUp = jest.fn();
 const mockSignIn = jest.fn();
-const mockSignInWithGoogle = jest.fn();
 
 jest.mock('@/lib/auth', () => ({
   useAuth: () => ({
     signUp: mockSignUp,
     signIn: mockSignIn,
-    signInWithGoogle: mockSignInWithGoogle,
   }),
 }));
 
@@ -20,7 +18,6 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockSignUp.mockResolvedValue(undefined);
   mockSignIn.mockResolvedValue(undefined);
-  mockSignInWithGoogle.mockResolvedValue(undefined);
 });
 
 describe('Onboarding', () => {
@@ -111,15 +108,6 @@ describe('Onboarding', () => {
     await fireEvent.press(submitButton);
 
     expect(await waitFor(() => getByText('Invalid login credentials'))).toBeTruthy();
-  });
-
-  it('continues with Google', async () => {
-    const { getByText } = await renderWithTheme(<Onboarding />);
-
-    await fireEvent.press(getByText('Sign up'));
-    await fireEvent.press(getByText('Continue with Google'));
-
-    await waitFor(() => expect(mockSignInWithGoogle).toHaveBeenCalled());
   });
 
   it('shows the min-length hint upfront and toggles password visibility', async () => {
