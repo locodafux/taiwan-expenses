@@ -70,8 +70,8 @@ export default function CategoryManagement() {
   return (
     <SafeAreaView className="flex-1 bg-page" edges={['top']}>
       <ScrollView contentContainerClassName="gap-4 px-6 py-5" className="flex-1">
-        <View className="flex-row items-center justify-between">
-          <Text className="font-display-semibold text-lg text-ink">Categories</Text>
+        <View className="flex-row items-center justify-between gap-3">
+          <Text className="flex-1 font-display-semibold text-lg text-ink">Categories</Text>
           <Button size="sm" onPress={() => router.push('/(app)/categories/add')}>
             + Add
           </Button>
