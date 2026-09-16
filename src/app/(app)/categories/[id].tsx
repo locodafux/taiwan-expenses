@@ -96,10 +96,12 @@ export default function CategoryDetail() {
           <Text className="font-body text-sm text-ink-2">‹ Categories</Text>
         </Pressable>
 
-        <View className="flex-row items-center justify-between">
-          <View className="flex-row items-center gap-3">
+        <View className="flex-row items-center justify-between gap-3">
+          <View className="flex-1 flex-row items-center gap-3">
             <View className="h-3 w-3 rounded" style={{ backgroundColor: category.color ?? '#999' }} />
-            <Text className="font-display-semibold text-lg text-ink">{category.name}</Text>
+            <Text className="flex-1 font-display-semibold text-lg text-ink" numberOfLines={1}>
+              {category.name}
+            </Text>
           </View>
           <Button size="sm" onPress={() => setAdding((v) => !v)}>
             {category.kind === 'fund' ? '+ Add contribution' : '+ Add item'}

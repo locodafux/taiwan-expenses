@@ -190,8 +190,8 @@ export default function Dashboard() {
         )}
 
         {payday && (
-          <Card className="flex-row items-center justify-between p-4">
-            <View>
+          <Card className="flex-row items-center justify-between gap-3 p-4">
+            <View className="flex-1">
               <Text className="font-body text-xs uppercase tracking-wide text-ink-muted">
                 Next payday
               </Text>
