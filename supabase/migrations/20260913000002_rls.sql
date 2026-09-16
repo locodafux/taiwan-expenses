@@ -72,10 +72,8 @@ create policy "members update categories" on public.categories
   for update to authenticated
   using (household_id in (select private.user_household_ids()))
   with check (household_id in (select private.user_household_ids()));
--- Deliberately no DELETE policy: categories carry ledger_entries history via
--- ON DELETE CASCADE, and hard-deleting one would destroy real financial
--- history with no undo. Removal from use is done via the existing
--- `archived` flag (docs/plan.md §1), not deletion.
+-- DELETE policy added in 20260916000001_categories_delete.sql (captain's
+-- explicit call: cascade away bill_items/ledger_entries history too).
 
 create policy "members read incomes" on public.incomes
   for select to authenticated using (household_id in (select private.user_household_ids()));
