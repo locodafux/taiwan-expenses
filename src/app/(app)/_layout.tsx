@@ -2,6 +2,7 @@ import { Redirect, Tabs } from 'expo-router';
 import { Text, type ColorValue } from 'react-native';
 
 import { GoalCelebration } from '@/components/GoalCelebration';
+import { UpdateBanner } from '@/components/UpdateBanner';
 import { useAuth } from '@/lib/auth';
 import { useHouseholdMembership } from '@/lib/queries';
 import { useRealtimeSync } from '@/lib/realtime';
@@ -25,6 +26,7 @@ export default function AppLayout() {
   return (
     <>
       <GoalCelebration householdId={member?.household_id} />
+      <UpdateBanner />
       <Tabs
         screenOptions={{
           headerShown: false,
