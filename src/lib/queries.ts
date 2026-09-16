@@ -51,6 +51,36 @@ export function useHouseholdMembers(householdId: string | undefined) {
   });
 }
 
+export function useHousehold(householdId: string | undefined) {
+  return useQuery({
+    queryKey: ['household', householdId],
+    enabled: !!householdId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('households')
+        .select('*')
+        .eq('id', householdId as string)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
+export function useUpdateHouseholdName(householdId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (name: string) => {
+      const { error } = await supabase
+        .from('households')
+        .update({ name })
+        .eq('id', householdId as string);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['household', householdId] }),
+  });
+}
+
 export function useCreateInvite() {
   return useMutation({
     mutationFn: async () => {
