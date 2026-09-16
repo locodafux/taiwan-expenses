@@ -154,6 +154,19 @@ export function useUpdateCategory(householdId: string | undefined) {
   });
 }
 
+export function useDeleteCategory(householdId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('categories').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['categories', householdId] });
+    },
+  });
+}
+
 // Claims the one-time goal-celebration for a category: the `.is(...)` guard
 // means only the first caller to reach this (across devices/household
 // members) gets a non-null row back, so the celebration modal shows exactly

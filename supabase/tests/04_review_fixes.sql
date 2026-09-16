@@ -1,8 +1,10 @@
 -- Exercises the three round-1 review fixes as live client-facing behavior:
 --   1. household_invites can no longer be INSERTed directly by a client
 --      (only create_household_invite(), SECURITY DEFINER, may create one).
---   2. categories has no DELETE policy — a member's DELETE silently affects
---      zero rows instead of destroying ledger_entries history via cascade.
+--   2. categories DELETE is allowed for a household member and cascades into
+--      dependent ledger_entries/bill_items (captain's explicit call, see
+--      20260916000001_categories_delete.sql — the client UI is responsible
+--      for warning before deleting a category with existing history).
 --   3. bill_items.category_id must reference a kind='bill' category.
 --
 -- Same psql-variable/\if pattern as 01_rls_isolation.sql (dollar-quoted DO
@@ -38,14 +40,19 @@ select (:'SQLSTATE' = '42501') as chk_invite_sqlstate \gset
   \quit 1
 \endif
 
--- (2) DELETE on categories must be a no-op (no DELETE policy at all), not a
--- hard delete cascading into ledger_entries history.
+-- (2) A household member can DELETE their own category, and it cascades
+-- into that category's ledger_entries/bill_items history.
 delete from public.categories where id = :'expenses_cat';
 
-select exists(select 1 from public.categories where id = :'expenses_cat') as chk_category_survived \gset
-\if :chk_category_survived
-\else
-  \echo 'FAIL: categories DELETE should have affected zero rows (no DELETE policy), but the category is gone'
+select exists(select 1 from public.categories where id = :'expenses_cat') as chk_category_still_there \gset
+\if :chk_category_still_there
+  \echo 'FAIL: categories DELETE should have removed the row, but it still exists'
+  \quit 1
+\endif
+
+select exists(select 1 from public.ledger_entries where category_id = :'expenses_cat') as chk_ledger_still_there \gset
+\if :chk_ledger_still_there
+  \echo 'FAIL: deleting a category should cascade-delete its ledger_entries, but some remain'
   \quit 1
 \endif
 

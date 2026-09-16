@@ -1,4 +1,5 @@
 import { fireEvent, waitFor } from '@testing-library/react-native';
+import { Alert } from 'react-native';
 
 import { renderWithTheme } from '@/test/renderWithTheme';
 
@@ -17,6 +18,7 @@ const mockUseHouseholdMembers = jest.fn();
 const mockUseBillItems = jest.fn();
 const mockUseAddManualContribution = jest.fn();
 const mockUseCreateBillItem = jest.fn();
+const mockUseDeleteCategory = jest.fn();
 
 jest.mock('@/lib/queries', () => ({
   ...jest.requireActual('@/lib/queries'),
@@ -27,6 +29,7 @@ jest.mock('@/lib/queries', () => ({
   useBillItems: (...args: unknown[]) => mockUseBillItems(...args),
   useAddManualContribution: (...args: unknown[]) => mockUseAddManualContribution(...args),
   useCreateBillItem: (...args: unknown[]) => mockUseCreateBillItem(...args),
+  useDeleteCategory: (...args: unknown[]) => mockUseDeleteCategory(...args),
 }));
 
 import CategoryDetail from '../[id]';
@@ -54,6 +57,7 @@ const members = [{ id: 'member-1', user_id: 'user-1', display_name: 'Leo' }];
 
 const mockAddContributionMutateAsync = jest.fn();
 const mockCreateBillItemMutateAsync = jest.fn();
+const mockDeleteCategoryMutateAsync = jest.fn();
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -69,6 +73,10 @@ beforeEach(() => {
   });
   mockUseCreateBillItem.mockReturnValue({
     mutateAsync: mockCreateBillItemMutateAsync.mockResolvedValue({}),
+    isPending: false,
+  });
+  mockUseDeleteCategory.mockReturnValue({
+    mutateAsync: mockDeleteCategoryMutateAsync.mockResolvedValue({}),
     isPending: false,
   });
 });
@@ -147,5 +155,37 @@ describe('CategoryDetail', () => {
     const { getByText } = await renderWithTheme(<CategoryDetail />);
     await fireEvent.press(await waitFor(() => getByText('‹ Categories')));
     expect(mockBack).toHaveBeenCalled();
+  });
+
+  it('deletes the category after confirming, and navigates back', async () => {
+    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation((_title, _message, buttons) => {
+      const confirm = buttons?.find((b) => b.text === 'Delete');
+      confirm?.onPress?.();
+    });
+
+    const { getByText } = await renderWithTheme(<CategoryDetail />);
+    await fireEvent.press(await waitFor(() => getByText('Delete category')));
+
+    expect(alertSpy).toHaveBeenCalledWith(
+      'Delete this category?',
+      expect.stringContaining('permanently deleted'),
+      expect.any(Array),
+    );
+    await waitFor(() => expect(mockDeleteCategoryMutateAsync).toHaveBeenCalledWith('cat-fund'));
+    await waitFor(() => expect(mockBack).toHaveBeenCalled());
+
+    alertSpy.mockRestore();
+  });
+
+  it('does not delete when the confirmation is cancelled', async () => {
+    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+
+    const { getByText } = await renderWithTheme(<CategoryDetail />);
+    await fireEvent.press(await waitFor(() => getByText('Delete category')));
+
+    expect(alertSpy).toHaveBeenCalled();
+    expect(mockDeleteCategoryMutateAsync).not.toHaveBeenCalled();
+
+    alertSpy.mockRestore();
   });
 });

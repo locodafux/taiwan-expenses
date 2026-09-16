@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/ui/Button';
@@ -13,6 +13,7 @@ import {
   useCategories,
   useCategoryHistory,
   useCreateBillItem,
+  useDeleteCategory,
   useHouseholdMembers,
   useHouseholdMembership,
 } from '@/lib/queries';
@@ -31,6 +32,7 @@ export default function CategoryDetail() {
 
   const addContribution = useAddManualContribution(id, householdId);
   const createBillItem = useCreateBillItem(id);
+  const deleteCategory = useDeleteCategory(householdId);
 
   const [adding, setAdding] = useState(false);
   const [amount, setAmount] = useState('');
@@ -61,6 +63,31 @@ export default function CategoryDetail() {
 
   const goal = category.rule?.type === 'goal' ? category.rule.target_amount : null;
   const pct = goal ? Math.min(1, balance / goal) : null;
+  const hasHistory = (history ?? []).length > 0 || (billItems ?? []).length > 0;
+
+  function confirmDelete() {
+    Alert.alert(
+      'Delete this category?',
+      hasHistory
+        ? `"${category!.name}" and everything linked to it — its bills and spending history — will be permanently deleted. This can’t be undone.`
+        : `"${category!.name}" will be permanently deleted. This can’t be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteCategory.mutateAsync(category!.id);
+              router.back();
+            } catch (e) {
+              Alert.alert('Could not delete category', e instanceof Error ? e.message : 'Try again.');
+            }
+          },
+        },
+      ],
+    );
+  }
 
   return (
     <SafeAreaView className="flex-1 bg-page" edges={['top']}>
@@ -273,6 +300,15 @@ export default function CategoryDetail() {
             )}
           </Card>
         </View>
+
+        <Button
+          variant="secondary"
+          className="border-status-bad"
+          loading={deleteCategory.isPending}
+          onPress={confirmDelete}
+        >
+          Delete category
+        </Button>
       </ScrollView>
     </SafeAreaView>
   );
