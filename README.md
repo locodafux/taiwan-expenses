@@ -1,47 +1,56 @@
 # Taiwan Fund Planner
 
-A single-page budgeting tool for one specific Philippine-peso income/expense/debt schedule, running October 2026 through July 17, 2027. It's built for whoever owns that plan (the repo owner) to see, at a glance, how much of every payday's leftover cash should go toward bills, debt, a Taiwan savings goal, a "Pinatubo trip" fund, an emergency fund, general savings, and whatever's left over — plus a checklist to tick off as each payday's amounts actually get set aside.
+A couple's shared household finance and fund-allocation planner, built as an Expo/React
+Native app on top of Supabase. Both partners sign in (email/password or Google) to the same
+household, pool their paydays, and split each payday's leftover cash proportionally across
+savings categories — bills, debt, goals, and general funds — with a live checklist to mark
+off as amounts are actually set aside.
 
-## How to use it
+This began as a single-file HTML tool (`taiwan-fund-planner.html`, kept for reference) hardcoded
+to one person's specific 2026–2027 budget. It has since been rebuilt into a general-purpose,
+multi-user app; the original file no longer reflects how the app works today.
 
-There's no install or server. Just open `taiwan-fund-planner.html` directly in a web browser (double-click it, or drag it into a browser window). Everything — layout, styling, and logic — is self-contained in that one file, with no build step and no external dependencies besides a Google Fonts stylesheet.
+## Stack
 
-The page has two tabs:
-- **Overview** — the final totals by end-of-plan, and a full month-by-month table.
-- **Monthly breakdown** — a calendar for the selected month, per-month fund tiles, and a checklist of every item (expenses, debt, fund contributions) grouped by payday, with a progress bar.
+- **Frontend**: Expo (React Native) + Expo Router, styled with NativeWind v4 (Tailwind v3)
+- **Backend**: Supabase (Postgres, Auth, Realtime), with RLS enforcing per-household data
+  isolation
+- **State/data**: TanStack Query, synced live via Supabase Realtime subscriptions
 
-## Data model (in brief)
+## Features
 
-All figures are hardcoded in the HTML/JS itself:
+- **Households & invites**: sign up to create a new household, or join an existing one via an
+  invite code. Household membership and name are manageable from Settings.
+- **Shared incomes**: each member's paydays and take-home amounts are recorded per household.
+- **Categories with proportional allocation**: configurable savings/expense categories, each
+  using one of three rule types — *goal* (balance-adaptive target by a date), *capped-percent*,
+  or *remainder* — reproducing the original tool's proportional payday-split math generically.
+  Categories can be archived.
+- **Bill items**: recurring per-category expense items.
+- **Payday checklist**: a per-payday checklist of bills, debts, and fund contributions; checking
+  an item posts a real ledger transaction (not just a toggle) and updates that category's running
+  balance.
+- **Dashboard**: household overview, including a saved-this-quarter stat and a payday streak
+  chip.
+- **Goal celebrations**: a one-time, cross-device notification when a goal category is fully
+  funded.
+- **Realtime sync**: changes made by either partner (categories, incomes, bill items, ledger
+  entries, membership) sync live to the other's device.
+- **Switchable themes**: three runtime-switchable UI themes (`original`, `warm`, `playful`),
+  set per-user in Settings.
 
-- **Paydays**: four fixed paydays per month — the 5th, 15th, 20th, and 30th — each with its own fixed take-home amount.
-- **Expense items**: a fixed list of recurring monthly expenses (rent, utilities, food, transport fares, subscriptions, etc.), each tagged with the specific payday it's paid from.
-- **Debt items by month**: a per-month list of debts owed (e.g. Macbook, Atome, Shopee, Nano), also tagged by payday, which shrinks over time as debts get paid off.
-- **Fund categories**: a Taiwan fund (goal ₱80,000, spread across the first several months), a one-time Pinatubo trip fund (₱15,000, due before a fixed date), an emergency fund (capped at ₱100,000), general savings, and "excess" (whatever's left after everything else).
-- **Proportional allocation rule**: for each month, after expenses and debt are assigned to their paydays, whatever's left over per payday is used as a weight — a payday with more cushion after its own bills and debt gets a proportionally larger share of that month's fund contributions, and a payday running tight (or negative) gets none.
+## Setup
 
-Checklist state (which items are checked off) is saved via the browser's `localStorage`.
+1. Install dependencies: `npm install`
+2. Copy `.env.example` to `.env.local` and fill in your Supabase project's URL and anon key
+   (`supabase status` for a local `supabase start` stack, or Project Settings → API for a
+   real project).
+3. If you're pointing at a fresh Supabase project, link it and apply the schema:
+   `supabase link --project-ref <ref>` then `supabase db push` (applies everything in
+   `supabase/migrations/`, in filename order).
+4. Start the app: `npx expo start` (or `--android` / `--ios`; see `AGENTS.md` for the
+   `--web` caveat and other environment-specific notes).
 
-## Current limitations
-
-- **No editing UI.** All numbers — income, expenses, debts, fund targets — are hardcoded in the HTML/JS. Changing anything requires editing the file directly.
-- **Local-only persistence.** Checklist progress is saved only via `localStorage` in the browser it was checked in. It does not sync across browsers or devices, and it's lost if browser data is cleared.
-
-## Roadmap (future ideas, not committed work)
-
-- Deploy it live (e.g. on Vercel's free tier) so it's reachable at a URL instead of only as a local file.
-- Make it installable on Android as a PWA.
-- Add real persistent, synced data storage in place of `localStorage`.
-- Potentially generalize it into a broader personal-finance app built around this same idea.
-
-## Planned rework
-
-The captain has approved a plan to rebuild this as a full-stack couple's finance app. The Supabase backend (schema, RLS, allocation engine — see `supabase/migrations/`) is built; the React Native/Expo frontend is a separate future task and doesn't exist yet, so everything above still describes how the tool works today. The rework will implement the following:
-
-See [docs/plan.md](docs/plan.md) and [docs/techspec.md](docs/techspec.md) for the full design and technical spec.
-
-- **React Native (Expo) mobile app**, installable on Android, backed by Supabase's free tier (Postgres + Auth + Storage + Realtime) instead of a static HTML file with `localStorage`.
-- **Shared household budget**: two people's incomes pool into one budget. Each person signs in separately (including Google sign-in) but both see and edit the same shared data.
-- **Fully editable categories**: expenses, savings, the Taiwan fund, etc. become configurable in-app instead of hardcoded, using three rule types — *goal*, *capped-percent*, and *remainder* — matching the same proportional payday-split math this tool uses today.
-- **Real ledger transactions**: checking off an item posts an actual transaction and builds that category's running balance over time, instead of just toggling a saved checkbox.
-- **Three switchable UI themes**: an evolution of the original palette, a warm couple-oriented theme, and a bold playful-fintech look (the default).
+See `AGENTS.md` for architecture notes, migration/RLS details, and sharp edges discovered
+during development. See `docs/plan.md` and `docs/techspec.md` for the original design/tech
+spec this build was based on.
