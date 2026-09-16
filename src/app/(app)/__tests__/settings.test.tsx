@@ -8,14 +8,18 @@ jest.mock('@/lib/auth', () => ({
 }));
 
 const mockUseHouseholdMembership = jest.fn();
+const mockUseHousehold = jest.fn();
 const mockUseHouseholdMembers = jest.fn();
 const mockUseCreateInvite = jest.fn();
+const mockUseUpdateHouseholdName = jest.fn();
 
 jest.mock('@/lib/queries', () => ({
   ...jest.requireActual('@/lib/queries'),
   useHouseholdMembership: (...args: unknown[]) => mockUseHouseholdMembership(...args),
+  useHousehold: (...args: unknown[]) => mockUseHousehold(...args),
   useHouseholdMembers: (...args: unknown[]) => mockUseHouseholdMembers(...args),
   useCreateInvite: (...args: unknown[]) => mockUseCreateInvite(...args),
+  useUpdateHouseholdName: (...args: unknown[]) => mockUseUpdateHouseholdName(...args),
 }));
 
 import Settings from '../settings';
@@ -27,14 +31,19 @@ const members = [
 ];
 
 const mockCreateInviteMutateAsync = jest.fn();
+const mockUpdateHouseholdNameMutateAsync = jest.fn();
 
 beforeEach(() => {
   jest.clearAllMocks();
   mockUseHouseholdMembership.mockReturnValue({ data: member });
+  mockUseHousehold.mockReturnValue({ data: { id: 'household-1', name: 'The Smiths' } });
   mockUseHouseholdMembers.mockReturnValue({ data: members });
   mockUseCreateInvite.mockReturnValue({
     mutateAsync: mockCreateInviteMutateAsync.mockResolvedValue({ code: 'abc123def456' }),
     isPending: false,
+  });
+  mockUseUpdateHouseholdName.mockReturnValue({
+    mutateAsync: mockUpdateHouseholdNameMutateAsync.mockResolvedValue(undefined),
   });
 });
 
@@ -71,6 +80,17 @@ describe('Settings', () => {
     await fireEvent.press(await waitFor(() => getByText('Generate invite code')));
 
     expect(await waitFor(() => getByText('Could not generate invite code'))).toBeTruthy();
+  });
+
+  it('renames the household', async () => {
+    const { getByText, getByDisplayValue } = await renderWithTheme(<Settings />);
+
+    await fireEvent.press(await waitFor(() => getByText('The Smiths')));
+    const input = getByDisplayValue('The Smiths');
+    await fireEvent.changeText(input, 'The Garcias');
+    await fireEvent(input, 'submitEditing');
+
+    await waitFor(() => expect(mockUpdateHouseholdNameMutateAsync).toHaveBeenCalledWith('The Garcias'));
   });
 
   it('signs out', async () => {

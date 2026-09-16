@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/ui/Avatar';
@@ -7,7 +7,13 @@ import { Button } from '@/components/ui/Button';
 import { Card, ListRow } from '@/components/ui/Card';
 import { ThemeSwitcher } from '@/components/ui/ThemeSwitcher';
 import { useAuth } from '@/lib/auth';
-import { useCreateInvite, useHouseholdMembers, useHouseholdMembership } from '@/lib/queries';
+import {
+  useCreateInvite,
+  useHousehold,
+  useHouseholdMembers,
+  useHouseholdMembership,
+  useUpdateHouseholdName,
+} from '@/lib/queries';
 import { useTheme } from '@/theme/ThemeProvider';
 
 const THEME_DESCRIPTIONS = {
@@ -20,10 +26,26 @@ export default function Settings() {
   const { theme, setTheme } = useTheme();
   const { signOut } = useAuth();
   const { data: member } = useHouseholdMembership();
+  const { data: household } = useHousehold(member?.household_id);
   const { data: members } = useHouseholdMembers(member?.household_id);
   const createInvite = useCreateInvite();
+  const updateHouseholdName = useUpdateHouseholdName(member?.household_id);
   const [invite, setInvite] = useState<string | null>(null);
   const [inviteError, setInviteError] = useState<string | null>(null);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [nameDraft, setNameDraft] = useState('');
+
+  const saveName = async () => {
+    const trimmed = nameDraft.trim();
+    setIsEditingName(false);
+    if (!trimmed || trimmed === household?.name) return;
+    try {
+      await updateHouseholdName.mutateAsync(trimmed);
+    } catch {
+      // ponytail: no toast infra for this screen yet; the field snaps back to
+      // the last-known name via useHousehold's cached data on failure.
+    }
+  };
 
   return (
     <SafeAreaView className="flex-1 bg-page" edges={['top']}>
@@ -40,6 +62,26 @@ export default function Settings() {
 
         <View>
           <Text className="mb-3 font-body-semibold text-sm text-ink">Household</Text>
+          {isEditingName ? (
+            <TextInput
+              autoFocus
+              value={nameDraft}
+              onChangeText={setNameDraft}
+              onBlur={saveName}
+              onSubmitEditing={saveName}
+              className="mb-3 rounded-md border border-border bg-page px-4 py-4 font-body text-base text-ink"
+            />
+          ) : (
+            <Pressable
+              className="mb-3"
+              onPress={() => {
+                setNameDraft(household?.name ?? '');
+                setIsEditingName(true);
+              }}
+            >
+              <Text className="font-body text-base text-ink">{household?.name ?? 'Our household'}</Text>
+            </Pressable>
+          )}
           <Card>
             {(members ?? []).map((m, i) => (
               <ListRow key={m.id} isLast={i === (members?.length ?? 0) - 1}>

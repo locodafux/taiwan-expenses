@@ -25,6 +25,13 @@ export function useRealtimeSync(householdId: string | undefined) {
       )
       .on(
         'postgres_changes',
+        { event: '*', schema: 'public', table: 'households', filter: `id=eq.${householdId}` },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['household', householdId] });
+        },
+      )
+      .on(
+        'postgres_changes',
         { event: '*', schema: 'public', table: 'categories', filter: `household_id=eq.${householdId}` },
         () => {
           queryClient.invalidateQueries({ queryKey: ['categories', householdId] });
