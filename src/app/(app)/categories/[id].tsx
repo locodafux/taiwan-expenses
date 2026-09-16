@@ -64,7 +64,7 @@ export default function CategoryDetail() {
 
   return (
     <SafeAreaView className="flex-1 bg-page" edges={['top']}>
-      <ScrollView contentContainerClassName="gap-5 px-7 py-6" className="flex-1">
+      <ScrollView contentContainerClassName="gap-4 px-6 py-5" className="flex-1">
         <Pressable onPress={() => router.back()} hitSlop={13} className="self-start py-3">
           <Text className="font-body text-sm text-ink-2">‹ Categories</Text>
         </Pressable>

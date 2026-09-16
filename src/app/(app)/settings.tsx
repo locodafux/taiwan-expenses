@@ -27,7 +27,7 @@ export default function Settings() {
 
   return (
     <SafeAreaView className="flex-1 bg-page" edges={['top']}>
-      <ScrollView contentContainerClassName="gap-7 px-7 py-6" className="flex-1">
+      <ScrollView contentContainerClassName="gap-5 px-6 py-5" className="flex-1">
         <Text className="font-display-semibold text-lg text-ink">Settings</Text>
 
         <View>

@@ -27,15 +27,15 @@ function Ring({ pct, color, trackColor }: { pct: number; color: string; trackCol
   const r = 17;
   const c = 2 * Math.PI * r;
   return (
-    <Svg width={42} height={42} viewBox="0 0 42 42">
-      <Circle cx={21} cy={21} r={r} fill="none" stroke={trackColor} strokeWidth={4} />
+    <Svg width={46} height={46} viewBox="0 0 42 42">
+      <Circle cx={21} cy={21} r={r} fill="none" stroke={trackColor} strokeWidth={6} />
       <Circle
         cx={21}
         cy={21}
         r={r}
         fill="none"
         stroke={color}
-        strokeWidth={4}
+        strokeWidth={6}
         strokeLinecap="round"
         strokeDasharray={c}
         strokeDashoffset={c * (1 - Math.min(1, Math.max(0, pct)))}
@@ -115,7 +115,7 @@ export default function Dashboard() {
 
   return (
     <SafeAreaView className="flex-1 bg-page" edges={['top']}>
-      <ScrollView contentContainerClassName="gap-5 px-7 py-6" className="flex-1">
+      <ScrollView contentContainerClassName="gap-4 px-6 py-5" className="flex-1">
         <View className="flex-row items-center gap-3">
           <View className="flex-row">
             {(members ?? []).slice(0, 2).map((m, i) => (
@@ -137,7 +137,7 @@ export default function Dashboard() {
         </View>
 
         {!setupComplete && (
-          <Card className="gap-1 p-5">
+          <Card className="gap-1 p-4">
             <View className="mb-2 flex-row items-center gap-3">
               <Ring
                 pct={setupSteps.filter((s) => s.done).length / setupSteps.length}
@@ -169,7 +169,7 @@ export default function Dashboard() {
         )}
 
         {savedThisQuarter !== undefined && streak !== undefined && (
-          <View className="flex-row items-center gap-4 rounded-xl border border-border bg-surface p-5">
+          <Card className="flex-row items-center gap-4 p-4">
             <Ring
               pct={setupSteps.filter((s) => s.done).length / setupSteps.length}
               color={vars['--accent']}
@@ -186,11 +186,11 @@ export default function Dashboard() {
                 {streak > 0 ? `🔥 ${streak}-payday streak` : 'Start your streak'}
               </Text>
             </View>
-          </View>
+          </Card>
         )}
 
         {payday && (
-          <View className="flex-row items-center justify-between rounded-xl border border-border bg-surface p-5">
+          <Card className="flex-row items-center justify-between p-4">
             <View>
               <Text className="font-body text-xs uppercase tracking-wide text-ink-muted">
                 Next payday
@@ -203,7 +203,7 @@ export default function Dashboard() {
             <Button size="sm" onPress={() => router.push('/(app)/checklist')}>
               Review
             </Button>
-          </View>
+          </Card>
         )}
 
         <View>
@@ -214,35 +214,33 @@ export default function Dashboard() {
               const goal = c.rule?.type === 'goal' ? c.rule.target_amount : null;
               const target = goal ?? (c.rule?.type === 'capped_percent' ? c.rule.cap ?? null : null);
               return (
-                <Pressable
-                  key={c.id}
-                  onPress={() => router.push(`/(app)/categories/${c.id}`)}
-                  className="flex-row items-center gap-4 rounded-md border border-border bg-surface p-4"
-                >
-                  {target != null ? (
-                    <Ring pct={balance / target} color={c.color ?? '#999'} trackColor={vars['--surface-3']} />
-                  ) : (
-                    <View className="h-[42px] w-[42px] items-center justify-center">
-                      <View className="h-3 w-3 rounded-full" style={{ backgroundColor: c.color ?? '#999' }} />
+                <Pressable key={c.id} onPress={() => router.push(`/(app)/categories/${c.id}`)}>
+                  <Card className="flex-row items-center gap-4 p-4">
+                    {target != null ? (
+                      <Ring pct={balance / target} color={c.color ?? '#999'} trackColor={vars['--surface-3']} />
+                    ) : (
+                      <View className="h-[42px] w-[42px] items-center justify-center">
+                        <View className="h-3 w-3 rounded-full" style={{ backgroundColor: c.color ?? '#999' }} />
+                      </View>
+                    )}
+                    <View className="flex-1">
+                      <Text className="font-body-semibold text-base text-ink">{c.name}</Text>
+                      <Text className="font-body text-xs text-ink-muted">
+                        {c.kind === 'bill' ? 'Recurring bills' : goal ? `Goal · ${formatPeso(goal)}` : 'No cap'}
+                      </Text>
                     </View>
-                  )}
-                  <View className="flex-1">
-                    <Text className="font-body-semibold text-base text-ink">{c.name}</Text>
-                    <Text className="font-body text-xs text-ink-muted">
-                      {c.kind === 'bill' ? 'Recurring bills' : goal ? `Goal · ${formatPeso(goal)}` : 'No cap'}
-                    </Text>
-                  </View>
-                  {c.kind === 'fund' ? (
-                    <Text className="font-mono text-sm text-ink">
-                      {formatPeso(balance)}
-                      {goal ? ` / ${formatPeso(goal)}` : ''}
-                    </Text>
-                  ) : (
-                    <Text className="font-mono text-sm text-ink">
-                      {formatPeso(balancesThisMonth?.[c.id] ?? 0)} this month
-                    </Text>
-                  )}
-                  <Text className="text-ink-muted">›</Text>
+                    {c.kind === 'fund' ? (
+                      <Text className="font-mono text-sm text-ink">
+                        {formatPeso(balance)}
+                        {goal ? ` / ${formatPeso(goal)}` : ''}
+                      </Text>
+                    ) : (
+                      <Text className="font-mono text-sm text-ink">
+                        {formatPeso(balancesThisMonth?.[c.id] ?? 0)} this month
+                      </Text>
+                    )}
+                    <Text className="text-ink-muted">›</Text>
+                  </Card>
                 </Pressable>
               );
             })}
