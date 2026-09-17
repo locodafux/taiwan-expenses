@@ -1,5 +1,4 @@
 import { fireEvent, waitFor } from '@testing-library/react-native';
-import { Alert } from 'react-native';
 
 import { renderWithTheme } from '@/test/renderWithTheme';
 
@@ -157,35 +156,50 @@ describe('CategoryDetail', () => {
     expect(mockBack).toHaveBeenCalled();
   });
 
-  it('deletes the category after confirming, and navigates back', async () => {
-    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation((_title, _message, buttons) => {
-      const confirm = buttons?.find((b) => b.text === 'Delete');
-      confirm?.onPress?.();
+  it('opens the delete confirmation sheet with real bill/entry/total stats', async () => {
+    mockParams.id = 'cat-bill';
+    mockUseBillItems.mockReturnValue({
+      data: [
+        { id: 'bi-1', label: 'Base rent', amount: 1500, recurring_day: 5, end_date: null },
+        { id: 'bi-2', label: 'Utilities', amount: 500, recurring_day: 10, end_date: null },
+        { id: 'bi-3', label: 'Water', amount: 300, recurring_day: 15, end_date: null },
+      ],
     });
 
     const { getByText } = await renderWithTheme(<CategoryDetail />);
     await fireEvent.press(await waitFor(() => getByText('Delete category')));
 
-    expect(alertSpy).toHaveBeenCalledWith(
-      'Delete this category?',
-      expect.stringContaining('permanently deleted'),
-      expect.any(Array),
-    );
-    await waitFor(() => expect(mockDeleteCategoryMutateAsync).toHaveBeenCalledWith('cat-fund'));
-    await waitFor(() => expect(mockBack).toHaveBeenCalled());
-
-    alertSpy.mockRestore();
+    expect(getByText('Delete Category & History')).toBeTruthy();
+    expect(getByText('3')).toBeTruthy(); // Bills
+    expect(getByText(String(history.length))).toBeTruthy(); // Entries
+    expect(getByText('₱ 8,000')).toBeTruthy(); // Logged (5000 + 3000)
   });
 
-  it('does not delete when the confirmation is cancelled', async () => {
-    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+  it('deletes the category after confirming in the sheet, and navigates back', async () => {
+    const { getByText } = await renderWithTheme(<CategoryDetail />);
+    await fireEvent.press(await waitFor(() => getByText('Delete category')));
+    await fireEvent.press(getByText('Delete Category & History'));
+
+    await waitFor(() => expect(mockDeleteCategoryMutateAsync).toHaveBeenCalledWith('cat-fund'));
+    await waitFor(() => expect(mockBack).toHaveBeenCalled());
+  });
+
+  it('does not delete when the sheet is cancelled', async () => {
+    const { getByText, queryByText } = await renderWithTheme(<CategoryDetail />);
+    await fireEvent.press(await waitFor(() => getByText('Delete category')));
+    await fireEvent.press(getByText('Cancel'));
+
+    expect(mockDeleteCategoryMutateAsync).not.toHaveBeenCalled();
+    await waitFor(() => expect(queryByText('Delete Category & History')).toBeNull());
+  });
+
+  it('shows a simple no-history state for a category with nothing logged', async () => {
+    mockUseCategoryHistory.mockReturnValue({ data: [] });
+    mockUseBillItems.mockReturnValue({ data: [] });
 
     const { getByText } = await renderWithTheme(<CategoryDetail />);
     await fireEvent.press(await waitFor(() => getByText('Delete category')));
 
-    expect(alertSpy).toHaveBeenCalled();
-    expect(mockDeleteCategoryMutateAsync).not.toHaveBeenCalled();
-
-    alertSpy.mockRestore();
+    expect(getByText(/nothing else to lose/)).toBeTruthy();
   });
 });
