@@ -4,8 +4,9 @@ import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput,
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/ui/Button';
+import { ErrorState } from '@/components/ui/ErrorState';
 import { supabase } from '@/lib/supabase';
-import { useCreateCategory, useHouseholdMembership } from '@/lib/queries';
+import { combineQueryState, useCreateCategory, useHouseholdMembership } from '@/lib/queries';
 import { useTheme } from '@/theme/ThemeProvider';
 
 type Kind = 'fund' | 'bill';
@@ -15,8 +16,11 @@ const inputClass = 'mt-2 rounded-md border border-border bg-page px-4 py-4 font-
 export default function AddCategorySheet() {
   const router = useRouter();
   const { vars } = useTheme();
-  const { data: member } = useHouseholdMembership();
+  const membershipQuery = useHouseholdMembership();
+  const member = membershipQuery.data;
   const createCategory = useCreateCategory(member?.household_id);
+
+  const { isError, refetch } = combineQueryState(membershipQuery);
 
   const colorOptions = [
     { value: vars['--cat-expenses'], name: 'Blue' },
@@ -67,6 +71,14 @@ export default function AddCategorySheet() {
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not save category');
     }
+  }
+
+  if (isError) {
+    return (
+      <SafeAreaView className="flex-1 bg-page">
+        <ErrorState onRetry={refetch} />
+      </SafeAreaView>
+    );
   }
 
   return (

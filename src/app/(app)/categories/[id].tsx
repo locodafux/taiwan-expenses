@@ -6,9 +6,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/ui/Button';
 import { Card, ListRow } from '@/components/ui/Card';
 import { DeleteCategorySheet } from '@/components/ui/DeleteCategorySheet';
+import { ErrorState } from '@/components/ui/ErrorState';
 import { formatPeso } from '@/lib/format';
 import { fromDateOnly } from '@/lib/payday';
 import {
+  combineQueryState,
   useAddManualContribution,
   useBillItems,
   useCategories,
@@ -22,18 +24,31 @@ import {
 export default function CategoryDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { data: member } = useHouseholdMembership();
+  const membershipQuery = useHouseholdMembership();
+  const member = membershipQuery.data;
   const householdId = member?.household_id;
-  const { data: categories } = useCategories(householdId, { includeArchived: true });
+  const categoriesQuery = useCategories(householdId, { includeArchived: true });
+  const categories = categoriesQuery.data;
   const category = categories?.find((c) => c.id === id);
 
-  const { data: history } = useCategoryHistory(id);
-  const { data: members } = useHouseholdMembers(householdId);
-  const { data: billItems } = useBillItems(category?.kind === 'bill' ? id : undefined);
+  const historyQuery = useCategoryHistory(id);
+  const history = historyQuery.data;
+  const membersQuery = useHouseholdMembers(householdId);
+  const members = membersQuery.data;
+  const billItemsQuery = useBillItems(category?.kind === 'bill' ? id : undefined);
+  const billItems = billItemsQuery.data;
 
   const addContribution = useAddManualContribution(id, householdId);
   const createBillItem = useCreateBillItem(id);
   const deleteCategory = useDeleteCategory(householdId);
+
+  const { isError, refetch } = combineQueryState(
+    membershipQuery,
+    categoriesQuery,
+    historyQuery,
+    membersQuery,
+    billItemsQuery,
+  );
 
   const [adding, setAdding] = useState(false);
   const [amount, setAmount] = useState('');
@@ -59,6 +74,14 @@ export default function CategoryDetail() {
   function memberName(userId: string | null) {
     if (!userId) return 'Manual entry';
     return members?.find((m) => m.user_id === userId)?.display_name ?? 'Manual entry';
+  }
+
+  if (isError) {
+    return (
+      <SafeAreaView className="flex-1 bg-page">
+        <ErrorState onRetry={refetch} />
+      </SafeAreaView>
+    );
   }
 
   if (!category) return null;
