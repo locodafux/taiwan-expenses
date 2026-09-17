@@ -5,9 +5,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import { Card, ListRow } from '@/components/ui/Card';
+import { ErrorState } from '@/components/ui/ErrorState';
 import { ThemeSwitcher } from '@/components/ui/ThemeSwitcher';
 import { useAuth } from '@/lib/auth';
 import {
+  combineQueryState,
   useCreateInvite,
   useHousehold,
   useHouseholdMembers,
@@ -25,11 +27,17 @@ const THEME_DESCRIPTIONS = {
 export default function Settings() {
   const { theme, setTheme } = useTheme();
   const { signOut, deleteAccount } = useAuth();
-  const { data: member } = useHouseholdMembership();
-  const { data: household } = useHousehold(member?.household_id);
-  const { data: members } = useHouseholdMembers(member?.household_id);
+  const membershipQuery = useHouseholdMembership();
+  const member = membershipQuery.data;
+  const householdQuery = useHousehold(member?.household_id);
+  const household = householdQuery.data;
+  const membersQuery = useHouseholdMembers(member?.household_id);
+  const members = membersQuery.data;
   const createInvite = useCreateInvite();
   const updateHouseholdName = useUpdateHouseholdName(member?.household_id);
+
+  const { isError, refetch } = combineQueryState(membershipQuery, householdQuery, membersQuery);
+
   const [invite, setInvite] = useState<string | null>(null);
   const [inviteError, setInviteError] = useState<string | null>(null);
   const [isEditingName, setIsEditingName] = useState(false);
@@ -74,6 +82,14 @@ export default function Settings() {
       // the last-known name via useHousehold's cached data on failure.
     }
   };
+
+  if (isError) {
+    return (
+      <SafeAreaView className="flex-1 bg-page">
+        <ErrorState onRetry={refetch} />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView className="flex-1 bg-page" edges={['top']}>

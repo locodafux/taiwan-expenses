@@ -5,8 +5,15 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import { Card, ListRow } from '@/components/ui/Card';
+import { ErrorState } from '@/components/ui/ErrorState';
 import { formatPeso } from '@/lib/format';
-import { useCreateIncome, useHouseholdMembership, useIncomes, useUpdateIncome } from '@/lib/queries';
+import {
+  combineQueryState,
+  useCreateIncome,
+  useHouseholdMembership,
+  useIncomes,
+  useUpdateIncome,
+} from '@/lib/queries';
 import type { Income } from '@/lib/database.types';
 
 const RECURRING_DAYS = [5, 15, 20, 30];
@@ -16,11 +23,15 @@ function ordinal(day: number) {
 }
 
 export default function IncomeManagement() {
-  const { data: member } = useHouseholdMembership();
+  const membershipQuery = useHouseholdMembership();
+  const member = membershipQuery.data;
   const householdId = member?.household_id;
-  const { data: incomes } = useIncomes(householdId);
+  const incomesQuery = useIncomes(householdId);
+  const incomes = incomesQuery.data;
   const createIncome = useCreateIncome(householdId);
   const updateIncome = useUpdateIncome(householdId);
+
+  const { isError, refetch } = combineQueryState(membershipQuery, incomesQuery);
 
   const [adding, setAdding] = useState(false);
   const [label, setLabel] = useState('');
@@ -79,6 +90,14 @@ export default function IncomeManagement() {
     if (!editing) return;
     await updateIncome.mutateAsync({ id: editing.id, active: !editing.active });
     setEditing(null);
+  }
+
+  if (isError) {
+    return (
+      <SafeAreaView className="flex-1 bg-page">
+        <ErrorState onRetry={refetch} />
+      </SafeAreaView>
+    );
   }
 
   return (
