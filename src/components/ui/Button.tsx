@@ -4,7 +4,7 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, type PressableProps } f
 import { GRADIENT_ACCENT } from '@/theme/tokens';
 import { useTheme } from '@/theme/ThemeProvider';
 
-type Variant = 'primary' | 'secondary' | 'ghost';
+type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
 type Size = 'sm' | 'md';
 
 type ButtonProps = Omit<PressableProps, 'children'> & {
@@ -28,6 +28,7 @@ const variantClasses: Record<Variant, { container: string; text: string }> = {
   primary: { container: 'bg-accent', text: 'text-white' },
   secondary: { container: 'bg-surface-2 border border-border', text: 'text-ink' },
   ghost: { container: 'bg-transparent', text: 'text-ink-2' },
+  danger: { container: 'bg-status-bad', text: 'text-white' },
 };
 
 export function Button({
@@ -43,7 +44,7 @@ export function Button({
   const gradient = variant === 'primary' ? GRADIENT_ACCENT[theme] : null;
   const isDisabled = disabled || loading;
   const v = variantClasses[variant];
-  const indicatorColor = variant === 'primary' ? '#fff9f4' : vars['--ink'];
+  const indicatorColor = variant === 'primary' || variant === 'danger' ? '#fff9f4' : vars['--ink'];
 
   const content = (
     <>

@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/ui/Button';
 import { Card, ListRow } from '@/components/ui/Card';
+import { DeleteCategorySheet } from '@/components/ui/DeleteCategorySheet';
 import { formatPeso } from '@/lib/format';
 import { fromDateOnly } from '@/lib/payday';
 import {
@@ -39,6 +40,7 @@ export default function CategoryDetail() {
   const [billLabel, setBillLabel] = useState('');
   const [billDay, setBillDay] = useState('5');
   const [error, setError] = useState<string | null>(null);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   const balance = useMemo(
     () => (history ?? []).reduce((s, h) => s + h.amount, 0),
@@ -63,30 +65,16 @@ export default function CategoryDetail() {
 
   const goal = category.rule?.type === 'goal' ? category.rule.target_amount : null;
   const pct = goal ? Math.min(1, balance / goal) : null;
-  const hasHistory = (history ?? []).length > 0 || (billItems ?? []).length > 0;
 
-  function confirmDelete() {
-    Alert.alert(
-      'Delete this category?',
-      hasHistory
-        ? `"${category!.name}" and everything linked to it — its bills and spending history — will be permanently deleted. This can’t be undone.`
-        : `"${category!.name}" will be permanently deleted. This can’t be undone.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteCategory.mutateAsync(category!.id);
-              router.back();
-            } catch (e) {
-              Alert.alert('Could not delete category', e instanceof Error ? e.message : 'Try again.');
-            }
-          },
-        },
-      ],
-    );
+  async function handleConfirmDelete() {
+    try {
+      await deleteCategory.mutateAsync(category!.id);
+      setConfirmingDelete(false);
+      router.back();
+    } catch (e) {
+      setConfirmingDelete(false);
+      Alert.alert('Could not delete category', e instanceof Error ? e.message : 'Try again.');
+    }
   }
 
   return (
@@ -307,11 +295,24 @@ export default function CategoryDetail() {
           variant="secondary"
           className="border-status-bad"
           loading={deleteCategory.isPending}
-          onPress={confirmDelete}
+          onPress={() => setConfirmingDelete(true)}
         >
           Delete category
         </Button>
       </ScrollView>
+
+      <DeleteCategorySheet
+        visible={confirmingDelete}
+        categoryName={category.name}
+        categoryColor={category.color}
+        showBillCount={category.kind === 'bill'}
+        billCount={(billItems ?? []).length}
+        entryCount={(history ?? []).length}
+        totalLogged={balance}
+        deleting={deleteCategory.isPending}
+        onCancel={() => setConfirmingDelete(false)}
+        onConfirm={handleConfirmDelete}
+      />
     </SafeAreaView>
   );
 }
