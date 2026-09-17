@@ -16,6 +16,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { AuthProvider } from '@/lib/auth';
 import { QueryClientProvider } from '@/lib/query-client';
 import { ThemeProvider } from '@/theme/ThemeProvider';
@@ -45,7 +46,9 @@ export default function RootLayout() {
       <QueryClientProvider>
         <AuthProvider>
           <ThemeProvider>
-            <Slot />
+            <ErrorBoundary>
+              <Slot />
+            </ErrorBoundary>
           </ThemeProvider>
         </AuthProvider>
       </QueryClientProvider>
