@@ -39,7 +39,23 @@ function buildSelectChain(result: { data: unknown; error: null }) {
   return chain;
 }
 
-import { useCheckLedgerEntry, usePaydayStreak, useSavedThisQuarter, useUpdateIncome } from '../queries';
+const mockDelete = jest.fn();
+const mockDeleteEq = jest.fn();
+
+// Chainable delete mock: .delete({ count }).eq() resolving to { error, count }.
+function buildDeleteChain(result: { error: null | { message: string }; count: number | null }) {
+  mockDeleteEq.mockResolvedValue(result);
+  mockDelete.mockReturnValue({ eq: mockDeleteEq });
+  mockFrom.mockReturnValue({ delete: mockDelete });
+}
+
+import {
+  useCheckLedgerEntry,
+  useDeleteCategory,
+  usePaydayStreak,
+  useSavedThisQuarter,
+  useUpdateIncome,
+} from '../queries';
 
 function wrapper({ children }: { children: ReactNode }) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -191,5 +207,33 @@ describe('usePaydayStreak (dashboard momentum chip)', () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
     expect(result.current.data).toBe(1);
+  });
+});
+
+describe('useDeleteCategory (regression: silent no-op delete)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('deletes the category row', async () => {
+    buildDeleteChain({ error: null, count: 1 });
+    const { result } = await renderHook(() => useDeleteCategory('household-1'), { wrapper });
+
+    result.current.mutate('cat-1');
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(mockFrom).toHaveBeenCalledWith('categories');
+    expect(mockDelete).toHaveBeenCalledWith({ count: 'exact' });
+    expect(mockDeleteEq).toHaveBeenCalledWith('id', 'cat-1');
+  });
+
+  it('surfaces an error when the delete matches zero rows (e.g. RLS silently denies it)', async () => {
+    buildDeleteChain({ error: null, count: 0 });
+    const { result } = await renderHook(() => useDeleteCategory('household-1'), { wrapper });
+
+    result.current.mutate('cat-1');
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(result.current.error).toBeInstanceOf(Error);
   });
 });

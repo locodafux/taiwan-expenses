@@ -158,8 +158,15 @@ export function useDeleteCategory(householdId: string | undefined) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('categories').delete().eq('id', id);
+      const { error, count } = await supabase
+        .from('categories')
+        .delete({ count: 'exact' })
+        .eq('id', id);
       if (error) throw error;
+      // A no-op delete (RLS silently denies, or the row was already gone)
+      // returns success with zero rows affected — surface that as an error
+      // instead of letting the caller believe the category is gone.
+      if (count === 0) throw new Error('Category could not be deleted');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['categories', householdId] });
