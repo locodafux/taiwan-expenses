@@ -1,10 +1,12 @@
 import { fireEvent, waitFor } from '@testing-library/react-native';
+import { Alert } from 'react-native';
 
 import { renderWithTheme } from '@/test/renderWithTheme';
 
 const mockSignOut = jest.fn();
+const mockDeleteAccount = jest.fn();
 jest.mock('@/lib/auth', () => ({
-  useAuth: () => ({ signOut: mockSignOut }),
+  useAuth: () => ({ signOut: mockSignOut, deleteAccount: mockDeleteAccount }),
 }));
 
 const mockUseHouseholdMembership = jest.fn();
@@ -99,5 +101,51 @@ describe('Settings', () => {
     await fireEvent.press(await waitFor(() => getByText('Sign out')));
 
     expect(mockSignOut).toHaveBeenCalled();
+  });
+
+  it('deletes the account after confirming, warning that it cannot be undone', async () => {
+    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation((_title, _message, buttons) => {
+      const confirm = buttons?.find((b) => b.text === 'Delete account');
+      confirm?.onPress?.();
+    });
+
+    const { getByText } = await renderWithTheme(<Settings />);
+    await fireEvent.press(await waitFor(() => getByText('Delete account')));
+
+    expect(alertSpy).toHaveBeenCalledWith(
+      'Delete your account?',
+      expect.stringContaining('cannot be undone'),
+      expect.any(Array),
+    );
+    await waitFor(() => expect(mockDeleteAccount).toHaveBeenCalled());
+
+    alertSpy.mockRestore();
+  });
+
+  it('warns a partner in the household that shared data will stay behind', async () => {
+    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+
+    const { getByText } = await renderWithTheme(<Settings />);
+    await fireEvent.press(await waitFor(() => getByText('Delete account')));
+
+    expect(alertSpy).toHaveBeenCalledWith(
+      'Delete your account?',
+      expect.stringContaining('Shared categories, bills and ledger history stay'),
+      expect.any(Array),
+    );
+
+    alertSpy.mockRestore();
+  });
+
+  it('does not delete the account when the confirmation is cancelled', async () => {
+    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+
+    const { getByText } = await renderWithTheme(<Settings />);
+    await fireEvent.press(await waitFor(() => getByText('Delete account')));
+
+    expect(alertSpy).toHaveBeenCalled();
+    expect(mockDeleteAccount).not.toHaveBeenCalled();
+
+    alertSpy.mockRestore();
   });
 });

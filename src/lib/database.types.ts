@@ -204,6 +204,10 @@ export interface Database {
         Args: { p_ttl?: string };
         Returns: HouseholdInvite;
       };
+      delete_own_account: {
+        Args: Record<string, never>;
+        Returns: undefined;
+      };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;

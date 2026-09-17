@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/ui/Avatar';
@@ -24,7 +24,7 @@ const THEME_DESCRIPTIONS = {
 
 export default function Settings() {
   const { theme, setTheme } = useTheme();
-  const { signOut } = useAuth();
+  const { signOut, deleteAccount } = useAuth();
   const { data: member } = useHouseholdMembership();
   const { data: household } = useHousehold(member?.household_id);
   const { data: members } = useHouseholdMembers(member?.household_id);
@@ -34,6 +34,34 @@ export default function Settings() {
   const [inviteError, setInviteError] = useState<string | null>(null);
   const [isEditingName, setIsEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
+  const hasPartner = (members?.length ?? 0) > 1;
+
+  function confirmDeleteAccount() {
+    Alert.alert(
+      'Delete your account?',
+      (hasPartner
+        ? 'Your account and your own data (membership, income entries) will be permanently deleted. Shared categories, bills and ledger history stay in the household for your partner.'
+        : 'Your account and all of your household data - categories, bills, incomes and ledger history - will be permanently deleted.') +
+        ' This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete account',
+          style: 'destructive',
+          onPress: async () => {
+            setIsDeleting(true);
+            try {
+              await deleteAccount();
+            } catch (e) {
+              setIsDeleting(false);
+              Alert.alert('Could not delete account', e instanceof Error ? e.message : 'Try again.');
+            }
+          },
+        },
+      ],
+    );
+  }
 
   const saveName = async () => {
     const trimmed = nameDraft.trim();
@@ -124,6 +152,13 @@ export default function Settings() {
         <View className="border-t border-border pt-6">
           <Button variant="ghost" onPress={() => signOut()}>
             Sign out
+          </Button>
+        </View>
+
+        <View className="gap-3 border-t border-border pt-6">
+          <Text className="font-body-semibold text-sm text-status-bad">Danger zone</Text>
+          <Button variant="ghost" loading={isDeleting} onPress={confirmDeleteAccount}>
+            Delete account
           </Button>
         </View>
       </ScrollView>
