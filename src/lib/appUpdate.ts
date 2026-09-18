@@ -83,11 +83,16 @@ export async function downloadAndInstall(
 
   const contentUri = await getContentUriAsync(file.uri);
 
-  await IntentLauncher.startActivityAsync('android.intent.action.VIEW', {
+  const { resultCode } = await IntentLauncher.startActivityAsync('android.intent.action.VIEW', {
     data: contentUri,
     flags: 1, // FLAG_GRANT_READ_URI_PERMISSION
     type: 'application/vnd.android.package-archive',
   });
 
-  await markUpdateSeen(update.digest);
+  // A Canceled result also covers the OS declining to even show the installer
+  // (e.g. "install unknown apps" permission not yet granted for this app) -
+  // in both cases nothing was installed, so don't suppress the banner.
+  if (resultCode !== IntentLauncher.ResultCode.Canceled) {
+    await markUpdateSeen(update.digest);
+  }
 }
