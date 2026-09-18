@@ -16,7 +16,11 @@ export function ProgressBar({
         <Text className="font-body text-sm text-ink-2">{label}</Text>
         <Text className="font-body text-sm text-ink-2">{amountLabel}</Text>
       </View>
-      <View className="h-2 overflow-hidden rounded-full bg-surface-3">
+      <View
+        className="h-2 overflow-hidden rounded-full bg-surface-3"
+        accessibilityRole="progressbar"
+        accessibilityValue={{ now: Math.round(clamped), min: 0, max: 100 }}
+      >
         <View className="h-full rounded-full bg-status-good" style={{ width: `${clamped}%` }} />
       </View>
     </View>
