@@ -1,6 +1,7 @@
 import { useRouter } from 'expo-router';
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
+import Animated, { Easing, useAnimatedProps, useSharedValue, withTiming } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
 
@@ -23,13 +24,32 @@ import { formatPeso } from '@/lib/format';
 import { daysUntil, nextPayday } from '@/lib/payday';
 import { useTheme } from '@/theme/ThemeProvider';
 
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
+
 function Ring({ pct, color, trackColor }: { pct: number; color: string; trackColor: string }) {
   const r = 17;
   const c = 2 * Math.PI * r;
+  const clamped = Math.min(1, Math.max(0, pct));
+  const progress = useSharedValue(clamped);
+
+  useEffect(() => {
+    progress.value = withTiming(clamped, { duration: 400, easing: Easing.out(Easing.cubic) });
+  }, [clamped, progress]);
+
+  const animatedProps = useAnimatedProps(() => ({
+    strokeDashoffset: c * (1 - progress.value),
+  }));
+
   return (
-    <Svg width={46} height={46} viewBox="0 0 42 42">
+    <Svg
+      width={46}
+      height={46}
+      viewBox="0 0 42 42"
+      accessibilityRole="progressbar"
+      accessibilityValue={{ now: Math.round(clamped * 100), min: 0, max: 100 }}
+    >
       <Circle cx={21} cy={21} r={r} fill="none" stroke={trackColor} strokeWidth={6} />
-      <Circle
+      <AnimatedCircle
         cx={21}
         cy={21}
         r={r}
@@ -38,7 +58,7 @@ function Ring({ pct, color, trackColor }: { pct: number; color: string; trackCol
         strokeWidth={6}
         strokeLinecap="round"
         strokeDasharray={c}
-        strokeDashoffset={c * (1 - Math.min(1, Math.max(0, pct)))}
+        animatedProps={animatedProps}
         rotation={-90}
         originX={21}
         originY={21}
