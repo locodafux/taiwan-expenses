@@ -1,5 +1,6 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
+
+jest.mock('expo-application', () => ({ getLastUpdateTimeAsync: jest.fn() }));
 
 jest.mock('expo-intent-launcher', () => ({
   startActivityAsync: jest.fn(),
@@ -18,49 +19,46 @@ jest.mock('expo-file-system/legacy', () => ({
   getContentUriAsync: jest.fn().mockResolvedValue('content://fake/app-release.apk'),
 }));
 
-import { File } from 'expo-file-system';
-import { startActivityAsync } from 'expo-intent-launcher';
+import { getLastUpdateTimeAsync } from 'expo-application';
 
-import { checkForUpdate, downloadAndInstall, markUpdateSeen } from '../appUpdate';
+import { checkForUpdate } from '../appUpdate';
 
+// Mirrors the real `latest` release's assets as of 2026-09-18.
+const UPLOADED_AT = '2026-09-18T04:19:47Z';
 const releaseResponse = {
   assets: [
-    { name: 'app-release.apk', browser_download_url: 'https://example.com/app-release.apk', digest: 'sha256:abc123' },
-    { name: 'taiwan-fund-planner-latest-arm64.apk', browser_download_url: 'https://example.com/arm64.apk', digest: 'sha256:def456' },
+    { name: 'app-release.apk', browser_download_url: 'https://example.com/app-release.apk', updated_at: UPLOADED_AT },
+    {
+      name: 'taiwan-fund-planner-latest-arm64.apk',
+      browser_download_url: 'https://example.com/arm64.apk',
+      updated_at: '2026-09-14T00:35:23Z',
+    },
   ],
 };
 
+const installedAt = (iso: string) => (getLastUpdateTimeAsync as jest.Mock).mockResolvedValue(new Date(iso));
+
 describe('checkForUpdate', () => {
-  beforeEach(async () => {
-    await AsyncStorage.clear();
+  beforeEach(() => {
     Platform.OS = 'android';
     globalThis.fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => releaseResponse });
   });
 
-  it('reports the universal apk as an update when no digest has been seen yet', async () => {
-    const update = await checkForUpdate();
-    expect(update).toEqual({
-      digest: 'abc123',
-      downloadUrl: 'https://example.com/app-release.apk',
-      assetName: 'app-release.apk',
-    });
-  });
-
-  it('returns null once the current digest has been marked as seen', async () => {
-    await markUpdateSeen('abc123');
+  // Regression: reproduced on-device (2026-09-19) - installing the exact
+  // published APK, or updating through the banner itself, still showed
+  // "A new version is available" because "current" was a locally persisted
+  // digest that neither of those paths ever wrote.
+  it('reports nothing when the installed app is newer than the published apk', async () => {
+    installedAt('2026-09-19T05:13:43Z');
     expect(await checkForUpdate()).toBeNull();
   });
 
-  it('reports an update again once the release digest changes', async () => {
-    await markUpdateSeen('abc123');
-    (globalThis.fetch as jest.Mock).mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        assets: [{ name: 'app-release.apk', browser_download_url: 'https://example.com/app-release.apk', digest: 'sha256:newdigest' }],
-      }),
+  it('reports the universal apk when it was uploaded after the app was installed', async () => {
+    installedAt('2026-09-17T00:00:00Z');
+    expect(await checkForUpdate()).toEqual({
+      downloadUrl: 'https://example.com/app-release.apk',
+      assetName: 'app-release.apk',
     });
-    const update = await checkForUpdate();
-    expect(update?.digest).toBe('newdigest');
   });
 
   it('skips the check entirely on non-Android platforms', async () => {
@@ -70,40 +68,8 @@ describe('checkForUpdate', () => {
   });
 
   it('returns null when GitHub responds with an error status', async () => {
+    installedAt('2026-09-17T00:00:00Z');
     (globalThis.fetch as jest.Mock).mockResolvedValue({ ok: false, json: async () => ({}) });
-    expect(await checkForUpdate()).toBeNull();
-  });
-});
-
-describe('downloadAndInstall', () => {
-  const update = {
-    digest: 'abc123',
-    downloadUrl: 'https://example.com/app-release.apk',
-    assetName: 'app-release.apk',
-  };
-
-  beforeEach(async () => {
-    await AsyncStorage.clear();
-    Platform.OS = 'android';
-    globalThis.fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => releaseResponse });
-    (File.createDownloadTask as jest.Mock).mockReturnValue({
-      downloadAsync: jest.fn().mockResolvedValue({ uri: 'file:///cache/app-release.apk' }),
-    });
-  });
-
-  // Regression: verified on-device that Android can silently cancel the
-  // install intent (e.g. REQUEST_INSTALL_PACKAGES not yet granted for this
-  // app) without ever showing an installer screen - in that case nothing
-  // installed, so the banner must not disappear for good.
-  it('leaves the update visible next check when the install is canceled', async () => {
-    (startActivityAsync as jest.Mock).mockResolvedValue({ resultCode: 0 });
-    await downloadAndInstall(update);
-    expect(await checkForUpdate()).not.toBeNull();
-  });
-
-  it('stops reporting the update once the install succeeds', async () => {
-    (startActivityAsync as jest.Mock).mockResolvedValue({ resultCode: -1 });
-    await downloadAndInstall(update);
     expect(await checkForUpdate()).toBeNull();
   });
 });

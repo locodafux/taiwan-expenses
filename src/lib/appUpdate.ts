@@ -1,4 +1,4 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Application from 'expo-application';
 import * as IntentLauncher from 'expo-intent-launcher';
 import { Directory, File, Paths } from 'expo-file-system';
 import { getContentUriAsync } from 'expo-file-system/legacy';
@@ -7,16 +7,17 @@ import { Platform } from 'react-native';
 // The GitHub release process (see AGENTS.md) reuses a single "latest" tag
 // updated in place rather than publishing per-build version tags, so the
 // release's tag/nativeApplicationVersion can't be diffed for "is this new".
-// The asset's sha256 digest is the one thing GitHub's API gives us that
-// actually changes every build - use it as the version identifier instead,
-// persisted locally after each check/install so we know what's "seen".
+// Instead compare when the APK asset was uploaded against when this app was
+// last installed/updated on the device (Android's PackageInfo.lastUpdateTime):
+// an asset uploaded after our install is newer than what we're running.
+// Both sides come from the OS/GitHub, so a fresh install from the release
+// page or an install via the banner (whose process Android kills mid-install,
+// so no JS runs afterwards) are both recognised as up to date.
 const REPO = 'locodafux/taiwan-expenses';
 const RELEASE_TAG = 'latest';
-const SEEN_DIGEST_KEY = 'app-update:seen-digest';
 const ASSET_NAME_PREFERENCE = ['app-release.apk'];
 
 export type AvailableUpdate = {
-  digest: string;
   downloadUrl: string;
   assetName: string;
 };
@@ -24,7 +25,7 @@ export type AvailableUpdate = {
 type GithubAsset = {
   name: string;
   browser_download_url: string;
-  digest?: string;
+  updated_at: string;
 };
 
 type GithubRelease = {
@@ -40,7 +41,7 @@ function pickApkAsset(assets: GithubAsset[]): GithubAsset | undefined {
 }
 
 // Checks GitHub for the latest release APK and reports it as an update only
-// if its digest hasn't already been seen (installed or dismissed) on this device.
+// if it was uploaded after this app was last installed/updated.
 export async function checkForUpdate(): Promise<AvailableUpdate | null> {
   if (Platform.OS !== 'android') return null;
 
@@ -49,17 +50,12 @@ export async function checkForUpdate(): Promise<AvailableUpdate | null> {
   const release: GithubRelease = await res.json();
 
   const asset = pickApkAsset(release.assets ?? []);
-  if (!asset?.digest) return null;
+  if (!asset) return null;
 
-  const digest = asset.digest.replace(/^sha256:/, '');
-  const seenDigest = await AsyncStorage.getItem(SEEN_DIGEST_KEY);
-  if (digest === seenDigest) return null;
+  const installedAt = await Application.getLastUpdateTimeAsync();
+  if (new Date(asset.updated_at) <= installedAt) return null;
 
-  return { digest, downloadUrl: asset.browser_download_url, assetName: asset.name };
-}
-
-export async function markUpdateSeen(digest: string): Promise<void> {
-  await AsyncStorage.setItem(SEEN_DIGEST_KEY, digest);
+  return { downloadUrl: asset.browser_download_url, assetName: asset.name };
 }
 
 // Downloads the APK to the cache dir and hands it to Android's package
@@ -83,16 +79,12 @@ export async function downloadAndInstall(
 
   const contentUri = await getContentUriAsync(file.uri);
 
-  const { resultCode } = await IntentLauncher.startActivityAsync('android.intent.action.VIEW', {
+  // Nothing to record afterwards: a successful install bumps the app's
+  // lastUpdateTime (checkForUpdate then sees it's current), and a canceled or
+  // permission-blocked one leaves it unchanged so the banner comes back.
+  await IntentLauncher.startActivityAsync('android.intent.action.VIEW', {
     data: contentUri,
     flags: 1, // FLAG_GRANT_READ_URI_PERMISSION
     type: 'application/vnd.android.package-archive',
   });
-
-  // A Canceled result also covers the OS declining to even show the installer
-  // (e.g. "install unknown apps" permission not yet granted for this app) -
-  // in both cases nothing was installed, so don't suppress the banner.
-  if (resultCode !== IntentLauncher.ResultCode.Canceled) {
-    await markUpdateSeen(update.digest);
-  }
 }
