@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/ui/Button';
 import { ErrorState } from '@/components/ui/ErrorState';
-import { combineQueryState, useCreateBillItem, useCreateCategory, useHouseholdMembership } from '@/lib/queries';
+import { combineQueryState, useCreateCategory, useHouseholdMembership } from '@/lib/queries';
 import { useTheme } from '@/theme/ThemeProvider';
 
 type Kind = 'fund' | 'bill';
@@ -18,7 +18,6 @@ export default function AddCategorySheet() {
   const membershipQuery = useHouseholdMembership();
   const member = membershipQuery.data;
   const createCategory = useCreateCategory(member?.household_id);
-  const createBillItem = useCreateBillItem(undefined);
 
   const { isError, refetch } = combineQueryState(membershipQuery);
 
@@ -36,16 +35,13 @@ export default function AddCategorySheet() {
   const [kind, setKind] = useState<Kind>('fund');
   const [color, setColor] = useState(colorOptions[4].value);
   const [target, setTarget] = useState('');
-  const [amount, setAmount] = useState('');
-  const [payday, setPayday] = useState(5);
   const [error, setError] = useState<string | null>(null);
 
   async function handleSave() {
     if (!name.trim()) return setError('Name is required');
-    if (kind === 'bill' && !amount) return setError('Amount is required for a bill');
     setError(null);
     try {
-      const category = await createCategory.mutateAsync({
+      await createCategory.mutateAsync({
         name: name.trim(),
         kind,
         color,
@@ -58,14 +54,6 @@ export default function AddCategorySheet() {
               } as any)
             : undefined,
       });
-      if (kind === 'bill') {
-        await createBillItem.mutateAsync({
-          category_id: category.id,
-          label: name.trim(),
-          amount: Number(amount),
-          recurring_day: payday,
-        });
-      }
       router.back();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not save category');
@@ -139,34 +127,9 @@ export default function AddCategorySheet() {
           </View>
 
           {kind === 'bill' && (
-            <View className="flex-row gap-3">
-              <View className="flex-1">
-                <Text className="font-body text-xs text-ink-muted">Amount</Text>
-                <TextInput
-                  value={amount}
-                  onChangeText={setAmount}
-                  placeholder="₱0"
-                  keyboardType="numeric"
-                  className={`${inputClass} font-mono`}
-                />
-              </View>
-              <View className="flex-1">
-                <Text className="font-body text-xs text-ink-muted">Paid from</Text>
-                <ScrollView horizontal className="mt-2">
-                  {[5, 15, 20, 30].map((p) => (
-                    <Pressable
-                      key={p}
-                      onPress={() => setPayday(p)}
-                      className={`mr-2 rounded-md border px-3 py-3 ${
-                        payday === p ? 'border-accent bg-accent-soft' : 'border-border'
-                      }`}
-                    >
-                      <Text className="font-body text-sm text-ink">{p}th</Text>
-                    </Pressable>
-                  ))}
-                </ScrollView>
-              </View>
-            </View>
+            <Text className="font-body text-xs leading-[1.4] text-ink-muted">
+              Amounts live on the bills inside this category. Open it after saving to add them.
+            </Text>
           )}
           {kind === 'fund' && (
             <View>
@@ -194,7 +157,7 @@ export default function AddCategorySheet() {
             <Button
               variant="primary"
               className="flex-1"
-              loading={createCategory.isPending || createBillItem.isPending}
+              loading={createCategory.isPending}
               onPress={handleSave}
             >
               Add category

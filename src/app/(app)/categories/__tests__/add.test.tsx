@@ -65,29 +65,25 @@ describe('AddCategorySheet', () => {
     expect(mockBack).toHaveBeenCalled();
   });
 
-  // Regression: the bill item used to be a raw supabase insert with no cache
-  // invalidation, so the checklist never saw it until an app reload.
-  it('requires an amount when adding a bill category, then creates the bill item via the shared mutation', async () => {
-    const { getByText, getByPlaceholderText } = await renderWithTheme(<AddCategorySheet />);
+  // Amounts belong to the bill items inside a category, not the category itself,
+  // so adding a bill category asks for no amount and creates no bill item.
+  it('creates a bill category without asking for an amount or creating a bill item', async () => {
+    const { getByText, getByPlaceholderText, queryByPlaceholderText, queryByText } =
+      await renderWithTheme(<AddCategorySheet />);
 
     await fireEvent.press(getByText('Bill (recurring expense)'));
-    await fireEvent.changeText(getByPlaceholderText('e.g. New laptop fund'), 'Internet');
-    await fireEvent.press(getByText('Add category'));
-    expect(await waitFor(() => getByText('Amount is required for a bill'))).toBeTruthy();
+    expect(queryByPlaceholderText('₱0')).toBeNull();
+    expect(queryByText('Amount')).toBeNull();
 
-    await fireEvent.changeText(getByPlaceholderText('₱0'), '1200');
+    await fireEvent.changeText(getByPlaceholderText('e.g. New laptop fund'), 'Internet');
     await fireEvent.press(getByText('Add category'));
 
     await waitFor(() =>
       expect(mockCreateCategoryMutateAsync).toHaveBeenCalledWith(
-        expect.objectContaining({ name: 'Internet', kind: 'bill' }),
+        expect.objectContaining({ name: 'Internet', kind: 'bill', rule: undefined }),
       ),
     );
-    await waitFor(() =>
-      expect(mockCreateBillItemMutateAsync).toHaveBeenCalledWith(
-        expect.objectContaining({ category_id: 'new-cat', label: 'Internet', amount: 1200 }),
-      ),
-    );
+    expect(mockCreateBillItemMutateAsync).not.toHaveBeenCalled();
     expect(mockBack).toHaveBeenCalled();
   });
 
