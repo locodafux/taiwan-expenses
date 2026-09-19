@@ -14,6 +14,7 @@ import {
   useHousehold,
   useHouseholdMembers,
   useHouseholdMembership,
+  useSubmitBugReport,
   useUpdateHouseholdName,
 } from '@/lib/queries';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -35,6 +36,7 @@ export default function Settings() {
   const members = membersQuery.data;
   const createInvite = useCreateInvite();
   const updateHouseholdName = useUpdateHouseholdName(member?.household_id);
+  const submitBugReport = useSubmitBugReport(member?.household_id);
 
   const { isError, refetch } = combineQueryState(membershipQuery, householdQuery, membersQuery);
 
@@ -43,6 +45,8 @@ export default function Settings() {
   const [isEditingName, setIsEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
+  const [bugDraft, setBugDraft] = useState('');
+  const [bugResult, setBugResult] = useState<{ ok: boolean; message: string } | null>(null);
   const hasPartner = (members?.length ?? 0) > 1;
 
   function confirmDeleteAccount() {
@@ -69,6 +73,19 @@ export default function Settings() {
         },
       ],
     );
+  }
+
+  async function sendBugReport() {
+    const description = bugDraft.trim();
+    if (!description) return setBugResult({ ok: false, message: 'Describe what went wrong first.' });
+    setBugResult(null);
+    try {
+      await submitBugReport.mutateAsync(description);
+      setBugDraft('');
+      setBugResult({ ok: true, message: 'Thanks - your report was sent.' });
+    } catch (e) {
+      setBugResult({ ok: false, message: e instanceof Error ? e.message : 'Could not send report. Try again.' });
+    }
   }
 
   const saveName = async () => {
@@ -161,6 +178,29 @@ export default function Settings() {
               }}
             >
               {invite ? 'Generate a new code' : 'Generate invite code'}
+            </Button>
+          </Card>
+        </View>
+
+        <View>
+          <Text className="mb-3 font-body-semibold text-sm text-ink">Report a bug</Text>
+          <Card className="gap-3 p-5">
+            <TextInput
+              multiline
+              value={bugDraft}
+              onChangeText={setBugDraft}
+              placeholder="What went wrong? Steps to reproduce help too."
+              accessibilityLabel="Bug description"
+              className="min-h-24 rounded-md border border-border bg-page px-4 py-3 font-body text-base text-ink"
+              textAlignVertical="top"
+            />
+            {bugResult && (
+              <Text className={`font-body text-sm ${bugResult.ok ? 'text-status-good' : 'text-status-bad'}`}>
+                {bugResult.message}
+              </Text>
+            )}
+            <Button variant="secondary" loading={submitBugReport.isPending} onPress={sendBugReport}>
+              Send report
             </Button>
           </Card>
         </View>
