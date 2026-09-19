@@ -96,6 +96,44 @@ describe('useCheckLedgerEntry (checklist check-off -> ledger post)', () => {
 
     expect(mockUpdate).toHaveBeenCalledWith({ status: 'pending', checked_by: null, checked_at: null });
   });
+
+  it('ticks the cached row instantly and rolls it back if the write fails', async () => {
+    let rejectWrite!: (e: Error) => void;
+    mockSingle.mockReturnValue(new Promise((_, reject) => (rejectWrite = reject)));
+    mockSelect.mockReturnValue({ single: mockSingle });
+    mockEq.mockReturnValue({ select: mockSelect });
+    mockUpdate.mockReturnValue({ eq: mockEq });
+    mockFrom.mockReturnValue({ update: mockUpdate });
+
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const key = ['ledger-entries', 'household-1', '2026-10-05'];
+    client.setQueryData(key, [
+      { id: 'entry-1', status: 'pending' },
+      { id: 'entry-2', status: 'pending' },
+    ]);
+    const { result } = await renderHook(() => useCheckLedgerEntry('household-1', '2026-10-05'), {
+      wrapper: ({ children }: { children: ReactNode }) => (
+        <QueryClientProvider client={client}>{children}</QueryClientProvider>
+      ),
+    });
+
+    result.current.mutate({ id: 'entry-1', checked: true });
+
+    await waitFor(() =>
+      expect(client.getQueryData(key)).toEqual([
+        { id: 'entry-1', status: 'checked' },
+        { id: 'entry-2', status: 'pending' },
+      ]),
+    );
+
+    rejectWrite(new Error('offline'));
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(client.getQueryData(key)).toEqual([
+      { id: 'entry-1', status: 'pending' },
+      { id: 'entry-2', status: 'pending' },
+    ]);
+  });
 });
 
 describe('useUpdateIncome (edit/deactivate an existing income)', () => {

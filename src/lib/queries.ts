@@ -375,7 +375,24 @@ export function useCheckLedgerEntry(householdId: string | undefined, paydayDate:
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    // Optimistic: flip the row in the cached checklist immediately so the tick
+    // feels instant, roll back if the write fails, and resync with the server
+    // either way (Realtime invalidation keeps working on top of this).
+    onMutate: async ({ id, checked }) => {
+      const key = ['ledger-entries', householdId, paydayDate];
+      await queryClient.cancelQueries({ queryKey: key });
+      const previous = queryClient.getQueryData<{ id: string; status: string }[]>(key);
+      queryClient.setQueryData<{ id: string; status: string }[]>(key, (rows) =>
+        rows?.map((r) => (r.id === id ? { ...r, status: checked ? 'checked' : 'pending' } : r)),
+      );
+      return { previous };
+    },
+    onError: (_error, _vars, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(['ledger-entries', householdId, paydayDate], context.previous);
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['ledger-entries', householdId, paydayDate] });
       queryClient.invalidateQueries({ queryKey: ['category-history'] });
       queryClient.invalidateQueries({ queryKey: ['ledger-payday-status', householdId] });

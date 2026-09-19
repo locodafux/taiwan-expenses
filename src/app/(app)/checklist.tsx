@@ -1,9 +1,12 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, ScrollView, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Text, View } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/ui/Button';
+import { KeyboardScroll } from '@/components/ui/KeyboardScroll';
+import { TextField } from '@/components/ui/TextField';
 import { Callout } from '@/components/ui/Callout';
 import { Card } from '@/components/ui/Card';
 import { ChecklistGroup, ChecklistRow } from '@/components/ui/Checklist';
@@ -139,7 +142,7 @@ export default function PaydayChecklist() {
 
   return (
     <SafeAreaView className="flex-1 bg-page" edges={['top']}>
-      <ScrollView contentContainerClassName="gap-4 px-6 py-5" className="flex-1">
+      <KeyboardScroll contentContainerClassName="gap-4 px-6 py-5">
         <View>
           <Text className="font-display-semibold text-lg text-ink">
             {paydayDay}th payday checklist
@@ -208,43 +211,45 @@ export default function PaydayChecklist() {
         </Card>
 
         {editingId && (
-          <Card className="gap-3 p-5">
-            <Text className="font-body text-xs text-ink-muted">Adjust amount for this payday</Text>
-            <TextInput
-              autoFocus
-              value={editAmount}
-              onChangeText={setEditAmount}
-              keyboardType="numeric"
-              className="rounded-md border border-border bg-page px-4 py-4 font-mono text-base text-ink"
-            />
-            {editError && <Text className="font-body text-sm text-status-bad">{editError}</Text>}
-            <View className="flex-row gap-3">
-              <Button variant="secondary" className="flex-1" onPress={() => setEditingId(null)}>
-                Cancel
-              </Button>
-              <Button
-                variant="primary"
-                className="flex-1"
-                loading={updateAmount.isPending}
-                onPress={async () => {
-                  const parsed = Number(editAmount);
-                  if (!Number.isFinite(parsed) || parsed <= 0) return setEditError('Enter a valid amount');
-                  try {
-                    await updateAmount.mutateAsync({ id: editingId, amount: parsed });
-                    setEditingId(null);
-                  } catch (e) {
-                    setEditError(e instanceof Error ? e.message : 'Could not update amount');
-                  }
-                }}
-              >
-                Save
-              </Button>
-            </View>
-          </Card>
+          <Animated.View entering={FadeInDown.duration(200)}>
+            <Card className="gap-3 p-5">
+              <Text className="font-body text-xs text-ink-muted">Adjust amount for this payday</Text>
+              <TextField
+                autoFocus
+                value={editAmount}
+                onChangeText={setEditAmount}
+                keyboardType="numeric"
+                className="rounded-md border border-border bg-page px-4 py-4 font-mono text-base text-ink"
+              />
+              {editError && <Text className="font-body text-sm text-status-bad">{editError}</Text>}
+              <View className="flex-row gap-3">
+                <Button variant="secondary" className="flex-1" onPress={() => setEditingId(null)}>
+                  Cancel
+                </Button>
+                <Button
+                  variant="primary"
+                  className="flex-1"
+                  loading={updateAmount.isPending}
+                  onPress={async () => {
+                    const parsed = Number(editAmount);
+                    if (!Number.isFinite(parsed) || parsed <= 0) return setEditError('Enter a valid amount');
+                    try {
+                      await updateAmount.mutateAsync({ id: editingId, amount: parsed });
+                      setEditingId(null);
+                    } catch (e) {
+                      setEditError(e instanceof Error ? e.message : 'Could not update amount');
+                    }
+                  }}
+                >
+                  Save
+                </Button>
+              </View>
+            </Card>
+          </Animated.View>
         )}
 
         {cutAdvice && <Callout>{cutAdvice}</Callout>}
-      </ScrollView>
+      </KeyboardScroll>
     </SafeAreaView>
   );
 }

@@ -1,4 +1,4 @@
-import { fireEvent, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, waitFor } from '@testing-library/react-native';
 import { Alert } from 'react-native';
 
 import { renderWithTheme } from '@/test/renderWithTheme';
@@ -14,6 +14,9 @@ jest.mock('@/lib/auth', () => ({
     changePassword: mockChangePassword,
   }),
 }));
+
+const mockSetStringAsync = jest.fn();
+jest.mock('expo-clipboard', () => ({ setStringAsync: (...args: unknown[]) => mockSetStringAsync(...args) }));
 
 const mockUseHouseholdMembership = jest.fn();
 const mockUseHousehold = jest.fn();
@@ -180,6 +183,33 @@ describe('Settings', () => {
     expect(mockUseSubmitBugReport).toHaveBeenCalledWith('household-1');
     expect(await waitFor(() => getByText('Thanks - your report was sent.'))).toBeTruthy();
     expect(getByLabelText('Bug description').props.value).toBe('');
+  });
+
+  it('dismisses the bug report confirmation after a few seconds', async () => {
+    jest.useFakeTimers();
+    try {
+      const { getByText, getByLabelText, queryByText } = await renderWithTheme(<Settings />);
+
+      await fireEvent.changeText(getByLabelText('Bug description'), 'Checklist froze');
+      await fireEvent.press(getByText('Send report'));
+      await waitFor(() => getByText('Thanks - your report was sent.'));
+
+      await act(() => jest.advanceTimersByTime(4000));
+
+      expect(queryByText('Thanks - your report was sent.')).toBeNull();
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('copies a generated invite code to the clipboard', async () => {
+    const { getByText, getByLabelText } = await renderWithTheme(<Settings />);
+
+    await fireEvent.press(await waitFor(() => getByText('Generate invite code')));
+    await fireEvent.press(await waitFor(() => getByLabelText('Copy invite code')));
+
+    expect(mockSetStringAsync).toHaveBeenCalledWith('abc123def456');
+    expect(await waitFor(() => getByText('Copied ✓'))).toBeTruthy();
   });
 
   it('requires a description before sending a bug report', async () => {

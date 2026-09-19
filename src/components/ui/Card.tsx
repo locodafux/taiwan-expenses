@@ -47,5 +47,9 @@ export function ListRow({
     </View>
   );
   if (!onPress) return content;
-  return <Pressable onPress={onPress}>{content}</Pressable>;
+  return (
+    <Pressable onPress={onPress} className="active:opacity-60">
+      {content}
+    </Pressable>
+  );
 }
