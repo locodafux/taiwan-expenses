@@ -58,7 +58,7 @@ export function Button({
   return (
     <Pressable
       disabled={isDisabled}
-      className={`rounded-md items-center justify-center ${sizeClasses[size]} ${v.container} ${
+      className={`rounded-md items-center justify-center active:opacity-80 ${sizeClasses[size]} ${v.container} ${
         isDisabled ? 'opacity-50' : ''
       } ${className ?? ''}`}
       {...pressableProps}

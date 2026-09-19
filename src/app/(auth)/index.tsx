@@ -1,8 +1,10 @@
 import { useState } from 'react';
-import { Pressable, Text, TextInput, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/ui/Button';
+import { KeyboardScroll } from '@/components/ui/KeyboardScroll';
+import { TextField } from '@/components/ui/TextField';
 import { useAuth } from '@/lib/auth';
 import { validateDisplayName, validateEmail, validateInviteCode, validatePassword } from '@/lib/validation';
 
@@ -106,8 +108,8 @@ export default function Onboarding() {
   const submitHandlers = { create: handleCreate, join: handleJoin, signin: handleSignIn };
 
   return (
-    <SafeAreaView className="flex-1 bg-page px-7 py-8">
-      <View className="gap-6">
+    <SafeAreaView className="flex-1 bg-page">
+      <KeyboardScroll contentContainerClassName="gap-6 px-7 py-8">
         <Text className="font-display text-xl text-ink">{titles[step]}</Text>
         {isJoin && (
           <Text className="font-body text-sm text-ink-2">
@@ -119,7 +121,7 @@ export default function Onboarding() {
         {!isSignIn && (
           <View>
             <Text className="font-body text-xs text-ink-muted">Your name</Text>
-            <TextInput
+            <TextField
               value={displayName}
               onChangeText={setDisplayName}
               placeholder="e.g. Leo"
@@ -129,7 +131,7 @@ export default function Onboarding() {
         )}
         <View>
           <Text className="font-body text-xs text-ink-muted">Email</Text>
-          <TextInput
+          <TextField
             value={email}
             onChangeText={setEmail}
             placeholder="leo@email.com"
@@ -144,7 +146,7 @@ export default function Onboarding() {
             {!isSignIn && <Text className="font-body text-xs text-ink-muted">Min 8 characters</Text>}
           </View>
           <View className="relative justify-center">
-            <TextInput
+            <TextField
               value={password}
               onChangeText={setPassword}
               secureTextEntry={!showPassword}
@@ -165,7 +167,7 @@ export default function Onboarding() {
         {step === 'create' && (
           <View>
             <Text className="font-body text-xs text-ink-muted">Household name (optional)</Text>
-            <TextInput
+            <TextField
               value={householdName}
               onChangeText={setHouseholdName}
               placeholder="Our household"
@@ -176,7 +178,7 @@ export default function Onboarding() {
         {isJoin && (
           <View>
             <Text className="font-body text-xs text-ink-muted">Invite code</Text>
-            <TextInput
+            <TextField
               value={inviteCode}
               onChangeText={setInviteCode}
               placeholder="e.g. bcea6b01dbd4"
@@ -207,7 +209,7 @@ export default function Onboarding() {
             First sign-up creates your household. You&apos;ll get an invite code to share next.
           </Text>
         )}
-      </View>
+      </KeyboardScroll>
     </SafeAreaView>
   );
 }

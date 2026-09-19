@@ -1,9 +1,12 @@
 import { useState } from 'react';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
+import { KeyboardScroll } from '@/components/ui/KeyboardScroll';
+import { TextField } from '@/components/ui/TextField';
 import { Card, ListRow } from '@/components/ui/Card';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { formatPeso } from '@/lib/format';
@@ -102,7 +105,7 @@ export default function IncomeManagement() {
 
   return (
     <SafeAreaView className="flex-1 bg-page" edges={['top']}>
-      <ScrollView contentContainerClassName="gap-4 px-6 py-5" className="flex-1">
+      <KeyboardScroll contentContainerClassName="gap-4 px-6 py-5">
         <View className="flex-row items-center justify-between gap-3">
           <Text className="flex-1 font-display-semibold text-lg text-ink">Incomes</Text>
           <Button
@@ -117,100 +120,104 @@ export default function IncomeManagement() {
         </View>
 
         {adding && (
-          <Card className="gap-3 p-5">
-            <Text className="font-body text-xs text-ink-muted">Label</Text>
-            <TextInput
-              value={label}
-              onChangeText={setLabel}
-              placeholder="e.g. 5th payday"
-              className="rounded-md border border-border bg-page px-4 py-4 font-body text-base text-ink"
-            />
-            <Text className="font-body text-xs text-ink-muted">Amount</Text>
-            <TextInput
-              value={amount}
-              onChangeText={setAmount}
-              placeholder="₱0"
-              keyboardType="numeric"
-              className="rounded-md border border-border bg-page px-4 py-4 font-mono text-base text-ink"
-            />
-            <Text className="font-body text-xs text-ink-muted">Recurring day</Text>
-            <View className="flex-row gap-2">
-              {RECURRING_DAYS.map((p) => (
-                <Pressable
-                  key={p}
-                  onPress={() => setDay(p)}
-                  className={`rounded-md border px-3 py-3 ${
-                    day === p ? 'border-accent bg-accent-soft' : 'border-border'
-                  }`}
-                >
-                  <Text className="font-body text-sm text-ink">{p}th</Text>
-                </Pressable>
-              ))}
-            </View>
-            {error && <Text className="font-body text-sm text-status-bad">{error}</Text>}
-            <View className="flex-row gap-3">
-              <Button
-                variant="secondary"
-                className="flex-1"
-                onPress={() => {
-                  setAdding(false);
-                  setError(null);
-                }}
-              >
-                Cancel
-              </Button>
-              <Button variant="primary" className="flex-1" loading={createIncome.isPending} onPress={handleAdd}>
-                Save
-              </Button>
-            </View>
-          </Card>
-        )}
-
-        {editing && (
-          <Card className="gap-3 p-5">
-            <Text className="font-body text-xs text-ink-muted">Label</Text>
-            <TextInput
-              value={editLabel}
-              onChangeText={setEditLabel}
-              placeholder="e.g. 5th payday"
-              className="rounded-md border border-border bg-page px-4 py-4 font-body text-base text-ink"
-            />
-            <Text className="font-body text-xs text-ink-muted">Amount</Text>
-            <TextInput
-              value={editAmount}
-              onChangeText={setEditAmount}
-              placeholder="₱0"
-              keyboardType="numeric"
-              className="rounded-md border border-border bg-page px-4 py-4 font-mono text-base text-ink"
-            />
-            <Text className="font-body text-xs text-ink-muted">Recurring day</Text>
-            <View className="flex-row flex-wrap gap-2">
-              {(RECURRING_DAYS.includes(editDay) ? RECURRING_DAYS : [...RECURRING_DAYS, editDay].sort((a, b) => a - b)).map(
-                (p) => (
+          <Animated.View entering={FadeInDown.duration(200)}>
+            <Card className="gap-3 p-5">
+              <Text className="font-body text-xs text-ink-muted">Label</Text>
+              <TextField
+                value={label}
+                onChangeText={setLabel}
+                placeholder="e.g. 5th payday"
+                className="rounded-md border border-border bg-page px-4 py-4 font-body text-base text-ink"
+              />
+              <Text className="font-body text-xs text-ink-muted">Amount</Text>
+              <TextField
+                value={amount}
+                onChangeText={setAmount}
+                placeholder="₱0"
+                keyboardType="numeric"
+                className="rounded-md border border-border bg-page px-4 py-4 font-mono text-base text-ink"
+              />
+              <Text className="font-body text-xs text-ink-muted">Recurring day</Text>
+              <View className="flex-row gap-2">
+                {RECURRING_DAYS.map((p) => (
                   <Pressable
                     key={p}
-                    onPress={() => setEditDay(p)}
+                    onPress={() => setDay(p)}
                     className={`rounded-md border px-3 py-3 ${
-                      editDay === p ? 'border-accent bg-accent-soft' : 'border-border'
+                      day === p ? 'border-accent bg-accent-soft' : 'border-border'
                     }`}
                   >
                     <Text className="font-body text-sm text-ink">{p}th</Text>
                   </Pressable>
-                ),
-              )}
-            </View>
-            <View className="flex-row gap-3">
-              <Button variant="secondary" className="flex-1" onPress={() => setEditing(null)}>
-                Cancel
+                ))}
+              </View>
+              {error && <Text className="font-body text-sm text-status-bad">{error}</Text>}
+              <View className="flex-row gap-3">
+                <Button
+                  variant="secondary"
+                  className="flex-1"
+                  onPress={() => {
+                    setAdding(false);
+                    setError(null);
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button variant="primary" className="flex-1" loading={createIncome.isPending} onPress={handleAdd}>
+                  Save
+                </Button>
+              </View>
+            </Card>
+          </Animated.View>
+        )}
+
+        {editing && (
+          <Animated.View entering={FadeInDown.duration(200)}>
+            <Card className="gap-3 p-5">
+              <Text className="font-body text-xs text-ink-muted">Label</Text>
+              <TextField
+                value={editLabel}
+                onChangeText={setEditLabel}
+                placeholder="e.g. 5th payday"
+                className="rounded-md border border-border bg-page px-4 py-4 font-body text-base text-ink"
+              />
+              <Text className="font-body text-xs text-ink-muted">Amount</Text>
+              <TextField
+                value={editAmount}
+                onChangeText={setEditAmount}
+                placeholder="₱0"
+                keyboardType="numeric"
+                className="rounded-md border border-border bg-page px-4 py-4 font-mono text-base text-ink"
+              />
+              <Text className="font-body text-xs text-ink-muted">Recurring day</Text>
+              <View className="flex-row flex-wrap gap-2">
+                {(RECURRING_DAYS.includes(editDay) ? RECURRING_DAYS : [...RECURRING_DAYS, editDay].sort((a, b) => a - b)).map(
+                  (p) => (
+                    <Pressable
+                      key={p}
+                      onPress={() => setEditDay(p)}
+                      className={`rounded-md border px-3 py-3 ${
+                        editDay === p ? 'border-accent bg-accent-soft' : 'border-border'
+                      }`}
+                    >
+                      <Text className="font-body text-sm text-ink">{p}th</Text>
+                    </Pressable>
+                  ),
+                )}
+              </View>
+              <View className="flex-row gap-3">
+                <Button variant="secondary" className="flex-1" onPress={() => setEditing(null)}>
+                  Cancel
+                </Button>
+                <Button variant="primary" className="flex-1" loading={updateIncome.isPending} onPress={handleSaveEdit}>
+                  Save
+                </Button>
+              </View>
+              <Button variant="ghost" loading={updateIncome.isPending} onPress={handleToggleActive}>
+                {editing.active ? 'Deactivate this income' : 'Reactivate this income'}
               </Button>
-              <Button variant="primary" className="flex-1" loading={updateIncome.isPending} onPress={handleSaveEdit}>
-                Save
-              </Button>
-            </View>
-            <Button variant="ghost" loading={updateIncome.isPending} onPress={handleToggleActive}>
-              {editing.active ? 'Deactivate this income' : 'Reactivate this income'}
-            </Button>
-          </Card>
+            </Card>
+          </Animated.View>
         )}
 
         <Card>
@@ -245,7 +252,7 @@ export default function IncomeManagement() {
           <Text className="font-body text-sm text-ink-2">Combined monthly income</Text>
           <Text className="font-mono text-md text-ink">{formatPeso(combined)}</Text>
         </View>
-      </ScrollView>
+      </KeyboardScroll>
     </SafeAreaView>
   );
 }

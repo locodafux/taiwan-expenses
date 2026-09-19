@@ -1,9 +1,12 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Alert, Pressable, Text, View } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/ui/Button';
+import { KeyboardScroll } from '@/components/ui/KeyboardScroll';
+import { TextField } from '@/components/ui/TextField';
 import { Card, ListRow } from '@/components/ui/Card';
 import { DeleteCategorySheet } from '@/components/ui/DeleteCategorySheet';
 import { ErrorState } from '@/components/ui/ErrorState';
@@ -102,7 +105,7 @@ export default function CategoryDetail() {
 
   return (
     <SafeAreaView className="flex-1 bg-page" edges={['top']}>
-      <ScrollView contentContainerClassName="gap-4 px-6 py-5" className="flex-1">
+      <KeyboardScroll contentContainerClassName="gap-4 px-6 py-5">
         <Pressable onPress={() => router.back()} hitSlop={13} className="self-start py-3">
           <Text className="font-body text-sm text-ink-2">‹ Categories</Text>
         </Pressable>
@@ -141,123 +144,127 @@ export default function CategoryDetail() {
         </Card>
 
         {adding && category.kind === 'fund' && (
-          <Card className="gap-3 p-5">
-            <Text className="font-body text-xs text-ink-muted">Amount</Text>
-            <TextInput
-              autoFocus
-              value={amount}
-              onChangeText={setAmount}
-              placeholder="₱0"
-              keyboardType="numeric"
-              className="rounded-md border border-border bg-page px-4 py-4 font-mono text-base text-ink"
-            />
-            {error && <Text className="font-body text-sm text-status-bad">{error}</Text>}
-            <View className="flex-row gap-3">
-              <Button
-                variant="secondary"
-                className="flex-1"
-                onPress={() => {
-                  setAdding(false);
-                  setError(null);
-                }}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="primary"
-                className="flex-1"
-                disabled={!amount}
-                loading={addContribution.isPending}
-                onPress={async () => {
-                  const parsedAmount = Number(amount);
-                  if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
-                    return setError('Enter a valid amount');
-                  }
-                  setError(null);
-                  try {
-                    await addContribution.mutateAsync({ amount: parsedAmount });
-                    setAmount('');
+          <Animated.View entering={FadeInDown.duration(200)}>
+            <Card className="gap-3 p-5">
+              <Text className="font-body text-xs text-ink-muted">Amount</Text>
+              <TextField
+                autoFocus
+                value={amount}
+                onChangeText={setAmount}
+                placeholder="₱0"
+                keyboardType="numeric"
+                className="rounded-md border border-border bg-page px-4 py-4 font-mono text-base text-ink"
+              />
+              {error && <Text className="font-body text-sm text-status-bad">{error}</Text>}
+              <View className="flex-row gap-3">
+                <Button
+                  variant="secondary"
+                  className="flex-1"
+                  onPress={() => {
                     setAdding(false);
-                  } catch (e) {
-                    setError(e instanceof Error ? e.message : 'Could not save contribution');
-                  }
-                }}
-              >
-                Save
-              </Button>
-            </View>
-          </Card>
+                    setError(null);
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="primary"
+                  className="flex-1"
+                  disabled={!amount}
+                  loading={addContribution.isPending}
+                  onPress={async () => {
+                    const parsedAmount = Number(amount);
+                    if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+                      return setError('Enter a valid amount');
+                    }
+                    setError(null);
+                    try {
+                      await addContribution.mutateAsync({ amount: parsedAmount });
+                      setAmount('');
+                      setAdding(false);
+                    } catch (e) {
+                      setError(e instanceof Error ? e.message : 'Could not save contribution');
+                    }
+                  }}
+                >
+                  Save
+                </Button>
+              </View>
+            </Card>
+          </Animated.View>
         )}
 
         {adding && category.kind === 'bill' && (
-          <Card className="gap-3 p-5">
-            <Text className="font-body text-xs text-ink-muted">Label</Text>
-            <TextInput
-              value={billLabel}
-              onChangeText={setBillLabel}
-              placeholder="e.g. Internet"
-              className="rounded-md border border-border bg-page px-4 py-4 font-body text-base text-ink"
-            />
-            <Text className="font-body text-xs text-ink-muted">Amount</Text>
-            <TextInput
-              value={amount}
-              onChangeText={setAmount}
-              placeholder="₱0"
-              keyboardType="numeric"
-              className="rounded-md border border-border bg-page px-4 py-4 font-mono text-base text-ink"
-            />
-            <Text className="font-body text-xs text-ink-muted">Recurring day (1-31)</Text>
-            <TextInput
-              value={billDay}
-              onChangeText={setBillDay}
-              keyboardType="numeric"
-              className="rounded-md border border-border bg-page px-4 py-4 font-mono text-base text-ink"
-            />
-            {error && <Text className="font-body text-sm text-status-bad">{error}</Text>}
-            <View className="flex-row gap-3">
-              <Button
-                variant="secondary"
-                className="flex-1"
-                onPress={() => {
-                  setAdding(false);
-                  setError(null);
-                }}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="primary"
-                className="flex-1"
-                disabled={!billLabel || !amount}
-                loading={createBillItem.isPending}
-                onPress={async () => {
-                  const parsedAmount = Number(amount);
-                  const parsedDay = Number(billDay);
-                  if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
-                    return setError('Enter a valid amount');
-                  }
-                  if (!Number.isInteger(parsedDay) || parsedDay < 1 || parsedDay > 31) {
-                    return setError('Recurring day must be between 1 and 31');
-                  }
-                  setError(null);
-                  try {
-                    await createBillItem.mutateAsync({
-                      label: billLabel,
-                      amount: parsedAmount,
-                      recurring_day: parsedDay,
-                    });
-                    setBillLabel('');
-                    setAmount('');
+          <Animated.View entering={FadeInDown.duration(200)}>
+            <Card className="gap-3 p-5">
+              <Text className="font-body text-xs text-ink-muted">Label</Text>
+              <TextField
+                value={billLabel}
+                onChangeText={setBillLabel}
+                placeholder="e.g. Internet"
+                className="rounded-md border border-border bg-page px-4 py-4 font-body text-base text-ink"
+              />
+              <Text className="font-body text-xs text-ink-muted">Amount</Text>
+              <TextField
+                value={amount}
+                onChangeText={setAmount}
+                placeholder="₱0"
+                keyboardType="numeric"
+                className="rounded-md border border-border bg-page px-4 py-4 font-mono text-base text-ink"
+              />
+              <Text className="font-body text-xs text-ink-muted">Recurring day (1-31)</Text>
+              <TextField
+                value={billDay}
+                onChangeText={setBillDay}
+                keyboardType="numeric"
+                className="rounded-md border border-border bg-page px-4 py-4 font-mono text-base text-ink"
+              />
+              {error && <Text className="font-body text-sm text-status-bad">{error}</Text>}
+              <View className="flex-row gap-3">
+                <Button
+                  variant="secondary"
+                  className="flex-1"
+                  onPress={() => {
                     setAdding(false);
-                  } catch (e) {
-                    setError(e instanceof Error ? e.message : 'Could not save item');
-                  }
-                }}
-              >
-                Save
-              </Button>
-            </View>
-          </Card>
+                    setError(null);
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="primary"
+                  className="flex-1"
+                  disabled={!billLabel || !amount}
+                  loading={createBillItem.isPending}
+                  onPress={async () => {
+                    const parsedAmount = Number(amount);
+                    const parsedDay = Number(billDay);
+                    if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+                      return setError('Enter a valid amount');
+                    }
+                    if (!Number.isInteger(parsedDay) || parsedDay < 1 || parsedDay > 31) {
+                      return setError('Recurring day must be between 1 and 31');
+                    }
+                    setError(null);
+                    try {
+                      await createBillItem.mutateAsync({
+                        label: billLabel,
+                        amount: parsedAmount,
+                        recurring_day: parsedDay,
+                      });
+                      setBillLabel('');
+                      setAmount('');
+                      setAdding(false);
+                    } catch (e) {
+                      setError(e instanceof Error ? e.message : 'Could not save item');
+                    }
+                  }}
+                >
+                  Save
+                </Button>
+              </View>
+            </Card>
+          </Animated.View>
         )}
 
         {category.kind === 'bill' && (
@@ -322,7 +329,7 @@ export default function CategoryDetail() {
         >
           Delete category
         </Button>
-      </ScrollView>
+      </KeyboardScroll>
 
       <DeleteCategorySheet
         visible={confirmingDelete}
