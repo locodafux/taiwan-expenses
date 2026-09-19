@@ -281,16 +281,25 @@ export function useHouseholdBillItems(householdId: string | undefined) {
 export function useCreateBillItem(categoryId: string | undefined) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (input: { label: string; amount: number; recurring_day: number; end_date?: string }) => {
+    // `category_id` overrides the hook's categoryId, for callers that only learn it
+    // at mutate time (categories/add.tsx creating a bill category + its item).
+    mutationFn: async ({
+      category_id = categoryId,
+      ...input
+    }: { label: string; amount: number; recurring_day: number; end_date?: string; category_id?: string }) => {
       const { data, error } = await supabase
         .from('bill_items')
-        .insert({ category_id: categoryId as string, ...input })
+        .insert({ category_id: category_id as string, ...input })
         .select()
         .single();
       if (error) throw error;
       return data;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['bill-items', categoryId] }),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['bill-items', data.category_id] });
+      // The checklist reads the household-wide list (and re-materializes when it changes).
+      queryClient.invalidateQueries({ queryKey: ['bill-items-household'] });
+    },
   });
 }
 

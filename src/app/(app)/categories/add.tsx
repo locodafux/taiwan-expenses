@@ -5,8 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/ui/Button';
 import { ErrorState } from '@/components/ui/ErrorState';
-import { supabase } from '@/lib/supabase';
-import { combineQueryState, useCreateCategory, useHouseholdMembership } from '@/lib/queries';
+import { combineQueryState, useCreateBillItem, useCreateCategory, useHouseholdMembership } from '@/lib/queries';
 import { useTheme } from '@/theme/ThemeProvider';
 
 type Kind = 'fund' | 'bill';
@@ -19,6 +18,7 @@ export default function AddCategorySheet() {
   const membershipQuery = useHouseholdMembership();
   const member = membershipQuery.data;
   const createCategory = useCreateCategory(member?.household_id);
+  const createBillItem = useCreateBillItem(undefined);
 
   const { isError, refetch } = combineQueryState(membershipQuery);
 
@@ -59,13 +59,12 @@ export default function AddCategorySheet() {
             : undefined,
       });
       if (kind === 'bill') {
-        const { error: billError } = await supabase.from('bill_items').insert({
+        await createBillItem.mutateAsync({
           category_id: category.id,
           label: name.trim(),
           amount: Number(amount),
           recurring_day: payday,
         });
-        if (billError) throw billError;
       }
       router.back();
     } catch (e) {
@@ -195,7 +194,7 @@ export default function AddCategorySheet() {
             <Button
               variant="primary"
               className="flex-1"
-              loading={createCategory.isPending}
+              loading={createCategory.isPending || createBillItem.isPending}
               onPress={handleSave}
             >
               Add category

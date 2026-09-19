@@ -10,17 +10,14 @@ jest.mock('expo-router', () => ({
 const mockUseHouseholdMembership = jest.fn();
 const mockCreateCategoryMutateAsync = jest.fn();
 const mockUseCreateCategory = jest.fn();
-const mockSupabaseInsert = jest.fn();
-const mockSupabaseFrom = jest.fn();
+const mockCreateBillItemMutateAsync = jest.fn();
+const mockUseCreateBillItem = jest.fn();
 
 jest.mock('@/lib/queries', () => ({
   ...jest.requireActual('@/lib/queries'),
   useHouseholdMembership: (...args: unknown[]) => mockUseHouseholdMembership(...args),
   useCreateCategory: (...args: unknown[]) => mockUseCreateCategory(...args),
-}));
-
-jest.mock('@/lib/supabase', () => ({
-  supabase: { from: (...args: unknown[]) => mockSupabaseFrom(...args) },
+  useCreateBillItem: (...args: unknown[]) => mockUseCreateBillItem(...args),
 }));
 
 import AddCategorySheet from '../add';
@@ -34,8 +31,10 @@ beforeEach(() => {
     mutateAsync: mockCreateCategoryMutateAsync.mockResolvedValue({ id: 'new-cat' }),
     isPending: false,
   });
-  mockSupabaseFrom.mockReturnValue({ insert: mockSupabaseInsert });
-  mockSupabaseInsert.mockResolvedValue({ error: null });
+  mockUseCreateBillItem.mockReturnValue({
+    mutateAsync: mockCreateBillItemMutateAsync.mockResolvedValue({ id: 'new-bill' }),
+    isPending: false,
+  });
 });
 
 describe('AddCategorySheet', () => {
@@ -66,7 +65,9 @@ describe('AddCategorySheet', () => {
     expect(mockBack).toHaveBeenCalled();
   });
 
-  it('requires an amount when adding a bill category, then creates the bill item', async () => {
+  // Regression: the bill item used to be a raw supabase insert with no cache
+  // invalidation, so the checklist never saw it until an app reload.
+  it('requires an amount when adding a bill category, then creates the bill item via the shared mutation', async () => {
     const { getByText, getByPlaceholderText } = await renderWithTheme(<AddCategorySheet />);
 
     await fireEvent.press(getByText('Bill (recurring expense)'));
@@ -82,9 +83,10 @@ describe('AddCategorySheet', () => {
         expect.objectContaining({ name: 'Internet', kind: 'bill' }),
       ),
     );
-    await waitFor(() => expect(mockSupabaseFrom).toHaveBeenCalledWith('bill_items'));
-    expect(mockSupabaseInsert).toHaveBeenCalledWith(
-      expect.objectContaining({ category_id: 'new-cat', label: 'Internet', amount: 1200 }),
+    await waitFor(() =>
+      expect(mockCreateBillItemMutateAsync).toHaveBeenCalledWith(
+        expect.objectContaining({ category_id: 'new-cat', label: 'Internet', amount: 1200 }),
+      ),
     );
     expect(mockBack).toHaveBeenCalled();
   });

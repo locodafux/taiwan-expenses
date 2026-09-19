@@ -12,6 +12,7 @@ import { PaydayCelebration } from '@/components/ui/PaydayCelebration';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import {
   combineQueryState,
+  useCategories,
   useCheckLedgerEntry,
   useHouseholdBillItems,
   useHouseholdMembership,
@@ -39,6 +40,7 @@ export default function PaydayChecklist() {
   const incomes = incomesQuery.data;
   const billsQuery = useHouseholdBillItems(householdId);
   const bills = billsQuery.data;
+  const categoriesQuery = useCategories(householdId);
 
   const paydayDate = useMemo(() => {
     const activeDays = (incomes ?? []).filter((i) => i.active).map((i) => i.recurring_day);
@@ -54,17 +56,30 @@ export default function PaydayChecklist() {
   const updateAmount = useUpdateLedgerAmount(householdId, paydayDate);
   const completionHistoryQuery = usePaydayCompletionHistory(householdId);
 
-  const { isError, refetch } = combineQueryState(membershipQuery, incomesQuery, billsQuery, entriesQuery);
+  const { isError, refetch } = combineQueryState(
+    membershipQuery,
+    incomesQuery,
+    billsQuery,
+    categoriesQuery,
+    entriesQuery,
+  );
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editAmount, setEditAmount] = useState('');
   const [editError, setEditError] = useState<string | null>(null);
 
+  // Ledger rows only exist once materialize_payday has run, and this tab stays
+  // mounted — so re-run it whenever the categories/bill items it reads change
+  // (added here, on another screen, or by a partner via Realtime), not just when
+  // the target payday changes. Waits for both lists so mount materializes once.
+  const planInputs =
+    categoriesQuery.data && bills ? JSON.stringify([categoriesQuery.data, bills]) : undefined;
+
   useEffect(() => {
-    if (householdId && paydayDate) materialize.mutate(paydayDate);
-    // Only re-materialize when the target payday changes, not on every render.
+    if (householdId && paydayDate && planInputs) materialize.mutate(paydayDate);
+    // Only re-materialize when the payday or its inputs change, not on every render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [householdId, paydayDate]);
+  }, [householdId, paydayDate, planInputs]);
 
   const cutAdvice = useMemo(() => {
     if (!incomes || !bills) return null;
