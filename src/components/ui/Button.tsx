@@ -1,7 +1,5 @@
-import { LinearGradient } from 'expo-linear-gradient';
-import { ActivityIndicator, Pressable, StyleSheet, Text, type PressableProps } from 'react-native';
+import { ActivityIndicator, Pressable, Text, type PressableProps } from 'react-native';
 
-import { GRADIENT_ACCENT } from '@/theme/tokens';
 import { useTheme } from '@/theme/ThemeProvider';
 
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
@@ -40,8 +38,7 @@ export function Button({
   className,
   ...pressableProps
 }: ButtonProps) {
-  const { theme, vars } = useTheme();
-  const gradient = variant === 'primary' ? GRADIENT_ACCENT[theme] : null;
+  const { vars } = useTheme();
   const isDisabled = disabled || loading;
   const v = variantClasses[variant];
   const indicatorColor = variant === 'primary' || variant === 'danger' ? '#fff9f4' : vars['--ink'];
@@ -57,32 +54,6 @@ export function Button({
       )}
     </>
   );
-
-  if (gradient) {
-    return (
-      <Pressable
-        disabled={isDisabled}
-        className={`rounded-md overflow-hidden items-center justify-center ${sizeClasses[size]} ${
-          isDisabled ? 'opacity-50' : ''
-        } ${className ?? ''}`}
-        {...pressableProps}
-      >
-        <LinearGradient
-          colors={gradient}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={StyleSheet.absoluteFill}
-        />
-        {loading ? (
-          <ActivityIndicator color="#fff9f4" />
-        ) : (
-          <Text className={`font-body-semibold ${textSizeClasses[size]} text-white text-center`}>
-            {children}
-          </Text>
-        )}
-      </Pressable>
-    );
-  }
 
   return (
     <Pressable
