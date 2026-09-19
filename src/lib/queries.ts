@@ -1,3 +1,5 @@
+import * as Application from 'expo-application';
+import { Platform } from 'react-native';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useAuth } from './auth';
@@ -565,5 +567,25 @@ export function useAddManualContribution(categoryId: string | undefined, househo
       return data;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['category-history', categoryId] }),
+  });
+}
+
+// --- Bug reports ------------------------------------------------------------
+
+// Insert-only: bug_reports has no SELECT policy (reports are read from the
+// Supabase dashboard), so don't chain .select() - returning the row would
+// fail RLS. user_id and created_at are filled in by column defaults.
+export function useSubmitBugReport(householdId: string | undefined) {
+  return useMutation({
+    mutationFn: async (description: string) => {
+      const { error } = await supabase.from('bug_reports').insert({
+        household_id: householdId ?? null,
+        description,
+        app_version: `${Application.nativeApplicationVersion ?? '?'} (${Application.nativeBuildVersion ?? '?'})`,
+        platform: Platform.OS,
+        os_version: String(Platform.Version),
+      });
+      if (error) throw error;
+    },
   });
 }

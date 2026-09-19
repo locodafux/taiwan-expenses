@@ -55,6 +55,7 @@ import {
   useDeleteCategory,
   usePaydayStreak,
   useSavedThisQuarter,
+  useSubmitBugReport,
   useUpdateIncome,
 } from '../queries';
 
@@ -266,5 +267,41 @@ describe('useCreateBillItem (regression: checklist stale after adding a bill)', 
     );
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['bill-items', 'new-cat'] });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['bill-items-household'] });
+  });
+});
+
+describe('useSubmitBugReport', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('inserts the report with household and device context, without reading it back', async () => {
+    const mockInsert = jest.fn().mockResolvedValue({ error: null });
+    mockFrom.mockReturnValue({ insert: mockInsert });
+    const { result } = await renderHook(() => useSubmitBugReport('household-1'), { wrapper });
+
+    result.current.mutate('Checklist froze');
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(mockFrom).toHaveBeenCalledWith('bug_reports');
+    expect(mockInsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        household_id: 'household-1',
+        description: 'Checklist froze',
+        platform: expect.any(String),
+        os_version: expect.any(String),
+        app_version: expect.any(String),
+      }),
+    );
+  });
+
+  it('surfaces an insert error', async () => {
+    mockFrom.mockReturnValue({ insert: jest.fn().mockResolvedValue({ error: { message: 'RLS denied' } }) });
+    const { result } = await renderHook(() => useSubmitBugReport('household-1'), { wrapper });
+
+    result.current.mutate('Checklist froze');
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(result.current.error).toEqual({ message: 'RLS denied' });
   });
 });

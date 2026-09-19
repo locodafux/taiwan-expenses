@@ -14,6 +14,7 @@ const mockUseHousehold = jest.fn();
 const mockUseHouseholdMembers = jest.fn();
 const mockUseCreateInvite = jest.fn();
 const mockUseUpdateHouseholdName = jest.fn();
+const mockUseSubmitBugReport = jest.fn();
 
 jest.mock('@/lib/queries', () => ({
   ...jest.requireActual('@/lib/queries'),
@@ -22,6 +23,7 @@ jest.mock('@/lib/queries', () => ({
   useHouseholdMembers: (...args: unknown[]) => mockUseHouseholdMembers(...args),
   useCreateInvite: (...args: unknown[]) => mockUseCreateInvite(...args),
   useUpdateHouseholdName: (...args: unknown[]) => mockUseUpdateHouseholdName(...args),
+  useSubmitBugReport: (...args: unknown[]) => mockUseSubmitBugReport(...args),
 }));
 
 import Settings from '../settings';
@@ -34,6 +36,7 @@ const members = [
 
 const mockCreateInviteMutateAsync = jest.fn();
 const mockUpdateHouseholdNameMutateAsync = jest.fn();
+const mockSubmitBugReportMutateAsync = jest.fn();
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -46,6 +49,10 @@ beforeEach(() => {
   });
   mockUseUpdateHouseholdName.mockReturnValue({
     mutateAsync: mockUpdateHouseholdNameMutateAsync.mockResolvedValue(undefined),
+  });
+  mockUseSubmitBugReport.mockReturnValue({
+    mutateAsync: mockSubmitBugReportMutateAsync.mockResolvedValue(undefined),
+    isPending: false,
   });
 });
 
@@ -147,5 +154,37 @@ describe('Settings', () => {
     expect(mockDeleteAccount).not.toHaveBeenCalled();
 
     alertSpy.mockRestore();
+  });
+
+  it('sends a bug report for the household and confirms success', async () => {
+    const { getByText, getByLabelText } = await renderWithTheme(<Settings />);
+
+    await fireEvent.changeText(await waitFor(() => getByLabelText('Bug description')), '  Checklist froze  ');
+    await fireEvent.press(getByText('Send report'));
+
+    await waitFor(() => expect(mockSubmitBugReportMutateAsync).toHaveBeenCalledWith('Checklist froze'));
+    expect(mockUseSubmitBugReport).toHaveBeenCalledWith('household-1');
+    expect(await waitFor(() => getByText('Thanks - your report was sent.'))).toBeTruthy();
+    expect(getByLabelText('Bug description').props.value).toBe('');
+  });
+
+  it('requires a description before sending a bug report', async () => {
+    const { getByText } = await renderWithTheme(<Settings />);
+
+    await fireEvent.press(await waitFor(() => getByText('Send report')));
+
+    expect(await waitFor(() => getByText('Describe what went wrong first.'))).toBeTruthy();
+    expect(mockSubmitBugReportMutateAsync).not.toHaveBeenCalled();
+  });
+
+  it('shows an error and keeps the draft when sending a bug report fails', async () => {
+    mockSubmitBugReportMutateAsync.mockRejectedValue(new Error('Network request failed'));
+    const { getByText, getByLabelText } = await renderWithTheme(<Settings />);
+
+    await fireEvent.changeText(await waitFor(() => getByLabelText('Bug description')), 'Checklist froze');
+    await fireEvent.press(getByText('Send report'));
+
+    expect(await waitFor(() => getByText('Network request failed'))).toBeTruthy();
+    expect(getByLabelText('Bug description').props.value).toBe('Checklist froze');
   });
 });

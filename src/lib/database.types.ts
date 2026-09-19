@@ -99,6 +99,17 @@ type Relationship = {
   referencedColumns: string[];
 };
 
+export type BugReport = {
+  id: string;
+  user_id: string | null;
+  household_id: string | null;
+  description: string;
+  app_version: string | null;
+  platform: string | null;
+  os_version: string | null;
+  created_at: string;
+};
+
 type TableDef<Row, Insert, Relationships extends Relationship[] = []> = {
   Row: Row;
   Insert: Insert;
@@ -193,6 +204,7 @@ export interface Database {
           },
         ]
       >;
+      bug_reports: TableDef<BugReport, Partial<BugReport> & { description: string }>;
     };
     Views: Record<string, never>;
     Functions: {
