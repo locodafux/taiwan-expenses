@@ -80,12 +80,3 @@ export const THEMES: Record<ThemeName, ThemeVars> = {
     '--cat-excess': '#7c3aed',
   },
 };
-
-// RN has no CSS gradient background; playful's "bold gradient accent" is
-// applied via expo-linear-gradient using these two stops where it appears
-// (see components/core/Button.tsx primary variant).
-export const GRADIENT_ACCENT: Record<ThemeName, [string, string] | null> = {
-  warm: null,
-  original: null,
-  playful: ['#7c3aed', '#ec4899'],
-};
