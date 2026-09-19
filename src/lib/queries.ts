@@ -83,6 +83,23 @@ export function useUpdateHouseholdName(householdId: string | undefined) {
   });
 }
 
+// household_members has no client UPDATE policy; the RPC only ever renames
+// the caller's own row. Incomes embed display_name, so refresh them too.
+export function useUpdateDisplayName(householdId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (displayName: string) => {
+      const { error } = await supabase.rpc('update_own_display_name', { p_display_name: displayName });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['household-member'] });
+      queryClient.invalidateQueries({ queryKey: ['household-members', householdId] });
+      queryClient.invalidateQueries({ queryKey: ['incomes', householdId] });
+    },
+  });
+}
+
 export function useCreateInvite() {
   return useMutation({
     mutationFn: async () => {

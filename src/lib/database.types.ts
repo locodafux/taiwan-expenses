@@ -220,6 +220,10 @@ export interface Database {
         Args: Record<string, never>;
         Returns: undefined;
       };
+      update_own_display_name: {
+        Args: { p_display_name: string };
+        Returns: undefined;
+      };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;

@@ -5,8 +5,14 @@ import { renderWithTheme } from '@/test/renderWithTheme';
 
 const mockSignOut = jest.fn();
 const mockDeleteAccount = jest.fn();
+const mockChangePassword = jest.fn();
 jest.mock('@/lib/auth', () => ({
-  useAuth: () => ({ signOut: mockSignOut, deleteAccount: mockDeleteAccount }),
+  useAuth: () => ({
+    session: { user: { email: 'leo@example.com' } },
+    signOut: mockSignOut,
+    deleteAccount: mockDeleteAccount,
+    changePassword: mockChangePassword,
+  }),
 }));
 
 const mockUseHouseholdMembership = jest.fn();
@@ -15,6 +21,7 @@ const mockUseHouseholdMembers = jest.fn();
 const mockUseCreateInvite = jest.fn();
 const mockUseUpdateHouseholdName = jest.fn();
 const mockUseSubmitBugReport = jest.fn();
+const mockUseUpdateDisplayName = jest.fn();
 
 jest.mock('@/lib/queries', () => ({
   ...jest.requireActual('@/lib/queries'),
@@ -24,11 +31,12 @@ jest.mock('@/lib/queries', () => ({
   useCreateInvite: (...args: unknown[]) => mockUseCreateInvite(...args),
   useUpdateHouseholdName: (...args: unknown[]) => mockUseUpdateHouseholdName(...args),
   useSubmitBugReport: (...args: unknown[]) => mockUseSubmitBugReport(...args),
+  useUpdateDisplayName: (...args: unknown[]) => mockUseUpdateDisplayName(...args),
 }));
 
 import Settings from '../settings';
 
-const member = { id: 'member-1', household_id: 'household-1', user_id: 'user-1' };
+const member = { id: 'member-1', household_id: 'household-1', user_id: 'user-1', display_name: 'Leo' };
 const members = [
   { id: 'member-1', display_name: 'Leo', color: '#c1552f' },
   { id: 'member-2', display_name: 'Alex', color: '#1f5c56' },
@@ -37,6 +45,7 @@ const members = [
 const mockCreateInviteMutateAsync = jest.fn();
 const mockUpdateHouseholdNameMutateAsync = jest.fn();
 const mockSubmitBugReportMutateAsync = jest.fn();
+const mockUpdateDisplayNameMutateAsync = jest.fn();
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -50,6 +59,11 @@ beforeEach(() => {
   mockUseUpdateHouseholdName.mockReturnValue({
     mutateAsync: mockUpdateHouseholdNameMutateAsync.mockResolvedValue(undefined),
   });
+  mockUseUpdateDisplayName.mockReturnValue({
+    mutateAsync: mockUpdateDisplayNameMutateAsync.mockResolvedValue(undefined),
+    isPending: false,
+  });
+  mockChangePassword.mockResolvedValue(undefined);
   mockUseSubmitBugReport.mockReturnValue({
     mutateAsync: mockSubmitBugReportMutateAsync.mockResolvedValue(undefined),
     isPending: false,
@@ -186,5 +200,66 @@ describe('Settings', () => {
 
     expect(await waitFor(() => getByText('Network request failed'))).toBeTruthy();
     expect(getByLabelText('Bug description').props.value).toBe('Checklist froze');
+  });
+
+  it('shows the account email read-only', async () => {
+    const { getByText } = await renderWithTheme(<Settings />);
+
+    expect(await waitFor(() => getByText('leo@example.com'))).toBeTruthy();
+  });
+
+  it('renames yourself, trimming the name', async () => {
+    const { getByText, getByLabelText, queryByText } = await renderWithTheme(<Settings />);
+
+    const input = await waitFor(() => getByLabelText('Your name'));
+    expect(input.props.value).toBe('Leo');
+    expect(queryByText('Save name')).toBeNull();
+    await fireEvent.changeText(input, '  Leonardo ');
+    await fireEvent.press(getByText('Save name'));
+
+    await waitFor(() => expect(mockUpdateDisplayNameMutateAsync).toHaveBeenCalledWith('Leonardo'));
+    expect(mockUseUpdateDisplayName).toHaveBeenCalledWith('household-1');
+    expect(await waitFor(() => getByText('Name saved.'))).toBeTruthy();
+  });
+
+  it('rejects a blank name', async () => {
+    const { getByText, getByLabelText } = await renderWithTheme(<Settings />);
+
+    await fireEvent.changeText(await waitFor(() => getByLabelText('Your name')), '   ');
+    await fireEvent.press(getByText('Save name'));
+
+    expect(await waitFor(() => getByText('Name is required'))).toBeTruthy();
+    expect(mockUpdateDisplayNameMutateAsync).not.toHaveBeenCalled();
+  });
+
+  it('changes the password and clears the field', async () => {
+    const { getByText, getByLabelText } = await renderWithTheme(<Settings />);
+
+    await fireEvent.changeText(await waitFor(() => getByLabelText('New password')), 'supersecret');
+    await fireEvent.press(getByText('Change password'));
+
+    await waitFor(() => expect(mockChangePassword).toHaveBeenCalledWith('supersecret'));
+    expect(await waitFor(() => getByText('Password changed.'))).toBeTruthy();
+    expect(getByLabelText('New password').props.value).toBe('');
+  });
+
+  it('rejects a too-short password without calling the server', async () => {
+    const { getByText, getByLabelText } = await renderWithTheme(<Settings />);
+
+    await fireEvent.changeText(await waitFor(() => getByLabelText('New password')), 'short');
+    await fireEvent.press(getByText('Change password'));
+
+    expect(await waitFor(() => getByText('Password must be at least 8 characters'))).toBeTruthy();
+    expect(mockChangePassword).not.toHaveBeenCalled();
+  });
+
+  it('shows the server error when a password change fails', async () => {
+    mockChangePassword.mockRejectedValue(new Error('New password should be different from the old password.'));
+    const { getByText, getByLabelText } = await renderWithTheme(<Settings />);
+
+    await fireEvent.changeText(await waitFor(() => getByLabelText('New password')), 'supersecret');
+    await fireEvent.press(getByText('Change password'));
+
+    expect(await waitFor(() => getByText('New password should be different from the old password.'))).toBeTruthy();
   });
 });
