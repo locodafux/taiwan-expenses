@@ -51,6 +51,7 @@ function buildDeleteChain(result: { error: null | { message: string }; count: nu
 
 import {
   useCheckLedgerEntry,
+  useCreateBillItem,
   useDeleteCategory,
   usePaydayStreak,
   useSavedThisQuarter,
@@ -235,5 +236,35 @@ describe('useDeleteCategory (regression: silent no-op delete)', () => {
 
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(result.current.error).toBeInstanceOf(Error);
+  });
+});
+
+describe('useCreateBillItem (regression: checklist stale after adding a bill)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('inserts under an explicit category_id and invalidates the household-wide bill list the checklist reads', async () => {
+    const mockInsert = jest.fn(() => ({ select: mockSelect }));
+    mockSelect.mockReturnValue({ single: mockSingle });
+    mockSingle.mockResolvedValue({ data: { id: 'bill-1', category_id: 'new-cat' }, error: null });
+    mockFrom.mockReturnValue({ insert: mockInsert });
+
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const invalidate = jest.spyOn(client, 'invalidateQueries');
+    const { result } = await renderHook(() => useCreateBillItem(undefined), {
+      wrapper: ({ children }: { children: ReactNode }) => (
+        <QueryClientProvider client={client}>{children}</QueryClientProvider>
+      ),
+    });
+
+    result.current.mutate({ category_id: 'new-cat', label: 'Internet', amount: 1200, recurring_day: 5 });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(mockInsert).toHaveBeenCalledWith(
+      expect.objectContaining({ category_id: 'new-cat', label: 'Internet', amount: 1200 }),
+    );
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['bill-items', 'new-cat'] });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['bill-items-household'] });
   });
 });

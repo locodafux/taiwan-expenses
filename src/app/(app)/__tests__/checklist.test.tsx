@@ -1,6 +1,7 @@
 import { fireEvent, waitFor } from '@testing-library/react-native';
 
 import { renderWithTheme } from '@/test/renderWithTheme';
+import { ThemeProvider } from '@/theme/ThemeProvider';
 
 const mockPush = jest.fn();
 jest.mock('expo-router', () => ({
@@ -10,6 +11,7 @@ jest.mock('expo-router', () => ({
 const mockUseHouseholdMembership = jest.fn();
 const mockUseIncomes = jest.fn();
 const mockUseHouseholdBillItems = jest.fn();
+const mockUseCategories = jest.fn();
 const mockUseLedgerEntriesForPayday = jest.fn();
 const mockUseMaterializePayday = jest.fn();
 const mockUseCheckLedgerEntry = jest.fn();
@@ -21,6 +23,7 @@ jest.mock('@/lib/queries', () => ({
   useHouseholdMembership: (...args: unknown[]) => mockUseHouseholdMembership(...args),
   useIncomes: (...args: unknown[]) => mockUseIncomes(...args),
   useHouseholdBillItems: (...args: unknown[]) => mockUseHouseholdBillItems(...args),
+  useCategories: (...args: unknown[]) => mockUseCategories(...args),
   useLedgerEntriesForPayday: (...args: unknown[]) => mockUseLedgerEntriesForPayday(...args),
   useMaterializePayday: (...args: unknown[]) => mockUseMaterializePayday(...args),
   useCheckLedgerEntry: (...args: unknown[]) => mockUseCheckLedgerEntry(...args),
@@ -65,6 +68,7 @@ beforeEach(() => {
   mockUseHouseholdMembership.mockReturnValue(okQuery(member));
   mockUseIncomes.mockReturnValue(okQuery(incomes));
   mockUseHouseholdBillItems.mockReturnValue(okQuery([]));
+  mockUseCategories.mockReturnValue(okQuery([]));
   mockUseLedgerEntriesForPayday.mockReturnValue(okQuery(entries));
   mockUseMaterializePayday.mockReturnValue({ mutate: mockMaterializeMutate });
   mockUseCheckLedgerEntry.mockReturnValue({ mutate: mockCheckMutate });
@@ -160,5 +164,52 @@ describe('PaydayChecklist', () => {
     await waitFor(() =>
       expect(mockUpdateAmountMutateAsync).toHaveBeenCalledWith({ id: 'entry-1', amount: 1800 }),
     );
+  });
+
+  // Regression: the tab stays mounted, so ledger rows for a category/bill added
+  // after the first visit never appeared until an app reload.
+  it('re-materializes the payday when a bill item is added while mounted', async () => {
+    const { rerender } = await renderWithTheme(<PaydayChecklist />);
+    const themed = (
+      <ThemeProvider>
+        <PaydayChecklist />
+      </ThemeProvider>
+    );
+    await waitFor(() => expect(mockMaterializeMutate).toHaveBeenCalledTimes(1));
+
+    mockUseHouseholdBillItems.mockReturnValue(okQuery([{ id: 'bill-1', amount: 1200, recurring_day: 5 }]));
+    await rerender(themed);
+
+    await waitFor(() => expect(mockMaterializeMutate).toHaveBeenCalledTimes(2));
+    expect(mockMaterializeMutate).toHaveBeenLastCalledWith(expect.any(String));
+  });
+
+  it('re-materializes the payday when a category is added while mounted', async () => {
+    const { rerender } = await renderWithTheme(<PaydayChecklist />);
+    const themed = (
+      <ThemeProvider>
+        <PaydayChecklist />
+      </ThemeProvider>
+    );
+    await waitFor(() => expect(mockMaterializeMutate).toHaveBeenCalledTimes(1));
+
+    mockUseCategories.mockReturnValue(okQuery([{ id: 'cat-new', kind: 'fund' }]));
+    await rerender(themed);
+
+    await waitFor(() => expect(mockMaterializeMutate).toHaveBeenCalledTimes(2));
+  });
+
+  it('does not re-materialize on a re-render with unchanged inputs', async () => {
+    const { rerender } = await renderWithTheme(<PaydayChecklist />);
+    const themed = (
+      <ThemeProvider>
+        <PaydayChecklist />
+      </ThemeProvider>
+    );
+    await waitFor(() => expect(mockMaterializeMutate).toHaveBeenCalledTimes(1));
+
+    await rerender(themed);
+
+    expect(mockMaterializeMutate).toHaveBeenCalledTimes(1);
   });
 });
