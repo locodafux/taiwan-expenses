@@ -16,6 +16,7 @@ type AuthContextValue = {
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   deleteAccount: () => Promise<void>;
+  changePassword: (password: string) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -68,6 +69,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // The account no longer exists server-side; clear the local session
         // too so AppLayout's session check redirects back to (auth).
         await supabase.auth.signOut();
+      },
+      async changePassword(password) {
+        const { error } = await supabase.auth.updateUser({ password });
+        if (error) throw error;
       },
     }),
     [session, initializing],

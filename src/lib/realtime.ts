@@ -21,6 +21,8 @@ export function useRealtimeSync(householdId: string | undefined) {
         { event: '*', schema: 'public', table: 'household_members', filter: `household_id=eq.${householdId}` },
         () => {
           queryClient.invalidateQueries({ queryKey: ['household-members', householdId] });
+          // incomes embed the member's display_name (useIncomes).
+          queryClient.invalidateQueries({ queryKey: ['incomes', householdId] });
         },
       )
       .on(
