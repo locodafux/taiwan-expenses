@@ -8,7 +8,7 @@ import { checkForUpdate, downloadAndInstall, type AvailableUpdate } from '@/lib/
 
 // Mounted once above the tab navigator so it checks at most once per app
 // session regardless of which screen is active - see appUpdate.ts for why
-// "newer" is decided by APK digest rather than a version tag.
+// "newer" is decided by upload vs. install time rather than a version tag.
 export function UpdateBanner() {
   const [update, setUpdate] = useState<AvailableUpdate | null>(null);
   const [dismissed, setDismissed] = useState(false);
