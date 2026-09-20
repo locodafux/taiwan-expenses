@@ -72,7 +72,7 @@ export default function AddCategory() {
 
   return (
     <SafeAreaView className="flex-1 bg-page" edges={['top']}>
-      <KeyboardScroll contentContainerClassName="gap-5 px-6 py-5">
+      <KeyboardScroll contentContainerClassName="gap-4 px-6 py-5">
         <Pressable onPress={() => router.back()} hitSlop={13} className="self-start py-3">
           <Text className="font-body text-sm text-ink-2">‹ Categories</Text>
         </Pressable>

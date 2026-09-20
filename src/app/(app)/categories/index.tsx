@@ -95,7 +95,7 @@ export default function CategoryManagement() {
             </ListRow>
           ))}
           {(categories ?? []).length === 0 && (
-            <Text className="p-5 font-body text-sm text-ink-muted">No categories yet.</Text>
+            <Text className="p-4 font-body text-sm text-ink-muted">No categories yet.</Text>
           )}
         </Card>
 

@@ -122,7 +122,7 @@ export default function CategoryDetail() {
           </Button>
         </View>
 
-        <Card className="p-5">
+        <Card className="p-4">
           <Text className="font-mono text-2xl" style={{ color: category.color ?? undefined }}>
             {formatPeso(category.kind === 'bill' ? paidThisMonth : balance)}
           </Text>
@@ -145,7 +145,7 @@ export default function CategoryDetail() {
 
         {adding && category.kind === 'fund' && (
           <Animated.View entering={FadeInDown.duration(200)}>
-            <Card className="gap-3 p-5">
+            <Card className="gap-3 p-4">
               <Text className="font-body text-xs text-ink-muted">Amount</Text>
               <TextField
                 autoFocus
@@ -196,7 +196,7 @@ export default function CategoryDetail() {
 
         {adding && category.kind === 'bill' && (
           <Animated.View entering={FadeInDown.duration(200)}>
-            <Card className="gap-3 p-5">
+            <Card className="gap-3 p-4">
               <Text className="font-body text-xs text-ink-muted">Label</Text>
               <TextField
                 value={billLabel}
@@ -269,7 +269,7 @@ export default function CategoryDetail() {
 
         {category.kind === 'bill' && (
           <View>
-            <Text className="mb-3 font-body-bold text-sm text-ink">Line items</Text>
+            <Text className="mb-2 font-body-bold text-sm text-ink">Line items</Text>
             <Card>
               {(billItems ?? []).map((b, i) => (
                 <ListRow key={b.id} isLast={i === (billItems?.length ?? 0) - 1}>
@@ -283,14 +283,14 @@ export default function CategoryDetail() {
                 </ListRow>
               ))}
               {(billItems ?? []).length === 0 && (
-                <Text className="p-5 font-body text-sm text-ink-muted">No line items yet.</Text>
+                <Text className="p-4 font-body text-sm text-ink-muted">No line items yet.</Text>
               )}
             </Card>
           </View>
         )}
 
         <View>
-          <View className="mb-3 flex-row items-center justify-between">
+          <View className="mb-2 flex-row items-center justify-between">
             <Text className="font-body-bold text-sm text-ink">History</Text>
             {category.kind === 'bill' && (
               <Pressable onPress={() => router.push('/(app)/checklist')}>
@@ -316,7 +316,7 @@ export default function CategoryDetail() {
               </ListRow>
             ))}
             {(history ?? []).length === 0 && (
-              <Text className="p-5 font-body text-sm text-ink-muted">Nothing checked off yet.</Text>
+              <Text className="p-4 font-body text-sm text-ink-muted">Nothing checked off yet.</Text>
             )}
           </Card>
         </View>

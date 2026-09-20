@@ -7,7 +7,7 @@ import Svg, { Circle } from 'react-native-svg';
 
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
+import { Card, ListRow } from '@/components/ui/Card';
 import { ErrorState } from '@/components/ui/ErrorState';
 import {
   combineQueryState,
@@ -132,6 +132,7 @@ export default function Dashboard() {
     { label: 'Invite your partner', done: (members ?? []).length > 1, href: '/(app)/settings' as const },
   ];
   const setupComplete = setupSteps.every((s) => s.done);
+  const showMomentum = savedThisQuarter !== undefined && streak !== undefined;
 
   return (
     <SafeAreaView className="flex-1 bg-page" edges={['top']}>
@@ -188,88 +189,103 @@ export default function Dashboard() {
           </Card>
         )}
 
-        {savedThisQuarter !== undefined && streak !== undefined && (
-          <Card className="flex-row items-center gap-4 p-4">
-            <Ring
-              pct={setupSteps.filter((s) => s.done).length / setupSteps.length}
-              color={vars['--accent']}
-              trackColor={vars['--surface-3']}
-            />
-            <View className="flex-1">
-              <Text className="font-body text-xs uppercase tracking-wide text-ink-muted">
-                Saved this quarter
-              </Text>
-              <Text className="mt-1 font-mono text-xl text-ink">{formatPeso(savedThisQuarter)}</Text>
-            </View>
-            <View className="rounded-full bg-page px-3 py-1.5">
-              <Text className="font-body-bold text-xs text-ink">
-                {streak > 0 ? `🔥 ${streak}-payday streak` : 'Start your streak'}
-              </Text>
-            </View>
-          </Card>
-        )}
+        {(showMomentum || payday) && (
+          <Card>
+            {showMomentum && (
+              <ListRow isLast={!payday}>
+                <View className="flex-1">
+                  <Text className="font-body text-xs uppercase tracking-wide text-ink-muted">
+                    Saved this quarter
+                  </Text>
+                  <Text className="font-mono text-xl text-ink">{formatPeso(savedThisQuarter)}</Text>
+                </View>
+                <View className="rounded-full bg-page px-3 py-1.5">
+                  <Text className="font-body-bold text-xs text-ink">
+                    {streak > 0 ? `🔥 ${streak}-payday streak` : 'Start your streak'}
+                  </Text>
+                </View>
+              </ListRow>
+            )}
 
-        {payday && (
-          <Card className="flex-row items-center justify-between gap-3 p-4">
-            <View className="flex-1">
-              <Text className="font-body text-xs uppercase tracking-wide text-ink-muted">
-                Next payday
-              </Text>
-              <Text className="mt-1 font-mono text-xl text-ink">{formatPeso(payday.amount)}</Text>
-              <Text className="mt-1 font-body text-xs text-ink-2">
-                {payday.date.getDate()}th · in {payday.daysAway} day{payday.daysAway === 1 ? '' : 's'}
-              </Text>
-            </View>
-            <Button size="sm" onPress={() => router.push('/(app)/checklist')}>
-              Review
-            </Button>
+            {payday && (
+              <ListRow isLast>
+                <View className="flex-1">
+                  <Text className="font-body text-xs uppercase tracking-wide text-ink-muted">
+                    Next payday
+                  </Text>
+                  <Text className="font-mono text-xl text-ink">{formatPeso(payday.amount)}</Text>
+                  <Text className="font-body text-xs text-ink-2">
+                    {payday.date.getDate()}th · in {payday.daysAway} day{payday.daysAway === 1 ? '' : 's'}
+                  </Text>
+                </View>
+                <Button size="sm" onPress={() => router.push('/(app)/checklist')}>
+                  Review
+                </Button>
+              </ListRow>
+            )}
           </Card>
         )}
 
         <View>
-          <Text className="mb-3 font-body-bold text-sm text-ink">Category balances</Text>
-          <View className="gap-3">
-            {(categories ?? []).map((c) => {
+          <Text className="mb-2 font-body-bold text-sm text-ink">Category balances</Text>
+          <Card>
+            {(categories ?? []).map((c, i) => {
               const balance = balances?.[c.id] ?? 0;
               const goal = c.rule?.type === 'goal' ? c.rule.target_amount : null;
               const target = goal ?? (c.rule?.type === 'capped_percent' ? c.rule.cap ?? null : null);
               return (
-                <Pressable key={c.id} onPress={() => router.push(`/(app)/categories/${c.id}`)}>
-                  <Card className="flex-row items-center gap-4 p-4">
-                    {target != null ? (
-                      <Ring pct={balance / target} color={c.color ?? '#999'} trackColor={vars['--surface-3']} />
-                    ) : (
-                      <View className="h-[42px] w-[42px] items-center justify-center">
-                        <View className="h-3 w-3 rounded-full" style={{ backgroundColor: c.color ?? '#999' }} />
+                <ListRow
+                  key={c.id}
+                  isLast={i === (categories?.length ?? 0) - 1}
+                  onPress={() => router.push(`/(app)/categories/${c.id}`)}
+                >
+                  <View className="h-[10px] w-[10px] rounded" style={{ backgroundColor: c.color ?? '#999' }} />
+                  <View className="flex-1">
+                    <Text className="font-body-semibold text-base text-ink">{c.name}</Text>
+                    <Text className="mt-[2px] font-body text-xs text-ink-muted">
+                      {c.kind === 'bill'
+                        ? 'Recurring bills'
+                        : goal
+                          ? `Goal · ${formatPeso(goal)}`
+                          : target != null
+                            ? `Capped · ${formatPeso(target)}`
+                            : 'No cap'}
+                    </Text>
+                    {target != null && (
+                      <View
+                        className="mt-[5px] h-1 overflow-hidden rounded-full bg-surface-3"
+                        accessibilityRole="progressbar"
+                        accessibilityValue={{
+                          now: Math.round(Math.min(1, Math.max(0, balance / target)) * 100),
+                          min: 0,
+                          max: 100,
+                        }}
+                      >
+                        <View
+                          className="h-full rounded-full"
+                          style={{
+                            width: `${Math.min(1, Math.max(0, balance / target)) * 100}%`,
+                            backgroundColor: c.color ?? '#999',
+                          }}
+                        />
                       </View>
                     )}
-                    <View className="flex-1">
-                      <Text className="font-body-semibold text-base text-ink">{c.name}</Text>
-                      <Text className="font-body text-xs text-ink-muted">
-                        {c.kind === 'bill' ? 'Recurring bills' : goal ? `Goal · ${formatPeso(goal)}` : 'No cap'}
-                      </Text>
-                    </View>
-                    {c.kind === 'fund' ? (
-                      <Text className="font-mono text-sm text-ink">
-                        {formatPeso(balance)}
-                        {goal ? ` / ${formatPeso(goal)}` : ''}
-                      </Text>
-                    ) : (
-                      <Text className="font-mono text-sm text-ink">
-                        {formatPeso(balancesThisMonth?.[c.id] ?? 0)} this month
-                      </Text>
-                    )}
-                    <Text className="text-ink-muted">›</Text>
-                  </Card>
-                </Pressable>
+                  </View>
+                  <Text className="font-mono text-sm text-ink">
+                    {c.kind === 'fund'
+                      ? formatPeso(balance)
+                      : `${formatPeso(balancesThisMonth?.[c.id] ?? 0)} this month`}
+                  </Text>
+                  <Text className="text-ink-muted">›</Text>
+                </ListRow>
               );
             })}
             {(categories ?? []).length === 0 && (
-              <Text className="font-body text-sm text-ink-muted">
+              <Text className="p-4 font-body text-sm text-ink-muted">
                 No categories yet — add one from the Categories tab.
               </Text>
             )}
-          </View>
+          </Card>
         </View>
       </ScrollView>
     </SafeAreaView>

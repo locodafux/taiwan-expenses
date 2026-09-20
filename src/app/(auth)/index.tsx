@@ -76,8 +76,8 @@ export default function Onboarding() {
 
   if (step === 'welcome') {
     return (
-      <SafeAreaView className="flex-1 bg-page px-7 py-8">
-        <View className="flex-1 gap-9">
+      <SafeAreaView className="flex-1 bg-page px-6 py-6">
+        <View className="flex-1 gap-6">
           <Text className="mt-3 font-display text-2xl leading-[1.1] text-ink">
             Our household,{'\n'}one shared budget.
           </Text>
@@ -109,7 +109,7 @@ export default function Onboarding() {
 
   return (
     <SafeAreaView className="flex-1 bg-page">
-      <KeyboardScroll contentContainerClassName="gap-6 px-7 py-8">
+      <KeyboardScroll contentContainerClassName="gap-5 px-6 py-6">
         <Text className="font-display text-xl text-ink">{titles[step]}</Text>
         {isJoin && (
           <Text className="font-body text-sm text-ink-2">

@@ -212,7 +212,7 @@ export default function PaydayChecklist() {
 
         {editingId && (
           <Animated.View entering={FadeInDown.duration(200)}>
-            <Card className="gap-3 p-5">
+            <Card className="gap-3 p-4">
               <Text className="font-body text-xs text-ink-muted">Adjust amount for this payday</Text>
               <TextField
                 autoFocus
