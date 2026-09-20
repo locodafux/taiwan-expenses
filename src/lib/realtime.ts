@@ -63,6 +63,14 @@ export function useRealtimeSync(householdId: string | undefined) {
           queryClient.invalidateQueries({ queryKey: ['category-history'] });
         },
       )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'messages', filter: `household_id=eq.${householdId}` },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['messages', householdId] });
+          queryClient.invalidateQueries({ queryKey: ['messages-unread', householdId] });
+        },
+      )
       .subscribe();
 
     return () => {

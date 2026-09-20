@@ -43,8 +43,26 @@ describe('useRealtimeSync', () => {
     await renderHook(() => useRealtimeSync('household-1'), { wrapper: wrapper(new QueryClient()) });
 
     expect(Object.keys(callbacks)).toEqual(
-      expect.arrayContaining(['household_members', 'categories', 'incomes', 'bill_items', 'ledger_entries']),
+      expect.arrayContaining([
+        'household_members',
+        'categories',
+        'incomes',
+        'bill_items',
+        'ledger_entries',
+        'messages',
+      ]),
     );
+  });
+
+  it('invalidates the chat queries when a message arrives', async () => {
+    const queryClient = new QueryClient();
+    const invalidateSpy = jest.spyOn(queryClient, 'invalidateQueries');
+    await renderHook(() => useRealtimeSync('household-1'), { wrapper: wrapper(queryClient) });
+
+    callbacks.messages();
+
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['messages', 'household-1'] });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['messages-unread', 'household-1'] });
   });
 
   it('invalidates the household-members query when household_members changes', async () => {
