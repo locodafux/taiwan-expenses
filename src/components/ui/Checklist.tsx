@@ -86,9 +86,9 @@ export function ChecklistGroup({
   children: React.ReactNode;
 }) {
   return (
-    <View className="mb-7">
+    <View className="mb-5">
       <Text className="font-body-bold text-sm text-ink">{heading}</Text>
-      {note && <Text className="mb-3 mt-[2px] font-body text-xs text-ink-muted">{note}</Text>}
+      {note && <Text className="mb-2 mt-[2px] font-body text-xs text-ink-muted">{note}</Text>}
       {children}
     </View>
   );

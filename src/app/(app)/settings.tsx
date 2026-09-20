@@ -167,12 +167,12 @@ export default function Settings() {
 
   return (
     <SafeAreaView className="flex-1 bg-page" edges={['top']}>
-      <KeyboardScroll contentContainerClassName="gap-5 px-6 py-5">
+      <KeyboardScroll contentContainerClassName="gap-4 px-6 py-5">
         <Text className="font-display-semibold text-lg text-ink">Settings</Text>
 
         <View>
-          <Text className="mb-3 font-body-semibold text-sm text-ink">Your profile</Text>
-          <Card className="gap-3 p-5">
+          <Text className="mb-2 font-body-semibold text-sm text-ink">Your profile</Text>
+          <Card className="gap-3 p-4">
             <Text className="font-body text-xs text-ink-muted">Your name (how your partner sees you)</Text>
             <TextField
               value={profileName ?? member?.display_name ?? ''}
@@ -225,7 +225,7 @@ export default function Settings() {
         </View>
 
         <View>
-          <Text className="mb-3 font-body-semibold text-sm text-ink">Look and feel</Text>
+          <Text className="mb-2 font-body-semibold text-sm text-ink">Look and feel</Text>
           <ThemeSwitcher value={theme} onChange={setTheme} />
           <Text className="mt-3 font-body text-xs leading-[1.55] text-ink-muted">
             {THEME_DESCRIPTIONS[theme]}
@@ -233,7 +233,7 @@ export default function Settings() {
         </View>
 
         <View>
-          <Text className="mb-3 font-body-semibold text-sm text-ink">Household</Text>
+          <Text className="mb-2 font-body-semibold text-sm text-ink">Household</Text>
           {isEditingName ? (
             <TextField
               autoFocus
@@ -241,11 +241,11 @@ export default function Settings() {
               onChangeText={setNameDraft}
               onBlur={saveName}
               onSubmitEditing={saveName}
-              className="mb-3 rounded-md border border-border bg-page px-4 py-4 font-body text-base text-ink"
+              className="mb-2 rounded-md border border-border bg-page px-4 py-4 font-body text-base text-ink"
             />
           ) : (
             <Pressable
-              className="mb-3"
+              className="mb-2"
               onPress={() => {
                 setNameDraft(household?.name ?? '');
                 setIsEditingName(true);
@@ -265,8 +265,8 @@ export default function Settings() {
         </View>
 
         <View>
-          <Text className="mb-3 font-body-semibold text-sm text-ink">Invite your partner</Text>
-          <Card className="gap-3 p-5">
+          <Text className="mb-2 font-body-semibold text-sm text-ink">Invite your partner</Text>
+          <Card className="gap-3 p-4">
             {invite ? (
               <View className="flex-row items-center justify-between gap-3">
                 <Text selectable className="flex-1 font-mono text-lg text-ink">
@@ -310,8 +310,8 @@ export default function Settings() {
         </View>
 
         <View>
-          <Text className="mb-3 font-body-semibold text-sm text-ink">Report a bug</Text>
-          <Card className="gap-3 p-5">
+          <Text className="mb-2 font-body-semibold text-sm text-ink">Report a bug</Text>
+          <Card className="gap-3 p-4">
             <TextField
               multiline
               value={bugDraft}
@@ -346,13 +346,13 @@ export default function Settings() {
           </Card>
         </View>
 
-        <View className="border-t border-border pt-6">
+        <View className="border-t border-border pt-5">
           <Button variant="ghost" onPress={() => signOut()}>
             Sign out
           </Button>
         </View>
 
-        <View className="gap-3 border-t border-border pt-6">
+        <View className="gap-3 border-t border-border pt-5">
           <Text className="font-body-semibold text-sm text-status-bad">Danger zone</Text>
           <Button variant="ghost" loading={isDeleting} onPress={confirmDeleteAccount}>
             Delete account

@@ -121,7 +121,7 @@ export default function IncomeManagement() {
 
         {adding && (
           <Animated.View entering={FadeInDown.duration(200)}>
-            <Card className="gap-3 p-5">
+            <Card className="gap-3 p-4">
               <Text className="font-body text-xs text-ink-muted">Label</Text>
               <TextField
                 value={label}
@@ -173,7 +173,7 @@ export default function IncomeManagement() {
 
         {editing && (
           <Animated.View entering={FadeInDown.duration(200)}>
-            <Card className="gap-3 p-5">
+            <Card className="gap-3 p-4">
               <Text className="font-body text-xs text-ink-muted">Label</Text>
               <TextField
                 value={editLabel}
@@ -244,7 +244,7 @@ export default function IncomeManagement() {
             </ListRow>
           ))}
           {(incomes ?? []).length === 0 && (
-            <Text className="p-5 font-body text-sm text-ink-muted">No incomes yet.</Text>
+            <Text className="p-4 font-body text-sm text-ink-muted">No incomes yet.</Text>
           )}
         </Card>
 

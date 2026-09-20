@@ -10,7 +10,7 @@ import { Card } from './Card';
 export function PaydayCelebration({ streak }: { streak: number }) {
   return (
     <Animated.View entering={ZoomIn.duration(220)}>
-      <Card className="items-center gap-2 border-accent bg-accent-soft px-6 py-7">
+      <Card className="items-center gap-2 border-accent bg-accent-soft px-6 py-5">
         <Text className="text-2xl">🎉</Text>
         <Text className="font-display-semibold text-lg text-ink">Payday sorted</Text>
         <Text className="text-center font-body text-sm text-ink-2">

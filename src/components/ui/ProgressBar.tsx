@@ -12,7 +12,7 @@ export function ProgressBar({
   const clamped = Math.max(0, Math.min(100, percent));
   return (
     <View>
-      <View className="mb-3 flex-row flex-wrap items-center justify-between gap-3">
+      <View className="mb-2 flex-row flex-wrap items-center justify-between gap-3">
         <Text className="font-body text-sm text-ink-2">{label}</Text>
         <Text className="font-body text-sm text-ink-2">{amountLabel}</Text>
       </View>
