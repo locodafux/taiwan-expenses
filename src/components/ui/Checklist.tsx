@@ -15,17 +15,23 @@ export function ChecklistRow({
   amount,
   color,
   checked,
+  skipped,
   onToggle,
   onAmountPress,
   onLabelPress,
+  onSkipToggle,
 }: {
   label: string;
   amount: string;
   color: string;
   checked: boolean;
+  // Skipped for this month (fund rows only) - shown, but not something to
+  // tick off, so the checkbox and the amount edit are both inert.
+  skipped?: boolean;
   onToggle: () => void;
   onAmountPress?: () => void;
   onLabelPress?: () => void;
+  onSkipToggle?: () => void;
 }) {
   const isFirstRender = useRef(true);
   const scale = useSharedValue(1);
@@ -44,11 +50,12 @@ export function ChecklistRow({
     <View className="flex-row items-center gap-3 border-b border-gridline py-3">
       <AnimatedPressable
         onPress={onToggle}
+        disabled={skipped}
         hitSlop={13}
         style={animatedStyle}
         className={`h-[18px] w-[18px] items-center justify-center rounded-[4px] border ${
           checked ? 'border-status-good bg-status-good' : 'border-border'
-        }`}
+        } ${skipped ? 'opacity-40' : ''}`}
       >
         {checked && (
           <Animated.Text entering={ZoomIn.duration(120)} className="text-xs text-white">
@@ -57,16 +64,27 @@ export function ChecklistRow({
         )}
       </AnimatedPressable>
       <View className="h-[9px] w-[9px] rounded-[3px]" style={{ backgroundColor: color }} />
-      <Pressable className="flex-1" onPress={onToggle}>
+      <Pressable className="flex-1" onPress={onToggle} disabled={skipped}>
         <Text
-          className={`font-body text-base ${checked ? 'text-ink-muted line-through' : 'text-ink'}`}
+          className={`font-body text-base ${
+            skipped || checked ? 'text-ink-muted line-through' : 'text-ink'
+          }`}
         >
           {label}
         </Text>
       </Pressable>
-      <Pressable onPress={onAmountPress} disabled={!onAmountPress}>
-        <Text className="font-mono text-sm text-ink-2">{amount}</Text>
-      </Pressable>
+      {skipped ? (
+        <Text className="font-body text-xs text-ink-muted">Skipped</Text>
+      ) : (
+        <Pressable onPress={onAmountPress} disabled={!onAmountPress}>
+          <Text className="font-mono text-sm text-ink-2">{amount}</Text>
+        </Pressable>
+      )}
+      {onSkipToggle && (
+        <Pressable onPress={onSkipToggle} hitSlop={8}>
+          <Text className="font-body text-xs text-ink-2">{skipped ? 'Unskip' : 'Skip'}</Text>
+        </Pressable>
+      )}
       {onLabelPress && (
         <Pressable onPress={onLabelPress} hitSlop={8}>
           <Text className="text-ink-muted">›</Text>

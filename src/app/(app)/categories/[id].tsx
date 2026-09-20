@@ -79,6 +79,29 @@ export default function CategoryDetail() {
     return members?.find((m) => m.user_id === userId)?.display_name ?? 'Manual entry';
   }
 
+  // Captain's intent: the history is read a month at a time, keeping the last
+  // 12. The query itself stays all-time (the balance, goal progress and the
+  // delete sheet's "what you'd lose" all sum it), so the cap is applied here.
+  const months = useMemo(() => {
+    const byMonth = new Map<string, typeof history>();
+    for (const h of history ?? []) {
+      const key = h.payday_date.slice(0, 7);
+      byMonth.set(key, [...(byMonth.get(key) ?? []), h]);
+    }
+    return Array.from(byMonth.entries())
+      .sort((a, b) => (a[0] < b[0] ? 1 : -1))
+      .slice(0, 12)
+      .map(([key, rows]) => ({
+        key,
+        label: fromDateOnly(`${key}-01`).toLocaleDateString(undefined, {
+          month: 'long',
+          year: 'numeric',
+        }),
+        rows: rows ?? [],
+        total: (rows ?? []).reduce((s, r) => s + r.amount, 0),
+      }));
+  }, [history]);
+
   if (isError) {
     return (
       <SafeAreaView className="flex-1 bg-page">
@@ -298,27 +321,45 @@ export default function CategoryDetail() {
               </Pressable>
             )}
           </View>
-          <Card>
-            {(history ?? []).map((h, i) => (
-              <ListRow key={h.id} isLast={i === (history?.length ?? 0) - 1}>
-                <Text className="flex-1 font-body text-sm text-ink">
-                  {fromDateOnly(h.payday_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}{' '}
-                  <Text className="text-ink-muted">· {memberName(h.checked_by)}</Text>
-                </Text>
-                <Text
-                  className={`font-mono text-sm ${
-                    category.kind === 'bill' ? 'text-status-bad' : 'text-status-good'
-                  }`}
-                >
-                  {category.kind === 'bill' ? '−' : '+'}
-                  {formatPeso(h.amount)}
-                </Text>
-              </ListRow>
+          <View className="gap-3">
+            {months.map((month) => (
+              <Card key={month.key} className="overflow-hidden">
+                <ListRow className="bg-surface-2">
+                  <Text className="flex-1 font-body-semibold text-sm text-ink">{month.label}</Text>
+                  <Text className="font-mono text-xs text-ink-muted">{formatPeso(month.total)}</Text>
+                </ListRow>
+                {month.rows.map((h, i) => (
+                  <ListRow key={h.id} isLast={i === month.rows.length - 1}>
+                    <View className="flex-1">
+                      <Text className="font-body-semibold text-sm text-ink">
+                        {h.bill_items?.label ?? category!.name}
+                      </Text>
+                      <Text className="mt-[2px] font-body text-xs text-ink-muted">
+                        {memberName(h.checked_by)} ·{' '}
+                        {new Date(h.checked_at ?? `${h.payday_date}T00:00:00`).toLocaleDateString(
+                          undefined,
+                          { month: 'short', day: 'numeric' },
+                        )}
+                      </Text>
+                    </View>
+                    <Text
+                      className={`font-mono text-sm ${
+                        category!.kind === 'bill' ? 'text-status-bad' : 'text-status-good'
+                      }`}
+                    >
+                      {category!.kind === 'bill' ? '−' : '+'}
+                      {formatPeso(h.amount)}
+                    </Text>
+                  </ListRow>
+                ))}
+              </Card>
             ))}
-            {(history ?? []).length === 0 && (
-              <Text className="p-4 font-body text-sm text-ink-muted">Nothing checked off yet.</Text>
+            {months.length === 0 && (
+              <Card>
+                <Text className="p-4 font-body text-sm text-ink-muted">Nothing checked off yet.</Text>
+              </Card>
             )}
-          </Card>
+          </View>
         </View>
 
         <Button

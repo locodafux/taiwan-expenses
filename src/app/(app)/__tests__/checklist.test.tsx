@@ -17,6 +17,7 @@ const mockUseMaterializePayday = jest.fn();
 const mockUseCheckLedgerEntry = jest.fn();
 const mockUseUpdateLedgerAmount = jest.fn();
 const mockUsePaydayCompletionHistory = jest.fn();
+const mockUseToggleMonthSkip = jest.fn();
 
 jest.mock('@/lib/queries', () => ({
   ...jest.requireActual('@/lib/queries'),
@@ -29,6 +30,7 @@ jest.mock('@/lib/queries', () => ({
   useCheckLedgerEntry: (...args: unknown[]) => mockUseCheckLedgerEntry(...args),
   useUpdateLedgerAmount: (...args: unknown[]) => mockUseUpdateLedgerAmount(...args),
   usePaydayCompletionHistory: (...args: unknown[]) => mockUsePaydayCompletionHistory(...args),
+  useToggleMonthSkip: (...args: unknown[]) => mockUseToggleMonthSkip(...args),
 }));
 
 import PaydayChecklist from '../checklist';
@@ -62,6 +64,7 @@ function okQuery<T>(data: T) {
 const mockCheckMutate = jest.fn();
 const mockMaterializeMutate = jest.fn();
 const mockUpdateAmountMutateAsync = jest.fn();
+const mockToggleSkipMutate = jest.fn();
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -77,6 +80,7 @@ beforeEach(() => {
     isPending: false,
   });
   mockUsePaydayCompletionHistory.mockReturnValue(okQuery([]));
+  mockUseToggleMonthSkip.mockReturnValue({ mutate: mockToggleSkipMutate });
 });
 
 describe('PaydayChecklist', () => {
@@ -211,5 +215,83 @@ describe('PaydayChecklist', () => {
     await rerender(themed);
 
     expect(mockMaterializeMutate).toHaveBeenCalledTimes(1);
+  });
+
+  it('hides a ₱0 fund row - there is nothing to set aside for it', async () => {
+    mockUseLedgerEntriesForPayday.mockReturnValue(
+      okQuery([
+        ...entries,
+        {
+          id: 'entry-zero',
+          category_id: 'cat-excess',
+          amount: 0,
+          status: 'pending',
+          categories: { name: 'Excess', color: '#7a8b3f', kind: 'fund' },
+          bill_items: null,
+        },
+      ]),
+    );
+
+    const { getByText, queryByText } = await renderWithTheme(<PaydayChecklist />);
+
+    await waitFor(() => expect(getByText('Taiwan fund')).toBeTruthy());
+    expect(queryByText('Excess')).toBeNull();
+    // ...and it is out of the count, so the two real rows are the whole list.
+    expect(getByText('1 / 2 items checked')).toBeTruthy();
+  });
+
+  it('keeps a skipped fund visible but out of the progress count', async () => {
+    mockUseLedgerEntriesForPayday.mockReturnValue(
+      okQuery([
+        ...entries,
+        {
+          id: 'entry-skipped',
+          category_id: 'cat-savings',
+          amount: 0,
+          status: 'skipped',
+          categories: { name: 'Savings', color: '#7a8b3f', kind: 'fund' },
+          bill_items: null,
+        },
+      ]),
+    );
+
+    const { getByText } = await renderWithTheme(<PaydayChecklist />);
+
+    await waitFor(() => expect(getByText('Savings')).toBeTruthy());
+    expect(getByText('Skipped')).toBeTruthy();
+    expect(getByText('1 / 2 items checked')).toBeTruthy();
+  });
+
+  it('skips and un-skips a fund for the month', async () => {
+    mockUseLedgerEntriesForPayday.mockReturnValue(
+      okQuery([
+        entries[1],
+        {
+          id: 'entry-skipped',
+          category_id: 'cat-savings',
+          amount: 0,
+          status: 'skipped',
+          categories: { name: 'Savings', color: '#7a8b3f', kind: 'fund' },
+          bill_items: null,
+        },
+      ]),
+    );
+
+    const { getByText } = await renderWithTheme(<PaydayChecklist />);
+
+    await fireEvent.press(await waitFor(() => getByText('Skip')));
+    expect(mockToggleSkipMutate).toHaveBeenCalledWith({ categoryId: 'cat-fund', skipped: true });
+
+    await fireEvent.press(getByText('Unskip'));
+    expect(mockToggleSkipMutate).toHaveBeenCalledWith({ categoryId: 'cat-savings', skipped: false });
+  });
+
+  it('offers no skip on a bill - bills are not optional', async () => {
+    mockUseLedgerEntriesForPayday.mockReturnValue(okQuery([entries[0]]));
+
+    const { getByText, queryByText } = await renderWithTheme(<PaydayChecklist />);
+
+    await waitFor(() => expect(getByText('Rent')).toBeTruthy());
+    expect(queryByText('Skip')).toBeNull();
   });
 });
