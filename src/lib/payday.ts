@@ -103,3 +103,9 @@ export function leftoverByPaydayInMonth(
     })
     .sort((a, b) => a.day - b.day);
 }
+
+// First of the month a date-only string falls in, as another date-only
+// string - the shape category_month_skips.month is constrained to.
+export function monthStart(dateOnly: string): string {
+  return `${dateOnly.slice(0, 7)}-01`;
+}

@@ -82,13 +82,15 @@ beforeEach(() => {
 
 describe('CategoryDetail', () => {
   it('renders a fund category balance, goal progress and history with realistic data', async () => {
-    const { getByText } = await renderWithTheme(<CategoryDetail />);
+    const { getByText, getAllByText } = await renderWithTheme(<CategoryDetail />);
 
-    await waitFor(() => expect(getByText('Taiwan fund')).toBeTruthy());
+    // The name appears in the header and again on each history row, which for
+    // a fund (no bill item) is labelled with the category itself.
+    await waitFor(() => expect(getAllByText('Taiwan fund').length).toBeGreaterThan(0));
     expect(getByText('₱ 8,000')).toBeTruthy();
     expect(getByText(/of ₱ 50,000 goal/)).toBeTruthy();
-    expect(getByText(/· Leo/)).toBeTruthy();
-    expect(getByText(/· Manual entry/)).toBeTruthy();
+    expect(getByText(/^Leo ·/)).toBeTruthy();
+    expect(getByText(/^Manual entry ·/)).toBeTruthy();
   });
 
   it('shows an empty state when there is no history yet', async () => {
@@ -143,9 +145,10 @@ describe('CategoryDetail', () => {
       ],
     });
 
-    const { getByText } = await renderWithTheme(<CategoryDetail />);
+    const { getByText, getAllByText } = await renderWithTheme(<CategoryDetail />);
 
-    await waitFor(() => expect(getByText('₱ 5,000')).toBeTruthy());
+    // Headline total plus the September history row both read ₱ 5,000.
+    await waitFor(() => expect(getAllByText('₱ 5,000').length).toBe(2));
     expect(getByText('paid this month')).toBeTruthy();
     jest.useRealTimers();
   });
@@ -201,5 +204,76 @@ describe('CategoryDetail', () => {
     await fireEvent.press(await waitFor(() => getByText('Delete category')));
 
     expect(getByText(/nothing else to lose/)).toBeTruthy();
+  });
+
+  it('groups history by month, naming the specific bill item paid, by whom and when', async () => {
+    mockParams.id = 'cat-bill';
+    mockUseCategoryHistory.mockReturnValue({
+      data: [
+        {
+          id: 'h1',
+          amount: 1500,
+          payday_date: '2026-09-05',
+          checked_at: '2026-09-05T02:00:00.000Z',
+          checked_by: 'user-1',
+          bill_items: { label: 'Base rent' },
+        },
+        {
+          id: 'h2',
+          amount: 900,
+          payday_date: '2026-09-15',
+          checked_at: '2026-09-15T02:00:00.000Z',
+          checked_by: 'user-1',
+          bill_items: { label: 'Internet' },
+        },
+        {
+          id: 'h3',
+          amount: 1500,
+          payday_date: '2026-08-05',
+          checked_at: '2026-08-05T02:00:00.000Z',
+          checked_by: null,
+          bill_items: { label: 'Base rent' },
+        },
+      ],
+    });
+
+    const { getByText, getAllByText } = await renderWithTheme(<CategoryDetail />);
+
+    await waitFor(() => expect(getByText('September 2026')).toBeTruthy());
+    expect(getByText('August 2026')).toBeTruthy();
+    // September's subtotal (1500 + 900), not the all-time 3,900 - and it also
+    // matches the "paid this month" headline, hence two matches.
+    expect(getAllByText('₱ 2,400').length).toBe(2);
+    expect(getByText('Internet')).toBeTruthy();
+    expect(getAllByText('Base rent').length).toBe(2);
+    expect(getByText(/^Leo · Sep 5/)).toBeTruthy();
+    expect(getByText(/^Manual entry · Aug 5/)).toBeTruthy();
+  });
+
+  it('keeps only the last 12 months of history', async () => {
+    mockUseCategoryHistory.mockReturnValue({
+      data: Array.from({ length: 18 }, (_, i) => {
+        const month = 12 - (i % 12);
+        const year = 2026 - Math.floor(i / 12);
+        const date = `${year}-${String(month).padStart(2, '0')}-05`;
+        return {
+          id: `h${i}`,
+          amount: 1000,
+          payday_date: date,
+          checked_at: `${date}T02:00:00.000Z`,
+          checked_by: 'user-1',
+          bill_items: null,
+        };
+      }),
+    });
+
+    const { getByText, queryByText } = await renderWithTheme(<CategoryDetail />);
+
+    await waitFor(() => expect(getByText('December 2026')).toBeTruthy());
+    expect(getByText('January 2026')).toBeTruthy();
+    // 13th month back and older are dropped.
+    expect(queryByText('December 2025')).toBeNull();
+    // The headline balance still sums every entry, not just the shown 12.
+    expect(getByText('₱ 18,000')).toBeTruthy();
   });
 });

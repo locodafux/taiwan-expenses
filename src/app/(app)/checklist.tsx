@@ -23,6 +23,7 @@ import {
   useLedgerEntriesForPayday,
   useMaterializePayday,
   usePaydayCompletionHistory,
+  useToggleMonthSkip,
   useUpdateLedgerAmount,
 } from '@/lib/queries';
 import { formatPeso } from '@/lib/format';
@@ -57,6 +58,7 @@ export default function PaydayChecklist() {
   const isLoading = entriesQuery.isLoading || incomesQuery.isLoading || membershipQuery.isLoading;
   const checkEntry = useCheckLedgerEntry(householdId, paydayDate);
   const updateAmount = useUpdateLedgerAmount(householdId, paydayDate);
+  const toggleSkip = useToggleMonthSkip(householdId, paydayDate);
   const completionHistoryQuery = usePaydayCompletionHistory(householdId);
 
   const { isError, refetch } = combineQueryState(
@@ -122,18 +124,27 @@ export default function PaydayChecklist() {
   }
 
   const paydayDay = fromDateOnly(paydayDate).getDate();
-  const total = entries?.length ?? 0;
-  const checked = entries?.filter((e) => e.status === 'checked').length ?? 0;
-  const totalAmount = (entries ?? []).reduce((s, e) => s + e.amount, 0);
-  const checkedAmount = (entries ?? [])
+
+  // A ₱0 row is nothing to act on: bills can never be 0 (bill_items.amount has
+  // a > 0 check and the amount editor rejects <= 0), so a 0 is always a fund
+  // whose rule allocated nothing this payday. Skipped rows are 0 too, but stay
+  // visible - they are the only way back to un-skipping the month.
+  const visible = (entries ?? []).filter((e) => e.amount !== 0 || e.status === 'skipped');
+  // A skipped fund is not something to tick off, so it is out of the count,
+  // the progress bar and both totals.
+  const countable = visible.filter((e) => e.status !== 'skipped');
+  const total = countable.length;
+  const checked = countable.filter((e) => e.status === 'checked').length;
+  const totalAmount = countable.reduce((s, e) => s + e.amount, 0);
+  const checkedAmount = countable
     .filter((e) => e.status === 'checked')
     .reduce((s, e) => s + e.amount, 0);
   const takeHome = (incomes ?? [])
     .filter((i) => i.active && i.recurring_day === paydayDay)
     .reduce((s, i) => s + i.amount, 0);
 
-  const outgoing = (entries ?? []).filter((e) => e.categories?.kind !== 'fund');
-  const staying = (entries ?? []).filter((e) => e.categories?.kind === 'fund');
+  const outgoing = visible.filter((e) => e.categories?.kind !== 'fund');
+  const staying = visible.filter((e) => e.categories?.kind === 'fund');
 
   const allChecked = total > 0 && checked === total;
   const streak = allChecked
@@ -161,7 +172,7 @@ export default function PaydayChecklist() {
         {allChecked && <PaydayCelebration streak={streak} />}
 
         <Card className="px-5 py-4">
-          {total === 0 && (
+          {visible.length === 0 && (
             <Text className="py-4 font-body text-sm text-ink-muted">
               Nothing to check off for this payday yet.
             </Text>
@@ -189,7 +200,7 @@ export default function PaydayChecklist() {
           )}
 
           {staying.length > 0 && (
-            <ChecklistGroup heading="Money staying" note="Fund contributions kept in the household.">
+            <ChecklistGroup heading="Money staying" note="Fund contributions kept in the household. Skip one to sit a month out.">
               {staying.map((entry) => (
                 <ChecklistRow
                   key={entry.id}
@@ -197,6 +208,13 @@ export default function PaydayChecklist() {
                   amount={formatPeso(entry.amount)}
                   color={entry.categories?.color ?? '#999'}
                   checked={entry.status === 'checked'}
+                  skipped={entry.status === 'skipped'}
+                  onSkipToggle={() =>
+                    toggleSkip.mutate({
+                      categoryId: entry.category_id,
+                      skipped: entry.status !== 'skipped',
+                    })
+                  }
                   onToggle={() => checkEntry.mutate({ id: entry.id, checked: entry.status !== 'checked' })}
                   onAmountPress={() => {
                     setEditingId(entry.id);

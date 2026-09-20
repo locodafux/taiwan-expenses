@@ -4,7 +4,9 @@
 //   supabase gen types typescript --local > src/lib/database.types.ts
 
 export type CategoryKind = 'bill' | 'fund';
-export type LedgerStatus = 'pending' | 'checked';
+// 'skipped' is written only by materialize_payday, mirroring a
+// category_month_skips row onto that month's entries (20260920000003).
+export type LedgerStatus = 'pending' | 'checked' | 'skipped';
 
 export type CategoryRule =
   | { type: 'goal'; target_amount: number; target_date?: string | null }
@@ -88,6 +90,15 @@ export type LedgerEntry = {
   status: LedgerStatus;
   checked_by: string | null;
   checked_at: string | null;
+  created_at: string;
+};
+
+export type CategoryMonthSkip = {
+  id: string;
+  household_id: string;
+  category_id: string;
+  month: string;
+  created_by: string | null;
   created_at: string;
 };
 
@@ -210,6 +221,18 @@ export interface Database {
             foreignKeyName: 'ledger_entries_bill_item_id_fkey';
             columns: ['bill_item_id'];
             referencedRelation: 'bill_items';
+            referencedColumns: ['id'];
+          },
+        ]
+      >;
+      category_month_skips: TableDef<
+        CategoryMonthSkip,
+        Partial<CategoryMonthSkip> & { household_id: string; category_id: string; month: string },
+        [
+          {
+            foreignKeyName: 'category_month_skips_category_id_fkey';
+            columns: ['category_id'];
+            referencedRelation: 'categories';
             referencedColumns: ['id'];
           },
         ]

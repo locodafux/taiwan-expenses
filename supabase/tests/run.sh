@@ -43,7 +43,7 @@ done
 echo "== seed.sql"
 run "$ROOT/supabase/seed.sql"
 
-for f in "$ROOT"/supabase/tests/0*.sql; do
+for f in "$ROOT"/supabase/tests/[0-9]*.sql; do
   echo "== test: $(basename "$f")"
   # Some checks in these files are a soft `\if ... \echo 'FAIL: ...' \quit 1
   # \endif` rather than a raised SQL error (see e.g. 01_rls_isolation.sql) -
@@ -52,7 +52,13 @@ for f in "$ROOT"/supabase/tests/0*.sql; do
   # failure would otherwise print FAIL and still let the suite report
   # success. Treat a FAIL: line in the output as a real failure regardless of
   # psql's own exit code.
-  output="$(run "$f" 2>&1)"
+  # `set -e` would otherwise abort the assignment before the echo below,
+  # swallowing the psql error message entirely - print it, then fail.
+  if ! output="$(run "$f" 2>&1)"; then
+    echo "$output"
+    echo "TEST SUITE FAILED: $(basename "$f")" >&2
+    exit 1
+  fi
   echo "$output"
   if grep -q '^FAIL:' <<<"$output"; then
     echo "TEST SUITE FAILED: $(basename "$f")" >&2
