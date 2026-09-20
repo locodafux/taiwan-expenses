@@ -4,7 +4,7 @@ import { Text, type ColorValue } from 'react-native';
 import { GoalCelebration } from '@/components/GoalCelebration';
 import { UpdateBanner } from '@/components/UpdateBanner';
 import { useAuth } from '@/lib/auth';
-import { useHouseholdMembership } from '@/lib/queries';
+import { useHouseholdMembership, useUnreadMessageCount } from '@/lib/queries';
 import { useRealtimeSync } from '@/lib/realtime';
 import { THEMES } from '@/theme/tokens';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -17,6 +17,7 @@ export default function AppLayout() {
   const { session, initializing } = useAuth();
   const { theme } = useTheme();
   const { data: member } = useHouseholdMembership();
+  const { data: unreadMessages } = useUnreadMessageCount(member?.household_id);
   useRealtimeSync(member?.household_id);
   if (initializing) return null;
   if (!session) return <Redirect href="/(auth)" />;
@@ -55,6 +56,15 @@ export default function AppLayout() {
         <Tabs.Screen
           name="categories"
           options={{ title: 'Categories', tabBarIcon: ({ color }) => <TabIcon symbol="▤" color={color} /> }}
+        />
+        <Tabs.Screen
+          name="chat"
+          options={{
+            title: 'Chat',
+            tabBarIcon: ({ color }) => <TabIcon symbol="✉" color={color} />,
+            tabBarBadge: unreadMessages ? unreadMessages : undefined,
+            tabBarBadgeStyle: { backgroundColor: vars['--accent'], color: '#fff9f4', fontSize: 10 },
+          }}
         />
         <Tabs.Screen
           name="income"

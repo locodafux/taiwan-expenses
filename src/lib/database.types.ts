@@ -117,6 +117,16 @@ type TableDef<Row, Insert, Relationships extends Relationship[] = []> = {
   Relationships: Relationships;
 };
 
+export type Message = {
+  id: string;
+  household_id: string;
+  // null only once that member deletes their account (on delete set null) -
+  // the thread survives for whoever stays, so the UI falls back to "Someone".
+  sender_id: string | null;
+  body: string;
+  created_at: string;
+};
+
 export interface Database {
   public: {
     Tables: {
@@ -205,6 +215,7 @@ export interface Database {
         ]
       >;
       bug_reports: TableDef<BugReport, Partial<BugReport> & { description: string }>;
+      messages: TableDef<Message, Partial<Message> & { household_id: string; body: string }>;
     };
     Views: Record<string, never>;
     Functions: {

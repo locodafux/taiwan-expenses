@@ -1,3 +1,5 @@
+import { useCallback } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Application from 'expo-application';
 import { Platform } from 'react-native';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -622,4 +624,84 @@ export function useSubmitBugReport(householdId: string | undefined) {
       if (error) throw error;
     },
   });
+}
+
+// --- Household chat ---------------------------------------------------------
+
+// One thread per household, newest first (the chat screen renders an inverted
+// FlatList). Capped rather than paginated: a two-person household's backlog
+// isn't worth an infinite-scroll implementation.
+const MESSAGE_LIMIT = 200;
+
+export function useMessages(householdId: string | undefined) {
+  return useQuery({
+    queryKey: ['messages', householdId],
+    enabled: !!householdId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('household_id', householdId as string)
+        .order('created_at', { ascending: false })
+        .limit(MESSAGE_LIMIT);
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
+export function useSendMessage(householdId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: string) => {
+      // sender_id defaults to auth.uid() in the DB; the insert policy also
+      // requires it, so a client can never post as their partner.
+      const { error } = await supabase
+        .from('messages')
+        .insert({ household_id: householdId as string, body: body.trim() });
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['messages', householdId] }),
+  });
+}
+
+// The unread badge is per-device on purpose: it's a display convenience, not
+// shared household state. Storing it server-side would mean a writable
+// per-member column, and household_members deliberately has no client UPDATE
+// policy (see AGENTS.md) - not worth a second SECURITY DEFINER RPC for a dot.
+const lastReadKey = (householdId: string) => `chat:last-read:${householdId}`;
+
+export function useUnreadMessageCount(householdId: string | undefined) {
+  const { session } = useAuth();
+  const userId = session?.user.id;
+  return useQuery({
+    queryKey: ['messages-unread', householdId],
+    enabled: !!householdId && !!userId,
+    queryFn: async () => {
+      // A device with no stored mark starts from now, so a fresh install (or a
+      // new phone) doesn't badge the whole history as unread.
+      let since = await AsyncStorage.getItem(lastReadKey(householdId as string));
+      if (!since) {
+        since = new Date().toISOString();
+        await AsyncStorage.setItem(lastReadKey(householdId as string), since);
+      }
+      const { count, error } = await supabase
+        .from('messages')
+        .select('id', { count: 'exact', head: true })
+        .eq('household_id', householdId as string)
+        .neq('sender_id', userId as string)
+        .gt('created_at', since);
+      if (error) throw error;
+      return count ?? 0;
+    },
+  });
+}
+
+export function useMarkMessagesRead(householdId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useCallback(async () => {
+    if (!householdId) return;
+    await AsyncStorage.setItem(lastReadKey(householdId), new Date().toISOString());
+    await queryClient.invalidateQueries({ queryKey: ['messages-unread', householdId] });
+  }, [householdId, queryClient]);
 }

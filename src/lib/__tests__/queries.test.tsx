@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderHook, waitFor } from '@testing-library/react-native';
 import type { ReactNode } from 'react';
@@ -56,6 +57,7 @@ import {
   usePaydayStreak,
   useSavedThisQuarter,
   useSubmitBugReport,
+  useUnreadMessageCount,
   useUpdateIncome,
 } from '../queries';
 
@@ -341,5 +343,53 @@ describe('useSubmitBugReport', () => {
 
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(result.current.error).toEqual({ message: 'RLS denied' });
+  });
+});
+
+
+describe('useUnreadMessageCount (chat tab badge)', () => {
+  // The count query is head-only: .select(id, { count, head }).eq().neq().gt()
+  function buildCountChain(count: number) {
+    const chain: any = {
+      select: jest.fn(() => chain),
+      eq: jest.fn(() => chain),
+      neq: jest.fn(() => chain),
+      gt: jest.fn(() => chain),
+      then: (resolve: (value: unknown) => unknown) =>
+        Promise.resolve({ count, error: null }).then(resolve),
+    };
+    mockFrom.mockReturnValue(chain);
+    return chain;
+  }
+
+  beforeEach(async () => {
+    jest.clearAllMocks();
+    await AsyncStorage.clear();
+  });
+
+  it("counts only the partner messages newer than this device's last read", async () => {
+    await AsyncStorage.setItem('chat:last-read:household-1', '2026-09-20T02:00:00.000Z');
+    const chain = buildCountChain(2);
+
+    const { result } = await renderHook(() => useUnreadMessageCount('household-1'), { wrapper });
+    await waitFor(() => expect(result.current.data).toBe(2));
+
+    expect(mockFrom).toHaveBeenCalledWith('messages');
+    expect(chain.select).toHaveBeenCalledWith('id', { count: 'exact', head: true });
+    expect(chain.eq).toHaveBeenCalledWith('household_id', 'household-1');
+    // Your own messages are never unread.
+    expect(chain.neq).toHaveBeenCalledWith('sender_id', 'user-leo');
+    expect(chain.gt).toHaveBeenCalledWith('created_at', '2026-09-20T02:00:00.000Z');
+  });
+
+  it('starts a device with no stored mark from now, not from the whole history', async () => {
+    const chain = buildCountChain(0);
+
+    const { result } = await renderHook(() => useUnreadMessageCount('household-1'), { wrapper });
+    await waitFor(() => expect(result.current.data).toBe(0));
+
+    const stored = await AsyncStorage.getItem('chat:last-read:household-1');
+    expect(stored).toBeTruthy();
+    expect(chain.gt).toHaveBeenCalledWith('created_at', stored);
   });
 });
