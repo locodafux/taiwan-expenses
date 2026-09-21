@@ -1,6 +1,7 @@
 import type { Session } from '@supabase/supabase-js';
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 
+import { unregisterPushToken } from './notifications';
 import { supabase } from './supabase';
 
 type SignUpOptions = {
@@ -60,6 +61,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (error) throw error;
       },
       async signOut() {
+        await unregisterPushToken().catch(() => {});
         const { error } = await supabase.auth.signOut();
         if (error) throw error;
       },

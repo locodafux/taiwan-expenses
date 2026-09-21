@@ -1,6 +1,6 @@
 import * as Clipboard from 'expo-clipboard';
 import { useEffect, useState } from 'react';
-import { Alert, Pressable, Text, View } from 'react-native';
+import { Alert, Pressable, Switch, Text, View } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -18,6 +18,7 @@ import {
   useHousehold,
   useHouseholdMembers,
   useHouseholdMembership,
+  useSetNotificationsEnabled,
   useSubmitBugReport,
   useUpdateDisplayName,
   useUpdateHouseholdName,
@@ -32,7 +33,7 @@ const THEME_DESCRIPTIONS = {
 };
 
 export default function Settings() {
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme, vars } = useTheme();
   const { session, signOut, deleteAccount, changePassword } = useAuth();
   const membershipQuery = useHouseholdMembership();
   const member = membershipQuery.data;
@@ -44,6 +45,7 @@ export default function Settings() {
   const updateHouseholdName = useUpdateHouseholdName(member?.household_id);
   const submitBugReport = useSubmitBugReport(member?.household_id);
   const updateDisplayName = useUpdateDisplayName(member?.household_id);
+  const setNotificationsEnabled = useSetNotificationsEnabled();
 
   const { isError, refetch } = combineQueryState(membershipQuery, householdQuery, membersQuery);
 
@@ -221,6 +223,29 @@ export default function Settings() {
             <Button variant="secondary" loading={isChangingPassword} onPress={savePassword}>
               Change password
             </Button>
+          </Card>
+        </View>
+
+        <View>
+          <Text className="mb-2 font-body-semibold text-sm text-ink">Notifications</Text>
+          <Card className="flex-row items-center gap-3 p-4">
+            <View className="flex-1">
+              <Text className="font-body text-base text-ink">Push notifications</Text>
+              <Text className="font-body text-xs leading-[1.55] text-ink-muted">
+                Bills due tomorrow, payday checklists, and when your partner pays a bill or adds something.
+              </Text>
+            </View>
+            <Switch
+              accessibilityLabel="Push notifications"
+              value={setNotificationsEnabled.isPending ? setNotificationsEnabled.variables : (member?.notifications_enabled ?? true)}
+              disabled={!member || setNotificationsEnabled.isPending}
+              onValueChange={(v) =>
+                setNotificationsEnabled.mutate(v, {
+                  onError: (e) => Alert.alert('Could not update notifications', e.message),
+                })
+              }
+              trackColor={{ true: vars['--accent'] }}
+            />
           </Card>
         </View>
 

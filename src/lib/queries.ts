@@ -102,6 +102,18 @@ export function useUpdateDisplayName(householdId: string | undefined) {
   });
 }
 
+// The master notifications switch: same no-UPDATE-policy reason as above.
+export function useSetNotificationsEnabled() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (enabled: boolean) => {
+      const { error } = await supabase.rpc('set_notifications_enabled', { p_enabled: enabled });
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['household-member'] }),
+  });
+}
+
 export function useCreateInvite() {
   return useMutation({
     mutationFn: async () => {

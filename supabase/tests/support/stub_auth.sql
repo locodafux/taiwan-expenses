@@ -64,3 +64,36 @@ grant usage on schema public to anon, authenticated, service_role;
 -- at all yet, so that migration would otherwise fail with
 -- "publication \"supabase_realtime\" does not exist" before any test runs.
 create publication supabase_realtime;
+
+-- pg_net / pg_cron (20260921000020_notifications.sql) aren't installable on a
+-- plain Homebrew Postgres. Stand-ins with the same call signatures: http_post
+-- records the request instead of sending it, so tests can assert on exactly
+-- which pushes would have gone out; schedule records the job.
+create schema net;
+create table net.test_requests (
+  id bigserial primary key,
+  url text,
+  body jsonb,
+  headers jsonb
+);
+create function net.http_post(
+  url text,
+  body jsonb default '{}'::jsonb,
+  params jsonb default '{}'::jsonb,
+  headers jsonb default '{"Content-Type": "application/json"}'::jsonb,
+  timeout_milliseconds int default 5000
+) returns bigint
+language sql
+as $$
+  insert into net.test_requests (url, body, headers) values (url, body, headers) returning id;
+$$;
+
+create schema cron;
+create table cron.job (jobname text primary key, schedule text, command text);
+create function cron.schedule(job_name text, schedule text, command text) returns bigint
+language sql
+as $$
+  insert into cron.job values (job_name, schedule, command)
+  on conflict (jobname) do update set schedule = excluded.schedule, command = excluded.command;
+  select 1::bigint;
+$$;
