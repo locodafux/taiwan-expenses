@@ -1,7 +1,7 @@
 -- Verifies public.messages RLS (firstmate spec: household-scoped chat).
 -- The whole point of the feature is that a thread never leaks past its
 -- household, so this covers both directions of isolation plus sender
--- spoofing, immutability, and what happens when a member deletes their
+-- spoofing, cross-household immutability, and what happens when a member deletes their
 -- account. Self-contained fixtures (doesn't touch seed.sql's household).
 
 -- --- Isolation between two separate households -----------------------------
@@ -79,17 +79,8 @@ begin
     raise exception 'FAIL: household B''s message must survive A''s update/delete attempts';
   end if;
 
-  -- Own messages are immutable too (edit/delete are out of scope by design).
-  set role authenticated;
-  perform set_config('request.jwt.claim.sub', v_a::text, false);
-  delete from public.messages where household_id = v_household_a;
-  reset role;
-  reset request.jwt.claim.sub;
-
-  select count(*) into v_count from public.messages where household_id = v_household_a;
-  if v_count <> 1 then
-    raise exception 'FAIL: a member must not be able to delete their own message either';
-  end if;
+  -- Deleting your own message is allowed since 20260921000030_chat_delete.sql
+  -- (covered in 13_chat_delete.sql).
 
   -- Empty/whitespace bodies are rejected by the check constraint.
   begin

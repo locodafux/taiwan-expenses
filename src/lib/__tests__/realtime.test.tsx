@@ -6,7 +6,7 @@ const mockOn = jest.fn();
 const mockSubscribe = jest.fn();
 const mockChannel = jest.fn();
 const mockRemoveChannel = jest.fn();
-const callbacks: Record<string, () => void> = {};
+const callbacks: Record<string, (payload?: any) => void> = {};
 
 jest.mock('../supabase', () => ({
   supabase: {
@@ -31,8 +31,8 @@ describe('useRealtimeSync', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     for (const key of Object.keys(callbacks)) delete callbacks[key];
-    mockOn.mockImplementation((_event, config: { table: string }, callback: () => void) => {
-      callbacks[config.table] = callback;
+    mockOn.mockImplementation((_event, config: { table: string; event: string }, callback: () => void) => {
+      callbacks[config.event === 'DELETE' ? `${config.table}:DELETE` : config.table] = callback;
       return { on: mockOn, subscribe: mockSubscribe };
     });
     mockSubscribe.mockReturnValue('channel-instance');
@@ -63,6 +63,19 @@ describe('useRealtimeSync', () => {
 
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['messages', 'household-1'] });
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['messages-unread', 'household-1'] });
+  });
+
+  it('refetches the thread when one of its cached messages is deleted, ignoring other households', async () => {
+    const queryClient = new QueryClient();
+    queryClient.setQueryData(['messages', 'household-1'], [{ id: 'msg-1' }]);
+    const invalidateSpy = jest.spyOn(queryClient, 'invalidateQueries');
+    await renderHook(() => useRealtimeSync('household-1'), { wrapper: wrapper(queryClient) });
+
+    callbacks['messages:DELETE']({ old: { id: 'someone-elses' } });
+    expect(invalidateSpy).not.toHaveBeenCalled();
+
+    callbacks['messages:DELETE']({ old: { id: 'msg-1' } });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['messages', 'household-1'] });
   });
 
   it('invalidates the household-members query when household_members changes', async () => {

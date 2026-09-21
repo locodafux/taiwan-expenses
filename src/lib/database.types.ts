@@ -260,6 +260,10 @@ export interface Database {
         Args: { p_display_name: string };
         Returns: undefined;
       };
+      clear_chat_history: {
+        Args: { p_household_id: string };
+        Returns: undefined;
+      };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;

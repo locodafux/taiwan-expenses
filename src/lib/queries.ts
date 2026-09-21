@@ -795,6 +795,35 @@ export function useSendMessage(householdId: string | undefined) {
   });
 }
 
+// Own messages only (RLS). A hard delete, so it's gone for the partner too.
+export function useDeleteMessage(householdId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error, count } = await supabase.from('messages').delete({ count: 'exact' }).eq('id', id);
+      if (error) throw error;
+      if (count === 0) throw new Error('Message could not be deleted');
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['messages', householdId] }),
+  });
+}
+
+// Hides the thread for the caller only (a per-member marker, enforced by the
+// messages read policy) - the partner's view is untouched.
+export function useClearChatHistory(householdId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.rpc('clear_chat_history', { p_household_id: householdId as string });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['messages', householdId] });
+      queryClient.invalidateQueries({ queryKey: ['messages-unread', householdId] });
+    },
+  });
+}
+
 // The unread badge is per-device on purpose: it's a display convenience, not
 // shared household state. Storing it server-side would mean a writable
 // per-member column, and household_members deliberately has no client UPDATE

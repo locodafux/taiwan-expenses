@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { FlatList, KeyboardAvoidingView, Platform, Text, View } from 'react-native';
+import { Alert, FlatList, KeyboardAvoidingView, Platform, Pressable, Text, View } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -10,6 +10,8 @@ import { TextField } from '@/components/ui/TextField';
 import { useAuth } from '@/lib/auth';
 import {
   combineQueryState,
+  useClearChatHistory,
+  useDeleteMessage,
   useHouseholdMembers,
   useHouseholdMembership,
   useMarkMessagesRead,
@@ -30,21 +32,28 @@ function MessageRow({
   mine,
   name,
   color,
+  onLongPress,
 }: {
   message: Message;
   mine: boolean;
   name: string;
   color: string;
+  onLongPress?: () => void;
 }) {
   return (
-    <View className={`flex-row items-end gap-3 px-6 py-2 ${mine ? 'justify-end' : ''}`}>
+    <Pressable
+      onLongPress={onLongPress}
+      disabled={!onLongPress}
+      accessibilityHint={onLongPress ? 'Long press to delete' : undefined}
+      className={`flex-row items-end gap-3 px-6 py-2 ${mine ? 'justify-end' : ''}`}
+    >
       {!mine && <Avatar initial={name[0]?.toUpperCase() ?? '?'} color={color} size={26} />}
       <View className={`max-w-[78%] rounded-lg px-4 py-3 ${mine ? 'bg-accent-soft' : 'bg-surface'}`}>
         {!mine && <Text className="font-body-semibold text-xs text-ink-2">{name}</Text>}
         <Text className="font-body text-base text-ink">{message.body}</Text>
         <Text className="mt-[2px] font-body text-xs text-ink-muted">{formatSentAt(message.created_at)}</Text>
       </View>
-    </View>
+    </Pressable>
   );
 }
 
@@ -56,6 +65,8 @@ export default function Chat() {
   const membersQuery = useHouseholdMembers(householdId);
   const sendMessage = useSendMessage(householdId);
   const markRead = useMarkMessagesRead(householdId);
+  const deleteMessage = useDeleteMessage(householdId);
+  const clearHistory = useClearChatHistory(householdId);
 
   const { isError, refetch } = combineQueryState(membershipQuery, messagesQuery, membersQuery);
   const [draft, setDraft] = useState('');
@@ -86,6 +97,39 @@ export default function Chat() {
     }
   }
 
+  // Only your own messages get this (RLS enforces the same).
+  function confirmDelete(id: string) {
+    Alert.alert('Delete message?', 'It will be removed for everyone in the household.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () =>
+          deleteMessage.mutateAsync(id).catch((e) =>
+            Alert.alert('Could not delete message', e instanceof Error ? e.message : 'Try again.'),
+          ),
+      },
+    ]);
+  }
+
+  function confirmClear() {
+    Alert.alert(
+      'Clear chat history?',
+      "Messages so far will be hidden for you only - your partner's chat stays as it is. New messages will still show up.",
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Clear',
+          style: 'destructive',
+          onPress: () =>
+            clearHistory.mutateAsync().catch((e) =>
+              Alert.alert('Could not clear chat', e instanceof Error ? e.message : 'Try again.'),
+            ),
+        },
+      ],
+    );
+  }
+
   if (isError) {
     return (
       <SafeAreaView className="flex-1 bg-page">
@@ -97,8 +141,13 @@ export default function Chat() {
   return (
     <SafeAreaView className="flex-1 bg-page" edges={['top']}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-        <View className="px-6 py-5">
+        <View className="flex-row items-center justify-between px-6 py-5">
           <Text className="font-display-semibold text-lg text-ink">Household chat</Text>
+          {messages.length > 0 && (
+            <Button size="sm" variant="ghost" onPress={confirmClear}>
+              Clear history
+            </Button>
+          )}
         </View>
 
         <FlatList
@@ -111,10 +160,12 @@ export default function Chat() {
           contentContainerStyle={{ paddingVertical: 8 }}
           renderItem={({ item }) => {
             const sender = (membersQuery.data ?? []).find((m) => m.user_id === item.sender_id);
+            const mine = !!item.sender_id && item.sender_id === session?.user.id;
             return (
               <MessageRow
                 message={item}
-                mine={!!item.sender_id && item.sender_id === session?.user.id}
+                mine={mine}
+                onLongPress={mine ? () => confirmDelete(item.id) : undefined}
                 name={sender?.display_name ?? 'Someone'}
                 color={sender?.color ?? '#999'}
               />
