@@ -13,7 +13,7 @@ import { Card, ListRow } from '@/components/ui/Card';
 import { DeleteCategorySheet } from '@/components/ui/DeleteCategorySheet';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { formatPeso } from '@/lib/format';
-import { fromDateOnly, monthDueDate, paymentsLeft, toDateOnly } from '@/lib/payday';
+import { fromDateOnly, monthDueDate, nextMonth, paymentsLeft, toDateOnly } from '@/lib/payday';
 import {
   combineQueryState,
   useAddManualContribution,
@@ -96,6 +96,8 @@ export default function CategoryDetail() {
   const [editName, setEditName] = useState('');
   const [editColor, setEditColor] = useState('');
   const [editTarget, setEditTarget] = useState('');
+  // Goal deadline month ('YYYY-MM'); null = no deadline.
+  const [editDeadline, setEditDeadline] = useState<string | null>(null);
 
   const balance = useMemo(
     () => (history ?? []).reduce((s, h) => s + h.amount, 0),
@@ -169,6 +171,7 @@ export default function CategoryDetail() {
     setEditName(category!.name);
     setEditColor(category!.color ?? '');
     setEditTarget(goal ? String(goal) : '');
+    setEditDeadline(category!.rule?.type === 'goal' ? (category!.rule.target_date?.slice(0, 7) ?? null) : null);
     setError(null);
     setEditingCategory(true);
   }
@@ -182,7 +185,11 @@ export default function CategoryDetail() {
       if (!Number.isFinite(parsedTarget) || parsedTarget <= 0) {
         return setError('Enter a valid target amount');
       }
-      nextRule = { ...rule, target_amount: parsedTarget };
+      nextRule = {
+        ...rule,
+        target_amount: parsedTarget,
+        target_date: editDeadline ? `${editDeadline}-01` : null,
+      };
     }
     setError(null);
     try {
@@ -284,6 +291,13 @@ export default function CategoryDetail() {
                     onChangeText={setEditTarget}
                     keyboardType="numeric"
                     className="rounded-md border border-border bg-page px-4 py-4 font-mono text-base text-ink"
+                  />
+                  <Text className="font-body text-xs text-ink-muted">Complete by (optional)</Text>
+                  <MonthPicker
+                    value={editDeadline}
+                    min={nextMonth()}
+                    onChange={setEditDeadline}
+                    emptyLabel="No deadline · set a month"
                   />
                 </>
               )}

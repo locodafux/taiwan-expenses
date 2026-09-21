@@ -87,6 +87,44 @@ describe('AddCategorySheet', () => {
     expect(mockBack).toHaveBeenCalled();
   });
 
+  it('sets a deadline month on a goal fund, starting from next month', async () => {
+    jest.useFakeTimers().setSystemTime(new Date(2026, 8, 21));
+    const { getByText, getByPlaceholderText, getByLabelText, queryByText } = await renderWithTheme(
+      <AddCategorySheet />,
+    );
+
+    // No target, no goal, no deadline field.
+    expect(queryByText('No deadline · set a month')).toBeNull();
+    await fireEvent.changeText(getByPlaceholderText('e.g. New laptop fund'), 'Taiwan fund');
+    await fireEvent.changeText(getByPlaceholderText('Leave blank for no limit'), '80000');
+    await fireEvent.press(getByText('No deadline · set a month'));
+    expect(getByText('Oct 2026')).toBeTruthy();
+    await fireEvent.press(getByLabelText('Next month'));
+    await fireEvent.press(getByText('Add category'));
+
+    await waitFor(() =>
+      expect(mockCreateCategoryMutateAsync).toHaveBeenCalledWith(
+        expect.objectContaining({
+          rule: expect.objectContaining({ type: 'goal', target_amount: 80000, target_date: '2026-11-01' }),
+        }),
+      ),
+    );
+    jest.useRealTimers();
+  });
+
+  it('saves a goal without a deadline when the month is cleared', async () => {
+    const { getByText, getByPlaceholderText } = await renderWithTheme(<AddCategorySheet />);
+
+    await fireEvent.changeText(getByPlaceholderText('e.g. New laptop fund'), 'Taiwan fund');
+    await fireEvent.changeText(getByPlaceholderText('Leave blank for no limit'), '80000');
+    await fireEvent.press(getByText('No deadline · set a month'));
+    await fireEvent.press(getByText('Clear'));
+    await fireEvent.press(getByText('Add category'));
+
+    await waitFor(() => expect(mockCreateCategoryMutateAsync).toHaveBeenCalled());
+    expect(mockCreateCategoryMutateAsync.mock.calls[0][0].rule.target_date).toBeUndefined();
+  });
+
   it('shows an error message when saving fails', async () => {
     mockCreateCategoryMutateAsync.mockRejectedValue(new Error('Could not save category'));
     const { getByText, getByPlaceholderText } = await renderWithTheme(<AddCategorySheet />);

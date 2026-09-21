@@ -125,6 +125,12 @@ export function monthDueDate(recurringDay: number, month: string): string {
   return toDateOnly(clampDayToMonth(recurringDay, fromDateOnly(`${month}-01`)));
 }
 
+// Next calendar month as 'YYYY-MM' - the earliest goal deadline worth
+// offering, since the engine saves through the month before the deadline.
+export function nextMonth(from: Date = new Date()): string {
+  return toDateOnly(new Date(from.getFullYear(), from.getMonth() + 1, 1)).slice(0, 7);
+}
+
 // Due dates still ahead (today included) up to and including end_date.
 export function paymentsLeft(recurringDay: number, endDate: string, from: Date = new Date()): number {
   const end = fromDateOnly(endDate);

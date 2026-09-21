@@ -8,15 +8,17 @@ export function MonthPicker({
   value,
   min,
   onChange,
+  emptyLabel = 'Never ends · set a last month',
 }: {
   value: string | null;
   min: string;
   onChange: (month: string | null) => void;
+  emptyLabel?: string;
 }) {
   if (!value) {
     return (
       <Button variant="secondary" onPress={() => onChange(min)}>
-        Never ends · set a last month
+        {emptyLabel}
       </Button>
     );
   }

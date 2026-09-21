@@ -6,8 +6,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/ui/Button';
 import { ColorPicker, useCategoryColors } from '@/components/ui/ColorPicker';
 import { KeyboardScroll } from '@/components/ui/KeyboardScroll';
+import { MonthPicker } from '@/components/ui/MonthPicker';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { TextField } from '@/components/ui/TextField';
+import { nextMonth } from '@/lib/payday';
 import { combineQueryState, useCreateCategory, useHouseholdMembership } from '@/lib/queries';
 
 type Kind = 'fund' | 'bill';
@@ -28,6 +30,8 @@ export default function AddCategory() {
   const [kind, setKind] = useState<Kind>('fund');
   const [color, setColor] = useState(colorOptions[4].value);
   const [target, setTarget] = useState('');
+  // Goal deadline month ('YYYY-MM'); stored as rule.target_date = its 1st.
+  const [deadline, setDeadline] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   async function handleSave() {
@@ -44,6 +48,7 @@ export default function AddCategory() {
                 type: target ? 'goal' : 'remainder',
                 target_amount: Number(target) || 0,
                 percent: target ? undefined : 20,
+                target_date: target && deadline ? `${deadline}-01` : undefined,
               } as any)
             : undefined,
       });
@@ -120,6 +125,20 @@ export default function AddCategory() {
             <Text className="mt-1 font-body text-xs leading-[1.4] text-ink-muted">
               Set it and this category stops taking a share once full. Leave blank and it keeps its
               percentage share indefinitely.
+            </Text>
+          </View>
+        )}
+        {kind === 'fund' && target !== '' && (
+          <View className="gap-2">
+            <Text className="font-body text-xs text-ink-muted">Complete by (optional)</Text>
+            <MonthPicker
+              value={deadline}
+              min={nextMonth()}
+              onChange={setDeadline}
+              emptyLabel="No deadline · set a month"
+            />
+            <Text className="font-body text-xs leading-[1.4] text-ink-muted">
+              Saving is spread over the months before this one.
             </Text>
           </View>
         )}
