@@ -119,13 +119,10 @@ function dueDates(recurringDay: number, from: Date): () => Date {
   return () => clampDayToMonth(recurringDay, new Date(today.getFullYear(), today.getMonth() + offset++, 1));
 }
 
-// End date for a term of `payments` monthly payments, counting the next due
-// date on/after `from` as the first one.
-export function termEndDate(recurringDay: number, payments: number, from: Date = new Date()): string {
-  const next = dueDates(recurringDay, from);
-  let d = next();
-  for (let i = 1; i < payments; i++) d = next();
-  return toDateOnly(d);
+// End date for a bill whose last payment falls in `month` ('YYYY-MM'):
+// that month's due date, clamped to the month's length.
+export function monthDueDate(recurringDay: number, month: string): string {
+  return toDateOnly(clampDayToMonth(recurringDay, fromDateOnly(`${month}-01`)));
 }
 
 // Due dates still ahead (today included) up to and including end_date.
