@@ -324,6 +324,75 @@ export function useCreateBillItem(categoryId: string | undefined) {
   });
 }
 
+function invalidateBillItem(queryClient: ReturnType<typeof useQueryClient>, categoryId: string | undefined) {
+  queryClient.invalidateQueries({ queryKey: ['bill-items', categoryId] });
+  queryClient.invalidateQueries({ queryKey: ['bill-items-household'] });
+  queryClient.invalidateQueries({ queryKey: ['ledger-entries'] });
+  queryClient.invalidateQueries({ queryKey: ['ledger-payday-status'] });
+}
+
+// Drops the item's not-yet-checked checklist rows. materialize_payday only
+// upserts, so a row left on a no-longer-valid payday would otherwise linger.
+async function deleteUncheckedEntries(billItemId: string) {
+  const { error } = await supabase
+    .from('ledger_entries')
+    .delete()
+    .eq('bill_item_id', billItemId)
+    .neq('status', 'checked');
+  if (error) throw error;
+}
+
+export function useUpdateBillItem(categoryId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      id,
+      dayChanged,
+      ...patch
+    }: { id: string; dayChanged: boolean; label: string; amount: number; recurring_day: number }) => {
+      const { error, count } = await supabase
+        .from('bill_items')
+        .update(patch, { count: 'exact' })
+        .eq('id', id);
+      if (error) throw error;
+      if (count === 0) throw new Error('Item could not be updated');
+      // Amount changes are picked up by re-materialization; a moved day leaves
+      // the old payday's pending row behind unless it's cleared here.
+      if (dayChanged) await deleteUncheckedEntries(id);
+    },
+    onSuccess: () => invalidateBillItem(queryClient, categoryId),
+  });
+}
+
+// An item with checked (paid) history is retired via end_date instead of
+// deleted, so those ledger rows keep their bill_item_id and label; one with no
+// paid history is removed outright. (A hard delete would null the history rows'
+// bill_item_id, which also collides with the fund-row unique index.)
+export function useDeleteBillItem(categoryId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      await deleteUncheckedEntries(id);
+      const { count: paid, error: countError } = await supabase
+        .from('ledger_entries')
+        .select('id', { count: 'exact', head: true })
+        .eq('bill_item_id', id);
+      if (countError) throw countError;
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const { error, count } = paid
+        ? await supabase
+            .from('bill_items')
+            .update({ end_date: toDateOnly(yesterday) }, { count: 'exact' })
+            .eq('id', id)
+        : await supabase.from('bill_items').delete({ count: 'exact' }).eq('id', id);
+      if (error) throw error;
+      if (count === 0) throw new Error('Item could not be deleted');
+    },
+    onSuccess: () => invalidateBillItem(queryClient, categoryId),
+  });
+}
+
 // --- Ledger / payday checklist ---------------------------------------------
 
 export function useLedgerEntriesForPayday(householdId: string | undefined, paydayDate: string | undefined) {
