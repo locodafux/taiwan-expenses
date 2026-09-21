@@ -1,4 +1,5 @@
 import { fireEvent, waitFor } from '@testing-library/react-native';
+import { Alert } from 'react-native';
 
 import { renderWithTheme } from '@/test/renderWithTheme';
 
@@ -18,6 +19,8 @@ const mockUseHouseholdMembers = jest.fn();
 const mockUseMessages = jest.fn();
 const mockUseSendMessage = jest.fn();
 const mockMarkRead = jest.fn();
+const mockDeleteMutateAsync = jest.fn();
+const mockClearMutateAsync = jest.fn();
 
 jest.mock('@/lib/queries', () => ({
   ...jest.requireActual('@/lib/queries'),
@@ -26,6 +29,8 @@ jest.mock('@/lib/queries', () => ({
   useMessages: (...args: unknown[]) => mockUseMessages(...args),
   useSendMessage: (...args: unknown[]) => mockUseSendMessage(...args),
   useMarkMessagesRead: () => mockMarkRead,
+  useDeleteMessage: () => ({ mutateAsync: mockDeleteMutateAsync }),
+  useClearChatHistory: () => ({ mutateAsync: mockClearMutateAsync }),
 }));
 
 import Chat from '../chat';
@@ -52,7 +57,16 @@ beforeEach(() => {
     mutateAsync: mockSendMutateAsync.mockResolvedValue({}),
     isPending: false,
   });
+  mockDeleteMutateAsync.mockResolvedValue(undefined);
+  mockClearMutateAsync.mockResolvedValue(undefined);
 });
+
+// Presses the Alert's destructive button, as a user confirming would.
+function confirmAlerts() {
+  return jest.spyOn(Alert, 'alert').mockImplementation((_title, _message, buttons) => {
+    buttons?.find((b) => b.style === 'destructive')?.onPress?.();
+  });
+}
 
 describe('Chat', () => {
   it("shows the thread with the partner's name on their messages only", async () => {
@@ -98,6 +112,36 @@ describe('Chat', () => {
     await renderWithTheme(<Chat />);
 
     await waitFor(() => expect(mockMarkRead).toHaveBeenCalled());
+  });
+
+  it('deletes your own message on long press after confirming', async () => {
+    const alertSpy = confirmAlerts();
+    const { getByText } = await renderWithTheme(<Chat />);
+
+    await fireEvent(getByText('On my way'), 'longPress');
+
+    expect(alertSpy).toHaveBeenCalledWith('Delete message?', expect.any(String), expect.any(Array));
+    await waitFor(() => expect(mockDeleteMutateAsync).toHaveBeenCalledWith('msg-2'));
+  });
+
+  it("offers no delete on the partner's messages", async () => {
+    const alertSpy = confirmAlerts();
+    const { getByText } = await renderWithTheme(<Chat />);
+
+    await fireEvent(getByText('Paid the rent'), 'longPress');
+
+    expect(alertSpy).not.toHaveBeenCalled();
+    expect(mockDeleteMutateAsync).not.toHaveBeenCalled();
+  });
+
+  it('clears the history for this member after confirming', async () => {
+    const alertSpy = confirmAlerts();
+    const { getByText } = await renderWithTheme(<Chat />);
+
+    await fireEvent.press(getByText('Clear history'));
+
+    expect(alertSpy).toHaveBeenCalledWith('Clear chat history?', expect.any(String), expect.any(Array));
+    await waitFor(() => expect(mockClearMutateAsync).toHaveBeenCalled());
   });
 
   it('shows an empty state before the first message', async () => {

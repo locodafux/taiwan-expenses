@@ -71,6 +71,16 @@ export function useRealtimeSync(householdId: string | undefined) {
           queryClient.invalidateQueries({ queryKey: ['messages-unread', householdId] });
         },
       )
+      // Supabase can't filter DELETE events (the old row carries only its
+      // primary key under RLS), so the household_id filter above never
+      // matches a deleted message. Listen unfiltered and only refetch when
+      // the deleted id is one this household has cached.
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'messages' }, (payload) => {
+        const cached = queryClient.getQueryData<{ id: string }[]>(['messages', householdId]);
+        if (cached?.some((m) => m.id === (payload.old as { id?: string }).id)) {
+          queryClient.invalidateQueries({ queryKey: ['messages', householdId] });
+        }
+      })
       .subscribe();
 
     return () => {
