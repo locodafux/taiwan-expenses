@@ -129,7 +129,7 @@ describe('CategoryDetail', () => {
     await fireEvent.changeText(getByPlaceholderText('₱0'), '2500');
     await fireEvent.press(getByText('Save'));
 
-    await waitFor(() => expect(mockAddContributionMutateAsync).toHaveBeenCalledWith({ amount: 2500 }));
+    await waitFor(() => expect(mockAddContributionMutateAsync).toHaveBeenCalledWith({ categoryId: 'cat-fund', amount: 2500 }));
   });
 
   it('renders a bill category with its line items and lets you add one', async () => {
