@@ -12,7 +12,7 @@ import { Card, ListRow } from '@/components/ui/Card';
 import { DeleteCategorySheet } from '@/components/ui/DeleteCategorySheet';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { formatPeso } from '@/lib/format';
-import { fromDateOnly, toDateOnly } from '@/lib/payday';
+import { fromDateOnly, paymentsLeft, termEndDate, toDateOnly } from '@/lib/payday';
 import {
   combineQueryState,
   useAddManualContribution,
@@ -27,6 +27,13 @@ import {
   useUpdateBillItem,
   useUpdateCategory,
 } from '@/lib/queries';
+
+// Retired items (end_date passed) are hidden, so there's always >= 1 left here.
+function termLabel(recurringDay: number, endDate: string) {
+  const left = paymentsLeft(recurringDay, endDate);
+  const until = fromDateOnly(endDate).toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
+  return `${left} payment${left === 1 ? '' : 's'} left · until ${until}`;
+}
 
 export default function CategoryDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -64,6 +71,7 @@ export default function CategoryDetail() {
   const [amount, setAmount] = useState('');
   const [billLabel, setBillLabel] = useState('');
   const [billDay, setBillDay] = useState('5');
+  const [billPayments, setBillPayments] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   // The bill form doubles as the edit form for an existing line item.
@@ -96,6 +104,7 @@ export default function CategoryDetail() {
     setBillLabel('');
     setAmount('');
     setBillDay('5');
+    setBillPayments('');
     setError(null);
   }
 
@@ -178,6 +187,7 @@ export default function CategoryDetail() {
     setBillLabel(item.label);
     setAmount(String(item.amount));
     setBillDay(String(item.recurring_day));
+    setBillPayments(item.end_date ? String(paymentsLeft(item.recurring_day, item.end_date)) : '');
     setError(null);
     setAdding(true);
   }
@@ -384,6 +394,18 @@ export default function CategoryDetail() {
                 keyboardType="numeric"
                 className="rounded-md border border-border bg-page px-4 py-4 font-mono text-base text-ink"
               />
+              <Text className="font-body text-xs text-ink-muted">Number of payments (optional)</Text>
+              <TextField
+                value={billPayments}
+                onChangeText={setBillPayments}
+                placeholder="Leave blank if it never ends"
+                keyboardType="numeric"
+                className="rounded-md border border-border bg-page px-4 py-4 font-mono text-base text-ink"
+              />
+              <Text className="font-body text-xs leading-[1.4] text-ink-muted">
+                For loans and installments: counting from the next due date. It drops off the
+                checklist after the last payment.
+              </Text>
               {error && <Text className="font-body text-sm text-status-bad">{error}</Text>}
               <View className="flex-row gap-3">
                 <Button variant="secondary" className="flex-1" onPress={closeBillForm}>
@@ -403,14 +425,25 @@ export default function CategoryDetail() {
                     if (!Number.isInteger(parsedDay) || parsedDay < 1 || parsedDay > 31) {
                       return setError('Recurring day must be between 1 and 31');
                     }
+                    const parsedPayments = Number(billPayments);
+                    if (billPayments && (!Number.isInteger(parsedPayments) || parsedPayments < 1)) {
+                      return setError('Number of payments must be a whole number');
+                    }
                     setError(null);
-                    const input = { label: billLabel, amount: parsedAmount, recurring_day: parsedDay };
+                    const input = {
+                      label: billLabel,
+                      amount: parsedAmount,
+                      recurring_day: parsedDay,
+                      end_date: billPayments ? termEndDate(parsedDay, parsedPayments) : null,
+                    };
                     const editing = billItems?.find((b) => b.id === editingItemId);
                     try {
                       if (editing) {
                         await updateBillItem.mutateAsync({
                           id: editing.id,
-                          dayChanged: editing.recurring_day !== parsedDay,
+                          // A shortened term can leave a pending row past the new end_date.
+                          dayChanged:
+                            editing.recurring_day !== parsedDay || editing.end_date !== input.end_date,
                           ...input,
                         });
                       } else {
@@ -451,7 +484,7 @@ export default function CategoryDetail() {
                   <View className="flex-1">
                     <Text className="font-body-semibold text-base text-ink">{b.label}</Text>
                     <Text className="mt-[2px] font-body text-xs text-ink-muted">
-                      On the {b.recurring_day}th{b.end_date ? ` · retires ${b.end_date}` : ''}
+                      On the {b.recurring_day}th{b.end_date ? ` · ${termLabel(b.recurring_day, b.end_date)}` : ''}
                     </Text>
                   </View>
                   <Text className="font-mono text-sm text-ink">{formatPeso(b.amount)}</Text>

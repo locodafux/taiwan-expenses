@@ -1,4 +1,4 @@
-import { clampDayToMonth, daysUntil, fromDateOnly, leftoverByPaydayInMonth, nextPayday, toDateOnly } from '../payday';
+import { clampDayToMonth, daysUntil, fromDateOnly, leftoverByPaydayInMonth, nextPayday, paymentsLeft, termEndDate, toDateOnly } from '../payday';
 
 describe('fromDateOnly', () => {
   it('round-trips with toDateOnly regardless of local timezone', () => {
@@ -77,5 +77,29 @@ describe('leftoverByPaydayInMonth', () => {
     const retiredBills = [{ amount: 5000, recurring_day: 5, end_date: '2026-01-01' }];
     const rows = leftoverByPaydayInMonth(incomes, retiredBills, new Date(2026, 9, 1));
     expect(rows.find((r) => r.day === 5)?.leftover).toBe(20000);
+  });
+});
+
+describe('payment terms', () => {
+  const sep21 = new Date(2026, 8, 21);
+
+  it('counts the next due date as the first payment', () => {
+    // Day 5 already passed in Sep, so 12 payments run Oct 2026 - Sep 2027.
+    expect(termEndDate(5, 12, sep21)).toBe('2027-09-05');
+    // Day 25 is still ahead this month.
+    expect(termEndDate(25, 1, sep21)).toBe('2026-09-25');
+  });
+
+  it('clamps the last due date into short months', () => {
+    expect(termEndDate(31, 6, sep21)).toBe('2027-02-28');
+  });
+
+  it('round-trips with paymentsLeft', () => {
+    expect(paymentsLeft(5, termEndDate(5, 12, sep21), sep21)).toBe(12);
+    expect(paymentsLeft(31, termEndDate(31, 6, sep21), sep21)).toBe(6);
+  });
+
+  it('is 0 once the term is over', () => {
+    expect(paymentsLeft(5, '2026-09-05', sep21)).toBe(0);
   });
 });

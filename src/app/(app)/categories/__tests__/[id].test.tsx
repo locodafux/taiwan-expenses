@@ -153,8 +153,38 @@ describe('CategoryDetail', () => {
         label: 'Internet',
         amount: 900,
         recurring_day: 5,
+        end_date: null,
       }),
     );
+  });
+
+  it('records a loan term as an end date and shows the payments left', async () => {
+    jest.useFakeTimers().setSystemTime(new Date(2026, 8, 21));
+    mockParams.id = 'cat-bill';
+    mockUseBillItems.mockReturnValue({
+      data: [{ id: 'bi-1', label: 'Car loan', amount: 8000, recurring_day: 5, end_date: '2026-12-05' }],
+    });
+
+    const { getByText, getByPlaceholderText } = await renderWithTheme(<CategoryDetail />);
+
+    // Oct, Nov, Dec still to pay.
+    await waitFor(() => expect(getByText(/3 payments left · until Dec 2026/)).toBeTruthy());
+
+    await fireEvent.press(getByText('+ Add item'));
+    await fireEvent.changeText(getByPlaceholderText('e.g. Internet'), 'Phone');
+    await fireEvent.changeText(getByPlaceholderText('₱0'), '1200');
+    await fireEvent.changeText(getByPlaceholderText('Leave blank if it never ends'), '24');
+    await fireEvent.press(getByText('Save'));
+
+    await waitFor(() =>
+      expect(mockCreateBillItemMutateAsync).toHaveBeenCalledWith({
+        label: 'Phone',
+        amount: 1200,
+        recurring_day: 5,
+        end_date: '2028-09-05',
+      }),
+    );
+    jest.useRealTimers();
   });
 
   it('scopes a bill category\'s headline total to the current month, not all-time', async () => {
@@ -336,9 +366,36 @@ describe('CategoryDetail', () => {
         label: 'Base rent',
         amount: 1600,
         recurring_day: 10,
+        end_date: null,
       }),
     );
     expect(mockCreateBillItemMutateAsync).not.toHaveBeenCalled();
+  });
+
+  it('sets a payment term on an existing loan from the edit form', async () => {
+    jest.useFakeTimers().setSystemTime(new Date(2026, 8, 21));
+    mockParams.id = 'cat-bill';
+    mockUseBillItems.mockReturnValue({
+      data: [{ id: 'bi-1', label: 'Car loan', amount: 8000, recurring_day: 5, end_date: '2026-12-05' }],
+    });
+    const { getByText, getByDisplayValue } = await renderWithTheme(<CategoryDetail />);
+
+    await fireEvent.press(await waitFor(() => getByText('Car loan')));
+    // Prefilled with the payments still left (Oct, Nov, Dec).
+    await fireEvent.changeText(getByDisplayValue('3'), '6');
+    await fireEvent.press(getByText('Save'));
+
+    await waitFor(() =>
+      expect(mockUpdateBillItemMutateAsync).toHaveBeenCalledWith({
+        id: 'bi-1',
+        dayChanged: true,
+        label: 'Car loan',
+        amount: 8000,
+        recurring_day: 5,
+        end_date: '2027-03-05',
+      }),
+    );
+    jest.useRealTimers();
   });
 
   it('deletes a bill line item after confirming', async () => {
