@@ -307,7 +307,7 @@ export function useCreateBillItem(categoryId: string | undefined) {
     mutationFn: async ({
       category_id = categoryId,
       ...input
-    }: { label: string; amount: number; recurring_day: number; end_date?: string; category_id?: string }) => {
+    }: { label: string; amount: number; recurring_day: number; end_date?: string | null; category_id?: string }) => {
       const { data, error } = await supabase
         .from('bill_items')
         .insert({ category_id: category_id as string, ...input })
@@ -349,7 +349,14 @@ export function useUpdateBillItem(categoryId: string | undefined) {
       id,
       dayChanged,
       ...patch
-    }: { id: string; dayChanged: boolean; label: string; amount: number; recurring_day: number }) => {
+    }: {
+      id: string;
+      dayChanged: boolean;
+      label: string;
+      amount: number;
+      recurring_day: number;
+      end_date: string | null;
+    }) => {
       const { error, count } = await supabase
         .from('bill_items')
         .update(patch, { count: 'exact' })

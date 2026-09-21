@@ -109,3 +109,30 @@ export function leftoverByPaydayInMonth(
 export function monthStart(dateOnly: string): string {
   return `${dateOnly.slice(0, 7)}-01`;
 }
+
+// Loan/bill payment terms (captain's bug report, 2026-09-20). The term is
+// stored as bill_items.end_date = the last due date; materialize_payday and
+// leftoverByPaydayInMonth already stop a bill once its end_date has passed.
+function dueDates(recurringDay: number, from: Date): () => Date {
+  const today = new Date(from.getFullYear(), from.getMonth(), from.getDate());
+  let offset = clampDayToMonth(recurringDay, today) < today ? 1 : 0;
+  return () => clampDayToMonth(recurringDay, new Date(today.getFullYear(), today.getMonth() + offset++, 1));
+}
+
+// End date for a term of `payments` monthly payments, counting the next due
+// date on/after `from` as the first one.
+export function termEndDate(recurringDay: number, payments: number, from: Date = new Date()): string {
+  const next = dueDates(recurringDay, from);
+  let d = next();
+  for (let i = 1; i < payments; i++) d = next();
+  return toDateOnly(d);
+}
+
+// Due dates still ahead (today included) up to and including end_date.
+export function paymentsLeft(recurringDay: number, endDate: string, from: Date = new Date()): number {
+  const end = fromDateOnly(endDate);
+  const next = dueDates(recurringDay, from);
+  let n = 0;
+  while (next() <= end) n++;
+  return n;
+}
