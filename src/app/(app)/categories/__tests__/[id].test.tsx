@@ -165,7 +165,7 @@ describe('CategoryDetail', () => {
       data: [{ id: 'bi-1', label: 'Car loan', amount: 8000, recurring_day: 5, end_date: '2026-12-05' }],
     });
 
-    const { getByText, getByPlaceholderText } = await renderWithTheme(<CategoryDetail />);
+    const { getByText, getByPlaceholderText, getByLabelText } = await renderWithTheme(<CategoryDetail />);
 
     // Oct, Nov, Dec still to pay.
     await waitFor(() => expect(getByText(/3 payments left · until Dec 2026/)).toBeTruthy());
@@ -173,7 +173,10 @@ describe('CategoryDetail', () => {
     await fireEvent.press(getByText('+ Add item'));
     await fireEvent.changeText(getByPlaceholderText('e.g. Internet'), 'Phone');
     await fireEvent.changeText(getByPlaceholderText('₱0'), '1200');
-    await fireEvent.changeText(getByPlaceholderText('Leave blank if it never ends'), '24');
+    await fireEvent.press(getByText('Never ends · set a last month'));
+    expect(getByText('Sep 2026')).toBeTruthy();
+    await fireEvent.press(getByLabelText('Next month'));
+    await fireEvent.press(getByLabelText('Next month'));
     await fireEvent.press(getByText('Save'));
 
     await waitFor(() =>
@@ -181,8 +184,48 @@ describe('CategoryDetail', () => {
         label: 'Phone',
         amount: 1200,
         recurring_day: 5,
-        end_date: '2028-09-05',
+        end_date: '2026-11-05',
       }),
+    );
+    jest.useRealTimers();
+  });
+
+  it("rejects an end month whose payment date has already passed", async () => {
+    jest.useFakeTimers().setSystemTime(new Date(2026, 8, 21));
+    mockParams.id = 'cat-bill';
+    mockUseBillItems.mockReturnValue({ data: [] });
+
+    const { getByText, getByPlaceholderText } = await renderWithTheme(<CategoryDetail />);
+
+    await fireEvent.press(await waitFor(() => getByText('+ Add item')));
+    await fireEvent.changeText(getByPlaceholderText('e.g. Internet'), 'Phone');
+    await fireEvent.changeText(getByPlaceholderText('₱0'), '1200');
+    await fireEvent.press(getByText('Never ends · set a last month'));
+    await fireEvent.press(getByText('Save'));
+
+    await waitFor(() => expect(getByText("That month's payment date has already passed")).toBeTruthy());
+    expect(mockCreateBillItemMutateAsync).not.toHaveBeenCalled();
+    jest.useRealTimers();
+  });
+
+  it('pre-selects the end month when editing and can clear it', async () => {
+    jest.useFakeTimers().setSystemTime(new Date(2026, 8, 21));
+    mockParams.id = 'cat-bill';
+    mockUseBillItems.mockReturnValue({
+      data: [{ id: 'bi-1', label: 'Car loan', amount: 8000, recurring_day: 5, end_date: '2026-12-05' }],
+    });
+
+    const { getByText } = await renderWithTheme(<CategoryDetail />);
+
+    await fireEvent.press(await waitFor(() => getByText('Car loan')));
+    expect(getByText('Dec 2026')).toBeTruthy();
+    await fireEvent.press(getByText('Clear'));
+    await fireEvent.press(getByText('Save'));
+
+    await waitFor(() =>
+      expect(mockUpdateBillItemMutateAsync).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'bi-1', end_date: null }),
+      ),
     );
     jest.useRealTimers();
   });
@@ -378,11 +421,11 @@ describe('CategoryDetail', () => {
     mockUseBillItems.mockReturnValue({
       data: [{ id: 'bi-1', label: 'Car loan', amount: 8000, recurring_day: 5, end_date: '2026-12-05' }],
     });
-    const { getByText, getByDisplayValue } = await renderWithTheme(<CategoryDetail />);
+    const { getByText, getByLabelText } = await renderWithTheme(<CategoryDetail />);
 
     await fireEvent.press(await waitFor(() => getByText('Car loan')));
-    // Prefilled with the payments still left (Oct, Nov, Dec).
-    await fireEvent.changeText(getByDisplayValue('3'), '6');
+    for (let i = 0; i < 3; i++) await fireEvent.press(getByLabelText('Next month'));
+    expect(getByText('Mar 2027')).toBeTruthy();
     await fireEvent.press(getByText('Save'));
 
     await waitFor(() =>

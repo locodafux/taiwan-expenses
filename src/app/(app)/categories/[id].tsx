@@ -7,12 +7,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/ui/Button';
 import { ColorPicker } from '@/components/ui/ColorPicker';
 import { KeyboardScroll } from '@/components/ui/KeyboardScroll';
+import { MonthPicker } from '@/components/ui/MonthPicker';
 import { TextField } from '@/components/ui/TextField';
 import { Card, ListRow } from '@/components/ui/Card';
 import { DeleteCategorySheet } from '@/components/ui/DeleteCategorySheet';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { formatPeso } from '@/lib/format';
-import { fromDateOnly, paymentsLeft, termEndDate, toDateOnly } from '@/lib/payday';
+import { fromDateOnly, monthDueDate, paymentsLeft, toDateOnly } from '@/lib/payday';
 import {
   combineQueryState,
   useAddManualContribution,
@@ -71,7 +72,8 @@ export default function CategoryDetail() {
   const [amount, setAmount] = useState('');
   const [billLabel, setBillLabel] = useState('');
   const [billDay, setBillDay] = useState('5');
-  const [billPayments, setBillPayments] = useState('');
+  // Last month the bill is paid ('YYYY-MM'); null = never ends.
+  const [billUntil, setBillUntil] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   // The bill form doubles as the edit form for an existing line item.
@@ -104,7 +106,7 @@ export default function CategoryDetail() {
     setBillLabel('');
     setAmount('');
     setBillDay('5');
-    setBillPayments('');
+    setBillUntil(null);
     setError(null);
   }
 
@@ -187,7 +189,7 @@ export default function CategoryDetail() {
     setBillLabel(item.label);
     setAmount(String(item.amount));
     setBillDay(String(item.recurring_day));
-    setBillPayments(item.end_date ? String(paymentsLeft(item.recurring_day, item.end_date)) : '');
+    setBillUntil(item.end_date?.slice(0, 7) ?? null);
     setError(null);
     setAdding(true);
   }
@@ -394,17 +396,11 @@ export default function CategoryDetail() {
                 keyboardType="numeric"
                 className="rounded-md border border-border bg-page px-4 py-4 font-mono text-base text-ink"
               />
-              <Text className="font-body text-xs text-ink-muted">Number of payments (optional)</Text>
-              <TextField
-                value={billPayments}
-                onChangeText={setBillPayments}
-                placeholder="Leave blank if it never ends"
-                keyboardType="numeric"
-                className="rounded-md border border-border bg-page px-4 py-4 font-mono text-base text-ink"
-              />
+              <Text className="font-body text-xs text-ink-muted">Paid until (optional)</Text>
+              <MonthPicker value={billUntil} min={today.slice(0, 7)} onChange={setBillUntil} />
               <Text className="font-body text-xs leading-[1.4] text-ink-muted">
-                For loans and installments: counting from the next due date. It drops off the
-                checklist after the last payment.
+                For loans and installments: the month of the last payment. It drops off the
+                checklist after that.
               </Text>
               {error && <Text className="font-body text-sm text-status-bad">{error}</Text>}
               <View className="flex-row gap-3">
@@ -425,16 +421,16 @@ export default function CategoryDetail() {
                     if (!Number.isInteger(parsedDay) || parsedDay < 1 || parsedDay > 31) {
                       return setError('Recurring day must be between 1 and 31');
                     }
-                    const parsedPayments = Number(billPayments);
-                    if (billPayments && (!Number.isInteger(parsedPayments) || parsedPayments < 1)) {
-                      return setError('Number of payments must be a whole number');
+                    const endDate = billUntil ? monthDueDate(parsedDay, billUntil) : null;
+                    if (endDate && endDate < today) {
+                      return setError("That month's payment date has already passed");
                     }
                     setError(null);
                     const input = {
                       label: billLabel,
                       amount: parsedAmount,
                       recurring_day: parsedDay,
-                      end_date: billPayments ? termEndDate(parsedDay, parsedPayments) : null,
+                      end_date: endDate,
                     };
                     const editing = billItems?.find((b) => b.id === editingItemId);
                     try {
