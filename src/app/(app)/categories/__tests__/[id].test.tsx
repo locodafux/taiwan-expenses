@@ -4,10 +4,11 @@ import { Alert } from 'react-native';
 import { renderWithTheme } from '@/test/renderWithTheme';
 
 const mockPush = jest.fn();
-const mockBack = jest.fn();
+const mockDismissTo = jest.fn();
 const mockParams = { id: 'cat-fund' };
 jest.mock('expo-router', () => ({
-  useRouter: () => ({ push: mockPush, back: mockBack }),
+  useRouter: () => ({ push: mockPush, dismissTo: mockDismissTo }),
+  useFocusEffect: jest.fn(),
   useLocalSearchParams: () => mockParams,
 }));
 
@@ -250,8 +251,8 @@ describe('CategoryDetail', () => {
 
   it('navigates back to the category list', async () => {
     const { getByText } = await renderWithTheme(<CategoryDetail />);
-    await fireEvent.press(await waitFor(() => getByText('‹ Categories')));
-    expect(mockBack).toHaveBeenCalled();
+    await fireEvent.press(await waitFor(() => getByText('‹ Back')));
+    expect(mockDismissTo).toHaveBeenCalledWith('/(app)/categories');
   });
 
   it('opens the delete confirmation sheet with real bill/entry/total stats', async () => {
@@ -279,7 +280,7 @@ describe('CategoryDetail', () => {
     await fireEvent.press(getByText('Delete Category & History'));
 
     await waitFor(() => expect(mockDeleteCategoryMutateAsync).toHaveBeenCalledWith('cat-fund'));
-    await waitFor(() => expect(mockBack).toHaveBeenCalled());
+    await waitFor(() => expect(mockDismissTo).toHaveBeenCalledWith('/(app)/categories'));
   });
 
   it('does not delete when the sheet is cancelled', async () => {

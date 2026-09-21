@@ -1,6 +1,6 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
-import { Alert, Pressable, Text, View } from 'react-native';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useMemo, useState } from 'react';
+import { Alert, BackHandler, Pressable, Text, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -39,6 +39,20 @@ function termLabel(recurringDay: number, endDate: string) {
 export default function CategoryDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  // Opened from the Dashboard/Checklist, this screen is the only route in the
+  // Categories stack, so router.back() would fall through to the tab history
+  // (e.g. the Dashboard). dismissTo pops to the list, or replaces this screen
+  // with it when it isn't underneath. Android's hardware back does the same.
+  const backToList = useCallback(() => router.dismissTo('/(app)/categories'), [router]);
+  useFocusEffect(
+    useCallback(() => {
+      const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+        backToList();
+        return true;
+      });
+      return () => sub.remove();
+    }, [backToList]),
+  );
   const membershipQuery = useHouseholdMembership();
   const member = membershipQuery.data;
   const householdId = member?.household_id;
@@ -222,7 +236,7 @@ export default function CategoryDetail() {
     try {
       await deleteCategory.mutateAsync(category!.id);
       setConfirmingDelete(false);
-      router.back();
+      backToList();
     } catch (e) {
       setConfirmingDelete(false);
       Alert.alert('Could not delete category', e instanceof Error ? e.message : 'Try again.');
@@ -232,8 +246,8 @@ export default function CategoryDetail() {
   return (
     <SafeAreaView className="flex-1 bg-page" edges={['top']}>
       <KeyboardScroll contentContainerClassName="gap-4 px-6 py-5">
-        <Pressable onPress={() => router.back()} hitSlop={13} className="self-start py-3">
-          <Text className="font-body text-sm text-ink-2">‹ Categories</Text>
+        <Pressable onPress={backToList} hitSlop={13} accessibilityRole="button" className="self-start py-3">
+          <Text className="font-body text-sm text-ink-2">‹ Back</Text>
         </Pressable>
 
         <View className="flex-row items-center justify-between gap-3">
