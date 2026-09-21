@@ -22,9 +22,11 @@ const textSizeClasses: Record<Size, string> = {
   md: 'text-base',
 };
 
+// Primary is the soft brown ink, not a loud accent: in Sunday Market colour
+// is for categories and good news, actions stay calm.
 const variantClasses: Record<Variant, { container: string; text: string }> = {
-  primary: { container: 'bg-accent', text: 'text-white' },
-  secondary: { container: 'bg-surface-2 border border-border', text: 'text-ink' },
+  primary: { container: 'bg-ink', text: 'text-page' },
+  secondary: { container: 'bg-surface-2', text: 'text-ink' },
   ghost: { container: 'bg-transparent', text: 'text-ink-2' },
   danger: { container: 'bg-status-bad', text: 'text-white' },
 };
@@ -41,14 +43,15 @@ export function Button({
   const { vars } = useTheme();
   const isDisabled = disabled || loading;
   const v = variantClasses[variant];
-  const indicatorColor = variant === 'primary' || variant === 'danger' ? '#fff9f4' : vars['--ink'];
+  const indicatorColor =
+    variant === 'primary' ? vars['--page'] : variant === 'danger' ? '#fff9f4' : vars['--ink'];
 
   const content = (
     <>
       {loading ? (
         <ActivityIndicator color={indicatorColor} />
       ) : (
-        <Text className={`font-body-semibold ${textSizeClasses[size]} ${v.text} text-center`}>
+        <Text className={`font-body-bold ${textSizeClasses[size]} ${v.text} text-center`}>
           {children}
         </Text>
       )}

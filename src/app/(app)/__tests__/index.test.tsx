@@ -66,7 +66,7 @@ describe('Dashboard', () => {
     expect(getByText(/Leo & Alex/)).toBeTruthy();
     expect(getByText(/₱\s?12,000/)).toBeTruthy();
     expect(getByText(/₱\s?3,500 this month/)).toBeTruthy();
-    expect(getByText('Next payday')).toBeTruthy();
+    expect(getByText(/^Next payday/)).toBeTruthy();
   });
 
   it('shows the empty state when there are no categories yet', async () => {
@@ -93,7 +93,7 @@ describe('Dashboard', () => {
     const { queryByText } = await renderWithTheme(<Dashboard />);
 
     expect(queryByText('Taiwan fund')).toBeNull();
-    expect(queryByText('Next payday')).toBeNull();
+    expect(queryByText(/^Next payday/)).toBeNull();
     expect(queryByText('Retry')).toBeNull();
   });
 
@@ -114,7 +114,7 @@ describe('Dashboard', () => {
 
     expect(await waitFor(() => getByText('Saved this quarter'))).toBeTruthy();
     expect(getByText(/₱\s?18,500/)).toBeTruthy();
-    expect(getByText('🔥 3-payday streak')).toBeTruthy();
+    expect(getByText('3-payday streak')).toBeTruthy();
   });
 
   it('shows a start-streak chip instead of a count when there is no streak yet', async () => {

@@ -4,6 +4,7 @@ import Animated, { ZoomIn } from 'react-native-reanimated';
 
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { DoneBadge } from '@/components/ui/DoneBadge';
 import type { Category } from '@/lib/database.types';
 import { formatPeso } from '@/lib/format';
 import {
@@ -69,8 +70,8 @@ export function GoalCelebration({ householdId }: { householdId: string | undefin
       <View className="flex-1 items-center justify-center px-9" style={{ backgroundColor: 'rgba(0,0,0,0.55)' }}>
         <Animated.View entering={ZoomIn.duration(260)} className="w-full">
           <Card className="items-center gap-3 p-8">
-            <Text className="text-3xl">🎉</Text>
-            <Text className="text-center font-display-semibold text-lg text-ink">Goal complete!</Text>
+            <DoneBadge />
+            <Text className="mt-1 text-center font-display text-lg text-ink">Goal complete!</Text>
             <Text className="text-center font-body text-base text-ink-2">
               {names} just reached {shown.name}, {formatPeso(target)}.
             </Text>

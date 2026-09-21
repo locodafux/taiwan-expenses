@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { KeyboardScroll } from '@/components/ui/KeyboardScroll';
 import { TextField } from '@/components/ui/TextField';
 import { Card, ListRow } from '@/components/ui/Card';
+import { Icon } from '@/components/ui/Icon';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { formatPeso } from '@/lib/format';
 import {
@@ -18,6 +19,7 @@ import {
   useUpdateIncome,
 } from '@/lib/queries';
 import type { Income } from '@/lib/database.types';
+import { useTheme } from '@/theme/ThemeProvider';
 
 const RECURRING_DAYS = [5, 15, 20, 30];
 
@@ -26,6 +28,7 @@ function ordinal(day: number) {
 }
 
 export default function IncomeManagement() {
+  const { vars } = useTheme();
   const membershipQuery = useHouseholdMembership();
   const member = membershipQuery.data;
   const householdId = member?.household_id;
@@ -240,7 +243,7 @@ export default function IncomeManagement() {
                 </Text>
               </View>
               <Text className="font-mono text-base text-ink">{formatPeso(income.amount)}</Text>
-              <Text className="text-ink-muted">›</Text>
+              <Icon name="chevronRight" size={16} color={vars['--ink-muted']} />
             </ListRow>
           ))}
           {(incomes ?? []).length === 0 && (

@@ -35,16 +35,22 @@ module.exports = {
         'cat-savings': 'var(--cat-savings)',
         'cat-pinatubo': 'var(--cat-pinatubo)',
         'cat-excess': 'var(--cat-excess)',
+        'sage-soft': 'var(--sage-soft)',
+        butter: 'var(--butter)',
       },
+      // Sunday Market type: Fraunces (a soft serif) for headings and every
+      // peso amount, Figtree for everything else. `mono` is kept as the name
+      // for "amount/number" text so screens didn't need rewriting; it is not
+      // a monospace face.
       fontFamily: {
-        display: ['BricolageGrotesque_700Bold'],
-        'display-semibold': ['BricolageGrotesque_600SemiBold'],
-        body: ['PublicSans_400Regular'],
-        'body-medium': ['PublicSans_500Medium'],
-        'body-semibold': ['PublicSans_600SemiBold'],
-        'body-bold': ['PublicSans_700Bold'],
-        mono: ['IBMPlexMono_500Medium'],
-        'mono-semibold': ['IBMPlexMono_600SemiBold'],
+        display: ['Fraunces_600SemiBold'],
+        'display-semibold': ['Fraunces_500Medium'],
+        body: ['Figtree_400Regular'],
+        'body-medium': ['Figtree_500Medium'],
+        'body-semibold': ['Figtree_600SemiBold'],
+        'body-bold': ['Figtree_700Bold'],
+        mono: ['Fraunces_600SemiBold'],
+        'mono-semibold': ['Fraunces_700Bold'],
       },
       fontSize: {
         xs: '11px',
@@ -72,11 +78,13 @@ module.exports = {
         14: '44px',
         15: '64px',
       },
+      // Soft, generous corners; hero surfaces also cut one corner small
+      // (rounded-lg + rounded-bl-sm) for the "leaf" shape.
       borderRadius: {
-        sm: '9px',
+        sm: '6px',
         md: '12px',
-        lg: '14px',
-        xl: '16px',
+        lg: '20px',
+        xl: '24px',
         pill: '999px',
       },
     },
