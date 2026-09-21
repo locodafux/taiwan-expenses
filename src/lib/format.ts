@@ -4,3 +4,8 @@
 export function formatPeso(n: number) {
   return '₱ ' + Math.round(n).toLocaleString();
 }
+
+// Short "Mon, Sep 21"-style date for the small line above screen titles.
+export function formatFolioDate(d: Date) {
+  return d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+}

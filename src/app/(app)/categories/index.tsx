@@ -3,7 +3,8 @@ import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/ui/Button';
-import { Card, ListRow } from '@/components/ui/Card';
+import { Card, CategoryMark, ListRow } from '@/components/ui/Card';
+import { Icon } from '@/components/ui/Icon';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { fromDateOnly } from '@/lib/payday';
 import {
@@ -13,6 +14,7 @@ import {
   useHouseholdBillItems,
   useHouseholdMembership,
 } from '@/lib/queries';
+import { useTheme } from '@/theme/ThemeProvider';
 
 function describeCategory(
   c: { kind: string; rule: any },
@@ -36,6 +38,7 @@ function describeCategory(
 }
 
 export default function CategoryManagement() {
+  const { vars } = useTheme();
   const router = useRouter();
   const membershipQuery = useHouseholdMembership();
   const member = membershipQuery.data;
@@ -84,14 +87,14 @@ export default function CategoryManagement() {
               isLast={i === (categories?.length ?? 0) - 1}
               onPress={() => router.push(`/(app)/categories/${c.id}`)}
             >
-              <View className="h-[10px] w-[10px] rounded" style={{ backgroundColor: c.color ?? '#999' }} />
+              <CategoryMark color={c.color} size={32} label={c.name} />
               <View className="flex-1">
                 <Text className="font-body-semibold text-base text-ink">{c.name}</Text>
                 <Text className="mt-[2px] font-body text-xs text-ink-muted">
                   {describeCategory(c, billCountByCategory[c.id] ?? 0, balances?.[c.id] ?? 0)}
                 </Text>
               </View>
-              <Text className="text-lg text-ink-muted">›</Text>
+              <Icon name="chevronRight" size={16} color={vars['--ink-muted']} />
             </ListRow>
           ))}
           {(categories ?? []).length === 0 && (

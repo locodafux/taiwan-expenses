@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import { Card, ListRow } from '@/components/ui/Card';
+import { Icon } from '@/components/ui/Icon';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { KeyboardScroll } from '@/components/ui/KeyboardScroll';
 import { TextField } from '@/components/ui/TextField';
@@ -28,7 +29,7 @@ import { useTheme } from '@/theme/ThemeProvider';
 
 const THEME_DESCRIPTIONS = {
   original: "Direction A — the original planner's palette, evolved for touch.",
-  warm: 'Direction B — terracotta, deep teal and cream. Default.',
+  warm: 'Sunday Market — sage, apricot and butter on cream. Default.',
   playful: 'Direction C — bold violet-to-pink accent, playful fintech feel.',
 };
 
@@ -353,11 +354,9 @@ export default function Settings() {
               <Animated.View entering={FadeIn.duration(200)} exiting={FadeOut.duration(300)}>
                 <View
                   accessibilityLiveRegion="polite"
-                  className="flex-row items-center gap-3 rounded-md bg-accent-soft px-4 py-3"
+                  className="flex-row items-center gap-3 rounded-lg rounded-bl-sm bg-sage-soft px-4 py-3"
                 >
-                  <View className="h-6 w-6 items-center justify-center rounded-full bg-status-good">
-                    <Text className="text-xs text-white">✓</Text>
-                  </View>
+                  <Icon name="check" size={22} strokeWidth={2.6} color={vars['--accent-2']} />
                   <View className="flex-1">
                     <Text className="font-body-semibold text-sm text-ink">{bugResult.message}</Text>
                     <Text className="font-body text-xs text-ink-2">We&apos;ll take a look. Thank you!</Text>

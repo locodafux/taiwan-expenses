@@ -8,6 +8,12 @@ import Animated, {
   ZoomIn,
 } from 'react-native-reanimated';
 
+import { useTheme } from '@/theme/ThemeProvider';
+
+import { CategoryMark } from './Card';
+import { SectionLabel } from './Heading';
+import { Icon } from './Icon';
+
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 export function ChecklistRow({
@@ -33,6 +39,7 @@ export function ChecklistRow({
   onLabelPress?: () => void;
   onSkipToggle?: () => void;
 }) {
+  const { vars } = useTheme();
   const isFirstRender = useRef(true);
   const scale = useSharedValue(1);
 
@@ -53,17 +60,17 @@ export function ChecklistRow({
         disabled={skipped}
         hitSlop={13}
         style={animatedStyle}
-        className={`h-[18px] w-[18px] items-center justify-center rounded-[4px] border ${
-          checked ? 'border-status-good bg-status-good' : 'border-border'
+        className={`h-[22px] w-[22px] items-center justify-center rounded-[8px] border-2 ${
+          checked ? 'border-status-good bg-status-good' : 'border-baseline bg-surface'
         } ${skipped ? 'opacity-40' : ''}`}
       >
         {checked && (
-          <Animated.Text entering={ZoomIn.duration(120)} className="text-xs text-white">
-            ✓
-          </Animated.Text>
+          <Animated.View entering={ZoomIn.duration(120)}>
+            <Icon name="check" size={14} strokeWidth={2.6} color="#ffffff" />
+          </Animated.View>
         )}
       </AnimatedPressable>
-      <View className="h-[9px] w-[9px] rounded-[3px]" style={{ backgroundColor: color }} />
+      <CategoryMark color={color} size={8} />
       <Pressable className="flex-1" onPress={onToggle} disabled={skipped}>
         <Text
           className={`font-body text-base ${
@@ -74,20 +81,22 @@ export function ChecklistRow({
         </Text>
       </Pressable>
       {skipped ? (
-        <Text className="font-body text-xs text-ink-muted">Skipped</Text>
+        <Text className="rounded-pill bg-surface-2 px-3 py-[2px] font-body-semibold text-xs text-ink-muted">
+          Skipped
+        </Text>
       ) : (
         <Pressable onPress={onAmountPress} disabled={!onAmountPress}>
-          <Text className="font-mono text-sm text-ink-2">{amount}</Text>
+          <Text className={`font-mono text-sm ${checked ? 'text-ink-muted' : 'text-ink'}`}>{amount}</Text>
         </Pressable>
       )}
       {onSkipToggle && (
         <Pressable onPress={onSkipToggle} hitSlop={8}>
-          <Text className="font-body text-xs text-ink-2">{skipped ? 'Unskip' : 'Skip'}</Text>
+          <Text className="font-body-semibold text-xs text-accent">{skipped ? 'Unskip' : 'Skip'}</Text>
         </Pressable>
       )}
       {onLabelPress && (
         <Pressable onPress={onLabelPress} hitSlop={8}>
-          <Text className="text-ink-muted">›</Text>
+          <Icon name="chevronRight" size={16} color={vars['--ink-muted']} />
         </Pressable>
       )}
     </View>
@@ -105,8 +114,8 @@ export function ChecklistGroup({
 }) {
   return (
     <View className="mb-5">
-      <Text className="font-body-bold text-sm text-ink">{heading}</Text>
-      {note && <Text className="mb-2 mt-[2px] font-body text-xs text-ink-muted">{note}</Text>}
+      <SectionLabel className="mb-0 mt-1">{heading}</SectionLabel>
+      {note && <Text className="mb-1 font-body text-xs text-ink-muted">{note}</Text>}
       {children}
     </View>
   );

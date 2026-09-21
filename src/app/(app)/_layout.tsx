@@ -1,7 +1,8 @@
 import { Redirect, Tabs } from 'expo-router';
-import { Text, type ColorValue } from 'react-native';
+import type { ColorValue } from 'react-native';
 
 import { GoalCelebration } from '@/components/GoalCelebration';
+import { Icon, type IconName } from '@/components/ui/Icon';
 import { UpdateBanner } from '@/components/UpdateBanner';
 import { useAuth } from '@/lib/auth';
 import { usePushRegistration } from '@/lib/notifications';
@@ -10,8 +11,10 @@ import { useRealtimeSync } from '@/lib/realtime';
 import { THEMES } from '@/theme/tokens';
 import { useTheme } from '@/theme/ThemeProvider';
 
-function TabIcon({ symbol, color }: { symbol: string; color: ColorValue }) {
-  return <Text style={{ fontSize: 18, color }}>{symbol}</Text>;
+function tabIcon(name: IconName) {
+  return function TabIcon({ color, focused }: { color: ColorValue; focused: boolean }) {
+    return <Icon name={name} size={22} color={color as string} strokeWidth={focused ? 2.2 : 1.7} />;
+  };
 }
 
 export default function AppLayout() {
@@ -33,48 +36,45 @@ export default function AppLayout() {
       <Tabs
         screenOptions={{
           headerShown: false,
-          tabBarActiveTintColor: vars['--accent'],
+          tabBarActiveTintColor: vars['--ink'],
           tabBarInactiveTintColor: vars['--ink-muted'],
           tabBarStyle: {
             backgroundColor: vars['--surface'],
-            borderTopColor: vars['--border'],
-            elevation: 8,
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: -2 },
-            shadowOpacity: 0.05,
-            shadowRadius: 6,
+            // Sits on the page by tone alone, like the cards: no rule, no shadow.
+            borderTopWidth: 0,
+            elevation: 0,
           },
-          tabBarLabelStyle: { fontFamily: 'PublicSans_600SemiBold', fontSize: 11 },
+          tabBarLabelStyle: { fontFamily: 'Figtree_600SemiBold', fontSize: 11 },
         }}
       >
         <Tabs.Screen
           name="index"
-          options={{ title: 'Dashboard', tabBarIcon: ({ color }) => <TabIcon symbol="⌂" color={color} /> }}
+          options={{ title: 'Dashboard', tabBarIcon: tabIcon('home') }}
         />
         <Tabs.Screen
           name="checklist"
-          options={{ title: 'Checklist', tabBarIcon: ({ color }) => <TabIcon symbol="✓" color={color} /> }}
+          options={{ title: 'Checklist', tabBarIcon: tabIcon('checklist') }}
         />
         <Tabs.Screen
           name="categories"
-          options={{ title: 'Categories', tabBarIcon: ({ color }) => <TabIcon symbol="▤" color={color} /> }}
+          options={{ title: 'Categories', tabBarIcon: tabIcon('tabs') }}
         />
         <Tabs.Screen
           name="chat"
           options={{
             title: 'Chat',
-            tabBarIcon: ({ color }) => <TabIcon symbol="✉" color={color} />,
+            tabBarIcon: tabIcon('chat'),
             tabBarBadge: unreadMessages ? unreadMessages : undefined,
             tabBarBadgeStyle: { backgroundColor: vars['--accent'], color: '#fff9f4', fontSize: 10 },
           }}
         />
         <Tabs.Screen
           name="income"
-          options={{ title: 'Income', tabBarIcon: ({ color }) => <TabIcon symbol="₱" color={color} /> }}
+          options={{ title: 'Income', tabBarIcon: tabIcon('peso') }}
         />
         <Tabs.Screen
           name="settings"
-          options={{ title: 'Settings', tabBarIcon: ({ color }) => <TabIcon symbol="⚙" color={color} /> }}
+          options={{ title: 'Settings', tabBarIcon: tabIcon('sliders') }}
         />
       </Tabs>
     </>

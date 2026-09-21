@@ -91,7 +91,7 @@ describe('Settings', () => {
 
     await waitFor(() => expect(getByText('Leo')).toBeTruthy());
     expect(getByText('Alex')).toBeTruthy();
-    expect(getByText(/Direction B — terracotta/)).toBeTruthy();
+    expect(getByText(/Sunday Market — sage/)).toBeTruthy();
   });
 
   it('switches theme when a different option is pressed', async () => {

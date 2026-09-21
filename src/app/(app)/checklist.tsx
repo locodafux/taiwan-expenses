@@ -8,9 +8,11 @@ import { Button } from '@/components/ui/Button';
 import { KeyboardScroll } from '@/components/ui/KeyboardScroll';
 import { TextField } from '@/components/ui/TextField';
 import { Callout } from '@/components/ui/Callout';
-import { Card } from '@/components/ui/Card';
+import { Card, CategoryMark } from '@/components/ui/Card';
 import { ChecklistGroup, ChecklistRow } from '@/components/ui/Checklist';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
+import { ScreenHeader } from '@/components/ui/Heading';
 import { PaydayCelebration } from '@/components/ui/PaydayCelebration';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import {
@@ -27,7 +29,7 @@ import {
   useToggleMonthSkip,
   useUpdateLedgerAmount,
 } from '@/lib/queries';
-import { formatPeso } from '@/lib/format';
+import { formatFolioDate, formatPeso } from '@/lib/format';
 import {
   completedPaydayStreak,
   fromDateOnly,
@@ -35,8 +37,10 @@ import {
   nextPayday,
   toDateOnly,
 } from '@/lib/payday';
+import { useTheme } from '@/theme/ThemeProvider';
 
 export default function PaydayChecklist() {
+  const { vars } = useTheme();
   const router = useRouter();
   const membershipQuery = useHouseholdMembership();
   const member = membershipQuery.data;
@@ -110,17 +114,15 @@ export default function PaydayChecklist() {
   if (isLoading) {
     return (
       <SafeAreaView className="flex-1 items-center justify-center bg-page">
-        <ActivityIndicator color="#c1552f" />
+        <ActivityIndicator color={vars['--accent']} />
       </SafeAreaView>
     );
   }
 
   if (!paydayDate) {
     return (
-      <SafeAreaView className="flex-1 items-center justify-center gap-4 bg-page px-10">
-        <Text className="text-center font-body text-sm text-ink-muted">
-          Add an income first to see your payday checklist.
-        </Text>
+      <SafeAreaView className="flex-1 justify-center gap-4 bg-page px-10">
+        <EmptyState>Add an income first to see your payday checklist.</EmptyState>
         <Button variant="secondary" size="sm" onPress={() => router.push('/(app)/income')}>
           Go to Income
         </Button>
@@ -168,12 +170,11 @@ export default function PaydayChecklist() {
   return (
     <SafeAreaView className="flex-1 bg-page" edges={['top']}>
       <KeyboardScroll contentContainerClassName="gap-4 px-6 py-5">
-        <View>
-          <Text className="font-display-semibold text-lg text-ink">
-            {paydayDay}th payday checklist
-          </Text>
-          <Text className="mt-1 font-body text-xs text-ink-muted">{formatPeso(takeHome)} take-home</Text>
-        </View>
+        <ScreenHeader
+          kicker={formatFolioDate(fromDateOnly(paydayDate))}
+          title={`${paydayDay}th payday checklist`}
+          subtitle={`${formatPeso(takeHome)} take-home`}
+        />
 
         {total > 0 && (
           <ProgressBar
@@ -185,66 +186,65 @@ export default function PaydayChecklist() {
 
         {allChecked && <PaydayCelebration streak={streak} />}
 
-        <Card className="px-5 py-4">
-          {visible.length === 0 && (
-            <Text className="py-4 font-body text-sm text-ink-muted">
-              Nothing to check off for this payday yet.
-            </Text>
-          )}
+        {visible.length === 0 && <EmptyState>Nothing to check off for this payday yet.</EmptyState>}
 
-          {outgoing.length > 0 && (
-            <ChecklistGroup heading="Money leaving" note="Bills and debt payments due this payday.">
-              {outgoing.map((entry) => (
-                <ChecklistRow
-                  key={entry.id}
-                  label={entry.bill_items?.label ?? entry.categories?.name ?? 'Item'}
-                  amount={formatPeso(entry.amount)}
-                  color={entry.categories?.color ?? '#999'}
-                  checked={entry.status === 'checked'}
-                  onToggle={() => checkEntry.mutate({ id: entry.id, checked: entry.status !== 'checked' })}
-                  onAmountPress={() => {
-                    setEditingId(entry.id);
-                    setEditAmount(String(entry.amount));
-                    setEditError(null);
-                  }}
-                  onLabelPress={() => router.push(`/(app)/categories/${entry.category_id}`)}
-                />
-              ))}
-            </ChecklistGroup>
-          )}
+        {visible.length > 0 && (
+          <Card className="px-5 py-4">
 
-          {staying.length > 0 && (
-            <ChecklistGroup heading="Money staying" note="Fund contributions kept in the household. Skip one to sit a month out.">
-              {staying.map((entry) => (
-                <ChecklistRow
-                  key={entry.id}
-                  label={`${entry.categories?.name ?? 'Item'}${entry.manual ? ' · extra' : ''}`}
-                  amount={formatPeso(entry.amount)}
-                  color={entry.categories?.color ?? '#999'}
-                  checked={entry.status === 'checked'}
-                  skipped={entry.status === 'skipped'}
-                  // An extra deposit isn't part of the plan, so there's no month to skip.
-                  onSkipToggle={
-                    entry.manual
-                      ? undefined
-                      : () =>
-                          toggleSkip.mutate({
-                            categoryId: entry.category_id,
-                            skipped: entry.status !== 'skipped',
-                          })
-                  }
-                  onToggle={() => checkEntry.mutate({ id: entry.id, checked: entry.status !== 'checked' })}
-                  onAmountPress={() => {
-                    setEditingId(entry.id);
-                    setEditAmount(String(entry.amount));
-                    setEditError(null);
-                  }}
-                  onLabelPress={() => router.push(`/(app)/categories/${entry.category_id}`)}
-                />
-              ))}
-            </ChecklistGroup>
-          )}
-        </Card>
+            {outgoing.length > 0 && (
+              <ChecklistGroup heading="Money leaving" note="Bills and debt payments due this payday.">
+                {outgoing.map((entry) => (
+                  <ChecklistRow
+                    key={entry.id}
+                    label={entry.bill_items?.label ?? entry.categories?.name ?? 'Item'}
+                    amount={formatPeso(entry.amount)}
+                    color={entry.categories?.color ?? '#999'}
+                    checked={entry.status === 'checked'}
+                    onToggle={() => checkEntry.mutate({ id: entry.id, checked: entry.status !== 'checked' })}
+                    onAmountPress={() => {
+                      setEditingId(entry.id);
+                      setEditAmount(String(entry.amount));
+                      setEditError(null);
+                    }}
+                    onLabelPress={() => router.push(`/(app)/categories/${entry.category_id}`)}
+                  />
+                ))}
+              </ChecklistGroup>
+            )}
+
+            {staying.length > 0 && (
+              <ChecklistGroup heading="Money staying" note="Fund contributions kept in the household. Skip one to sit a month out.">
+                {staying.map((entry) => (
+                  <ChecklistRow
+                    key={entry.id}
+                    label={`${entry.categories?.name ?? 'Item'}${entry.manual ? ' · extra' : ''}`}
+                    amount={formatPeso(entry.amount)}
+                    color={entry.categories?.color ?? '#999'}
+                    checked={entry.status === 'checked'}
+                    skipped={entry.status === 'skipped'}
+                    // An extra deposit isn't part of the plan, so there's no month to skip.
+                    onSkipToggle={
+                      entry.manual
+                        ? undefined
+                        : () =>
+                            toggleSkip.mutate({
+                              categoryId: entry.category_id,
+                              skipped: entry.status !== 'skipped',
+                            })
+                    }
+                    onToggle={() => checkEntry.mutate({ id: entry.id, checked: entry.status !== 'checked' })}
+                    onAmountPress={() => {
+                      setEditingId(entry.id);
+                      setEditAmount(String(entry.amount));
+                      setEditError(null);
+                    }}
+                    onLabelPress={() => router.push(`/(app)/categories/${entry.category_id}`)}
+                  />
+                ))}
+              </ChecklistGroup>
+            )}
+          </Card>
+        )}
 
         {editingId && (
           <Animated.View entering={FadeInDown.duration(200)}>
@@ -285,10 +285,10 @@ export default function PaydayChecklist() {
         )}
 
         {leftover > 0 && extraFund && (
-          <Card className="gap-3 p-4">
+          <Card className="gap-3 rounded-bl-sm bg-sage-soft p-4">
             <View>
-              <Text className="font-body-bold text-sm text-ink">{formatPeso(leftover)} left over</Text>
-              <Text className="mt-1 font-body text-xs text-ink-muted">
+              <Text className="font-display text-md text-ink">{formatPeso(leftover)} left over</Text>
+              <Text className="mt-1 font-body text-xs text-ink-2">
                 Take-home nothing above is using. Add it to savings, or type a different amount.
               </Text>
             </View>
@@ -297,12 +297,16 @@ export default function PaydayChecklist() {
                 <Pressable
                   key={f.id}
                   onPress={() => setExtraFundId(f.id)}
-                  className={`flex-row items-center gap-2 rounded-full border px-3 py-2 ${
-                    f.id === extraFund.id ? 'border-ink bg-surface' : 'border-border'
+                  className={`flex-row items-center gap-2 rounded-pill px-3 py-2 ${
+                    f.id === extraFund.id ? 'bg-ink' : 'bg-surface'
                   }`}
                 >
-                  <View className="h-2 w-2 rounded" style={{ backgroundColor: f.color ?? '#999' }} />
-                  <Text className="font-body-semibold text-xs text-ink">{f.name}</Text>
+                  <CategoryMark color={f.color} size={8} />
+                  <Text
+                    className={`font-body-semibold text-xs ${f.id === extraFund.id ? 'text-page' : 'text-ink'}`}
+                  >
+                    {f.name}
+                  </Text>
                 </Pressable>
               ))}
             </View>

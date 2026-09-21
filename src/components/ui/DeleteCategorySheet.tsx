@@ -5,14 +5,15 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { formatPeso } from '@/lib/format';
 
 import { Button } from './Button';
+import { CategoryMark } from './Card';
 
 const SHEET_OFFSET = Dimensions.get('window').height;
 
 function Stat({ value, label }: { value: string; label: string }) {
   return (
-    <View className="flex-1 items-center rounded-sm bg-surface-2 px-2 py-3">
-      <Text className="font-display-semibold text-md text-ink">{value}</Text>
-      <Text className="mt-1 font-body text-xs uppercase text-ink-muted">{label}</Text>
+    <View className="flex-1 items-center rounded-md bg-surface-2 px-2 py-3">
+      <Text className="font-mono text-md text-ink">{value}</Text>
+      <Text className="mt-1 font-body text-xs text-ink-muted">{label}</Text>
     </View>
   );
 }
@@ -61,16 +62,13 @@ export function DeleteCategorySheet({
         <Pressable className="absolute inset-0" onPress={onCancel} />
         <Animated.View
           style={{ transform: [{ translateY }] }}
-          className="rounded-t-xl border border-border bg-surface px-7 pb-6 pt-4"
+          className="rounded-t-xl bg-surface px-7 pb-6 pt-4"
         >
-          <View className="mb-4 h-1 w-9 self-center rounded-full bg-baseline" />
+          <View className="mb-4 h-1 w-9 self-center rounded-pill bg-baseline" />
 
           <View className="mb-5 flex-row items-center gap-3">
-            <View
-              className="h-3 w-3 rounded-full"
-              style={{ backgroundColor: categoryColor ?? '#999' }}
-            />
-            <Text className="font-body-semibold text-md text-ink">{categoryName}</Text>
+            <CategoryMark color={categoryColor} size={32} label={categoryName} />
+            <Text className="font-display text-md text-ink">{categoryName}</Text>
           </View>
 
           {hasHistory ? (

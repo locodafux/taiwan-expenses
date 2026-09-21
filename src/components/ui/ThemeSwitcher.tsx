@@ -16,15 +16,14 @@ export function ThemeSwitcher({
   onChange: (theme: ThemeName) => void;
 }) {
   return (
-    <View className="flex-row gap-1 rounded-md border border-border bg-surface-2 p-1">
+    <View className="flex-row gap-1 rounded-pill bg-surface-2 p-1">
       {THEME_NAMES.map((key) => {
         const active = value === key;
         return (
           <Pressable
             key={key}
             onPress={() => onChange(key)}
-            className={`flex-1 items-center rounded-sm px-3 py-3 ${active ? 'bg-surface' : ''}`}
-            style={active ? { shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 2 } : undefined}
+            className={`flex-1 items-center rounded-pill px-3 py-3 ${active ? 'bg-surface' : ''}`}
           >
             <Text className={`font-body-semibold text-sm ${active ? 'text-ink' : 'text-ink-2'}`}>
               {LABELS[key]}

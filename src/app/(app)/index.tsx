@@ -7,8 +7,12 @@ import Svg, { Circle } from 'react-native-svg';
 
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
-import { Card, ListRow } from '@/components/ui/Card';
+import { Card, CategoryMark, ListRow } from '@/components/ui/Card';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
+import { SectionLabel } from '@/components/ui/Heading';
+import { Icon } from '@/components/ui/Icon';
+import { Meter } from '@/components/ui/ProgressBar';
 import {
   combineQueryState,
   useCategories,
@@ -56,7 +60,7 @@ function Ring({ pct, color, trackColor }: { pct: number; color: string; trackCol
         fill="none"
         stroke={color}
         strokeWidth={6}
-        strokeLinecap="round"
+        strokeLinecap="butt"
         strokeDasharray={c}
         animatedProps={animatedProps}
         rotation={-90}
@@ -121,7 +125,7 @@ export default function Dashboard() {
   if (categoriesLoading) {
     return (
       <SafeAreaView className="flex-1 items-center justify-center bg-page">
-        <ActivityIndicator color="#c1552f" />
+        <ActivityIndicator color={vars['--accent']} />
       </SafeAreaView>
     );
   }
@@ -149,11 +153,11 @@ export default function Dashboard() {
               />
             ))}
           </View>
-          <View>
-            <Text className="font-display-semibold text-lg text-ink">Our household</Text>
-            <Text className="font-body text-xs text-ink-muted">
-              {(members ?? []).map((m) => m.display_name).join(' & ')} · shared budget
+          <View className="flex-1">
+            <Text className="font-body-medium text-sm text-ink-muted">
+              Hi {(members ?? []).map((m) => m.display_name).join(' & ')}
             </Text>
+            <Text className="font-display text-xl text-ink">Our household</Text>
           </View>
         </View>
 
@@ -166,7 +170,7 @@ export default function Dashboard() {
                 trackColor={vars['--surface-3']}
               />
               <View className="flex-1">
-                <Text className="font-body-bold text-sm text-ink">Get set up</Text>
+                <Text className="font-display text-md text-ink">Get set up</Text>
                 <Text className="font-body text-xs text-ink-muted">
                   {setupSteps.filter((s) => s.done).length} of {setupSteps.length} steps done
                 </Text>
@@ -183,109 +187,92 @@ export default function Dashboard() {
                 >
                   {step.label}
                 </Text>
-                {!step.done && <Text className="text-ink-muted">›</Text>}
+                {!step.done && <Icon name="chevronRight" size={16} color={vars['--ink-muted']} />}
               </Pressable>
             ))}
           </Card>
         )}
 
-        {(showMomentum || payday) && (
-          <Card>
-            {showMomentum && (
-              <ListRow isLast={!payday}>
-                <View className="flex-1">
-                  <Text className="font-body text-xs uppercase tracking-wide text-ink-muted">
-                    Saved this quarter
-                  </Text>
-                  <Text className="font-mono text-xl text-ink">{formatPeso(savedThisQuarter)}</Text>
-                </View>
-                <View className="rounded-full bg-page px-3 py-1.5">
-                  <Text className="font-body-bold text-xs text-ink">
-                    {streak > 0 ? `🔥 ${streak}-payday streak` : 'Start your streak'}
-                  </Text>
-                </View>
-              </ListRow>
-            )}
+        {/* Two "leaf" blocks (one corner cut small) instead of a generic card. */}
+        {showMomentum && (
+          <View className="gap-1 rounded-lg rounded-bl-sm bg-sage-soft px-5 py-4">
+            <View className="flex-row items-center justify-between gap-3">
+              <Text className="font-body-semibold text-sm text-accent-2">Saved this quarter</Text>
+              <View className="flex-row items-center gap-1 rounded-pill bg-surface px-3 py-1">
+                {streak > 0 && <Icon name="flame" size={14} color={vars['--accent']} />}
+                <Text className="font-body-bold text-xs text-accent">
+                  {streak > 0 ? `${streak}-payday streak` : 'Start your streak'}
+                </Text>
+              </View>
+            </View>
+            <Text className="font-mono text-2xl text-ink">{formatPeso(savedThisQuarter)}</Text>
+          </View>
+        )}
 
-            {payday && (
-              <ListRow isLast>
-                <View className="flex-1">
-                  <Text className="font-body text-xs uppercase tracking-wide text-ink-muted">
-                    Next payday
-                  </Text>
-                  <Text className="font-mono text-xl text-ink">{formatPeso(payday.amount)}</Text>
-                  <Text className="font-body text-xs text-ink-2">
-                    {payday.date.getDate()}th · in {payday.daysAway} day{payday.daysAway === 1 ? '' : 's'}
-                  </Text>
-                </View>
-                <Button size="sm" onPress={() => router.push('/(app)/checklist')}>
-                  Review
-                </Button>
-              </ListRow>
-            )}
-          </Card>
+        {payday && (
+          <View className="flex-row items-center gap-3 rounded-lg rounded-tl-sm bg-accent-soft px-5 py-4">
+            <View className="flex-1">
+              <Text className="font-body-semibold text-sm text-accent">
+                Next payday · {payday.date.getDate()}th · in {payday.daysAway} day
+                {payday.daysAway === 1 ? '' : 's'}
+              </Text>
+              <Text className="font-mono text-xl text-ink">{formatPeso(payday.amount)}</Text>
+            </View>
+            <Button size="sm" onPress={() => router.push('/(app)/checklist')}>
+              Review
+            </Button>
+          </View>
         )}
 
         <View>
-          <Text className="mb-2 font-body-bold text-sm text-ink">Category balances</Text>
-          <Card>
-            {(categories ?? []).map((c, i) => {
-              const balance = balances?.[c.id] ?? 0;
-              const goal = c.rule?.type === 'goal' ? c.rule.target_amount : null;
-              const target = goal ?? (c.rule?.type === 'capped_percent' ? c.rule.cap ?? null : null);
-              return (
-                <ListRow
-                  key={c.id}
-                  isLast={i === (categories?.length ?? 0) - 1}
-                  onPress={() => router.push(`/(app)/categories/${c.id}`)}
-                >
-                  <View className="h-[10px] w-[10px] rounded" style={{ backgroundColor: c.color ?? '#999' }} />
-                  <View className="flex-1">
-                    <Text className="font-body-semibold text-base text-ink">{c.name}</Text>
-                    <Text className="mt-[2px] font-body text-xs text-ink-muted">
-                      {c.kind === 'bill'
-                        ? 'Recurring bills'
-                        : goal
-                          ? `Goal · ${formatPeso(goal)}`
-                          : target != null
-                            ? `Capped · ${formatPeso(target)}`
-                            : 'No cap'}
-                    </Text>
-                    {target != null && (
-                      <View
-                        className="mt-[5px] h-1 overflow-hidden rounded-full bg-surface-3"
-                        accessibilityRole="progressbar"
-                        accessibilityValue={{
-                          now: Math.round(Math.min(1, Math.max(0, balance / target)) * 100),
-                          min: 0,
-                          max: 100,
-                        }}
-                      >
-                        <View
-                          className="h-full rounded-full"
-                          style={{
-                            width: `${Math.min(1, Math.max(0, balance / target)) * 100}%`,
-                            backgroundColor: c.color ?? '#999',
-                          }}
+          <SectionLabel>Category balances</SectionLabel>
+          {(categories ?? []).length === 0 && (
+            <EmptyState>No categories yet — add one from the Categories tab.</EmptyState>
+          )}
+          {(categories ?? []).length > 0 && (
+            <Card>
+              {(categories ?? []).map((c, i) => {
+                const balance = balances?.[c.id] ?? 0;
+                const goal = c.rule?.type === 'goal' ? c.rule.target_amount : null;
+                const target = goal ?? (c.rule?.type === 'capped_percent' ? c.rule.cap ?? null : null);
+                return (
+                  <ListRow
+                    key={c.id}
+                    isLast={i === (categories?.length ?? 0) - 1}
+                    onPress={() => router.push(`/(app)/categories/${c.id}`)}
+                  >
+                    <CategoryMark color={c.color} size={32} label={c.name} />
+                    <View className="flex-1">
+                      <Text className="font-body-semibold text-base text-ink">{c.name}</Text>
+                      <Text className="mt-[2px] font-body text-xs text-ink-muted">
+                        {c.kind === 'bill'
+                          ? 'Recurring bills'
+                          : goal
+                            ? `Goal · ${formatPeso(goal)}`
+                            : target != null
+                              ? `Capped · ${formatPeso(target)}`
+                              : 'No cap'}
+                      </Text>
+                      {target != null && (
+                        <Meter
+                          thin
+                          className="mt-[5px]"
+                          percent={Math.min(1, Math.max(0, balance / target)) * 100}
+                          color={c.color ?? vars['--ink-muted']}
                         />
-                      </View>
-                    )}
-                  </View>
-                  <Text className="font-mono text-sm text-ink">
-                    {c.kind === 'fund'
-                      ? formatPeso(balance)
-                      : `${formatPeso(balancesThisMonth?.[c.id] ?? 0)} this month`}
-                  </Text>
-                  <Text className="text-ink-muted">›</Text>
-                </ListRow>
-              );
-            })}
-            {(categories ?? []).length === 0 && (
-              <Text className="p-4 font-body text-sm text-ink-muted">
-                No categories yet — add one from the Categories tab.
-              </Text>
-            )}
-          </Card>
+                      )}
+                    </View>
+                    <Text className="font-mono text-sm text-ink">
+                      {c.kind === 'fund'
+                        ? formatPeso(balance)
+                        : `${formatPeso(balancesThisMonth?.[c.id] ?? 0)} this month`}
+                    </Text>
+                    <Icon name="chevronRight" size={16} color={vars['--ink-muted']} />
+                  </ListRow>
+                );
+              })}
+            </Card>
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>

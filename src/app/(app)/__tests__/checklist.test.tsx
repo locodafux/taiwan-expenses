@@ -161,7 +161,7 @@ describe('PaydayChecklist', () => {
     const { getByText } = await renderWithTheme(<PaydayChecklist />);
 
     await waitFor(() => expect(getByText('Payday sorted')).toBeTruthy());
-    expect(getByText('🔥 3 paydays in a row')).toBeTruthy();
+    expect(getByText('3 paydays in a row')).toBeTruthy();
   });
 
   it('edits an item amount', async () => {

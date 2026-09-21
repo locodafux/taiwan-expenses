@@ -1,26 +1,12 @@
-import { Pressable, View, type ViewProps } from 'react-native';
+import { Pressable, Text, View, type ViewProps } from 'react-native';
 
-// Flat bordered cards read as dated/2D on Android, where shadowOpacity alone
-// (no elevation) renders no shadow at all - both are required for the same
-// "floating surface" depth cue on both platforms.
-const CARD_SHADOW = {
-  shadowColor: '#000',
-  shadowOffset: { width: 0, height: 2 },
-  shadowOpacity: 0.06,
-  shadowRadius: 6,
-  elevation: 3,
-};
+import { useTheme } from '@/theme/ThemeProvider';
 
-// The bordered-surface-with-divided-rows pattern repeated across every
-// screen in the design system's ui_kits (category/income/history/member
-// lists) - one shared primitive instead of re-deriving borders per screen.
-export function Card({ children, className, style, ...props }: ViewProps & { className?: string }) {
+// A soft cream panel: no outline, no drop shadow - it sits on the page by
+// tone alone. The shared surface for every grouped list/form on every screen.
+export function Card({ children, className, ...props }: ViewProps & { className?: string }) {
   return (
-    <View
-      className={`rounded-lg border border-border bg-surface ${className ?? ''}`}
-      style={[CARD_SHADOW, style]}
-      {...props}
-    >
+    <View className={`rounded-lg bg-surface ${className ?? ''}`} {...props}>
       {children}
     </View>
   );
@@ -51,5 +37,35 @@ export function ListRow({
     <Pressable onPress={onPress} className="active:opacity-60">
       {content}
     </Pressable>
+  );
+}
+
+// A category's marker. With a label: a rounded tile tinted in the category's
+// colour carrying its initial. Without: a small dot for tight rows.
+export function CategoryMark({
+  color,
+  size = 10,
+  label,
+}: {
+  color: string | null | undefined;
+  size?: number;
+  label?: string;
+}) {
+  const { vars } = useTheme();
+  const c = color ?? vars['--ink-muted'];
+  if (!label) {
+    return <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: c }} />;
+  }
+  // 18% tint of a #rrggbb colour; anything else falls back to the neutral tile.
+  const tint = /^#[0-9a-f]{6}$/i.test(c) ? `${c}2e` : vars['--surface-2'];
+  return (
+    <View
+      style={{ width: size, height: size, borderRadius: size / 3, backgroundColor: tint }}
+      className="items-center justify-center"
+    >
+      <Text style={{ color: c, fontSize: size * 0.45 }} className="font-body-bold">
+        {label.trim()[0]?.toUpperCase() ?? ''}
+      </Text>
+    </View>
   );
 }
