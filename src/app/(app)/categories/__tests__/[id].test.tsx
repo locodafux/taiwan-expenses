@@ -386,9 +386,57 @@ describe('CategoryDetail', () => {
         id: 'cat-fund',
         name: 'Japan fund',
         color: '#1f5c56',
-        rule: { type: 'goal', target_amount: 60000 },
+        rule: { type: 'goal', target_amount: 60000, target_date: null },
       }),
     );
+  });
+
+  it('sets a goal deadline month from the edit form', async () => {
+    jest.useFakeTimers().setSystemTime(new Date(2026, 8, 21));
+    const { getByText, getByLabelText } = await renderWithTheme(<CategoryDetail />);
+
+    await fireEvent.press(await waitFor(() => getByText('Edit')));
+    await fireEvent.press(getByText('No deadline · set a month'));
+    expect(getByText('Oct 2026')).toBeTruthy();
+    // Past months aren't offered.
+    await fireEvent.press(getByLabelText('Previous month'));
+    expect(getByText('Oct 2026')).toBeTruthy();
+    await fireEvent.press(getByText('Save'));
+
+    await waitFor(() =>
+      expect(mockUpdateCategoryMutateAsync).toHaveBeenCalledWith(
+        expect.objectContaining({ rule: { type: 'goal', target_amount: 50000, target_date: '2026-10-01' } }),
+      ),
+    );
+    jest.useRealTimers();
+  });
+
+  it('changes and clears an existing goal deadline', async () => {
+    jest.useFakeTimers().setSystemTime(new Date(2026, 8, 21));
+    mockUseCategories.mockReturnValue({
+      data: [{ ...fundCategory, rule: { type: 'goal', target_amount: 80000, target_date: '2027-03-01' } }],
+    });
+    const { getByText, getByLabelText } = await renderWithTheme(<CategoryDetail />);
+
+    await fireEvent.press(await waitFor(() => getByText('Edit')));
+    expect(getByText('Mar 2027')).toBeTruthy();
+    await fireEvent.press(getByLabelText('Next month'));
+    await fireEvent.press(getByText('Save'));
+    await waitFor(() =>
+      expect(mockUpdateCategoryMutateAsync).toHaveBeenCalledWith(
+        expect.objectContaining({ rule: { type: 'goal', target_amount: 80000, target_date: '2027-04-01' } }),
+      ),
+    );
+
+    await fireEvent.press(getByText('Edit'));
+    await fireEvent.press(getByText('Clear'));
+    await fireEvent.press(getByText('Save'));
+    await waitFor(() =>
+      expect(mockUpdateCategoryMutateAsync).toHaveBeenLastCalledWith(
+        expect.objectContaining({ rule: { type: 'goal', target_amount: 80000, target_date: null } }),
+      ),
+    );
+    jest.useRealTimers();
   });
 
   it('edits a bill line item, flagging a moved recurring day', async () => {
