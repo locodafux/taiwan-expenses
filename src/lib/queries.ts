@@ -687,25 +687,33 @@ export function useCategoryHistory(categoryId: string | undefined) {
   });
 }
 
-// ponytail: an ad-hoc contribution on the same date as an already-materialized
-// payday for this category will collide with ledger_entries_fund_occurrence's
-// unique index (category_id, payday_date) - fine for today's v1 (manual
-// add-ons are rare/same-day edge case), revisit if that turns out common.
-export function useAddManualContribution(categoryId: string | undefined, householdId: string | undefined) {
+// An extra deposit into a fund on top of the plan (`manual` rows, see
+// 20260921000010_manual_contributions.sql). Dated today by default; the
+// checklist's "add what's left" dates it to its payday instead, so the deposit
+// shows on that payday's checklist and uses up its left-over.
+export function useAddManualContribution(householdId: string | undefined) {
   const queryClient = useQueryClient();
   const { session } = useAuth();
   return useMutation({
-    mutationFn: async ({ amount }: { amount: number }) => {
-      const today = toDateOnly(new Date());
+    mutationFn: async ({
+      categoryId,
+      amount,
+      paydayDate,
+    }: {
+      categoryId: string;
+      amount: number;
+      paydayDate?: string;
+    }) => {
       const { data, error } = await supabase
         .from('ledger_entries')
         .insert({
           household_id: householdId as string,
-          category_id: categoryId as string,
+          category_id: categoryId,
           bill_item_id: null,
-          payday_date: today,
+          payday_date: paydayDate ?? toDateOnly(new Date()),
           amount,
           status: 'checked',
+          manual: true,
           checked_by: session?.user.id,
           checked_at: new Date().toISOString(),
         })
@@ -714,7 +722,10 @@ export function useAddManualContribution(categoryId: string | undefined, househo
       if (error) throw error;
       return data;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['category-history', categoryId] }),
+    onSuccess: (row) => {
+      queryClient.invalidateQueries({ queryKey: ['category-history', row.category_id] });
+      queryClient.invalidateQueries({ queryKey: ['ledger-entries', householdId, row.payday_date] });
+    },
   });
 }
 

@@ -88,6 +88,8 @@ export type LedgerEntry = {
   payday_date: string;
   amount: number;
   status: LedgerStatus;
+  // an extra deposit on top of the plan; materialize_payday never touches it
+  manual: boolean;
   checked_by: string | null;
   checked_at: string | null;
   created_at: string;

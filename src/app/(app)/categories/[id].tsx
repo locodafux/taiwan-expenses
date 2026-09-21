@@ -45,7 +45,7 @@ export default function CategoryDetail() {
   const billItemsQuery = useBillItems(category?.kind === 'bill' ? id : undefined);
   const billItems = billItemsQuery.data;
 
-  const addContribution = useAddManualContribution(id, householdId);
+  const addContribution = useAddManualContribution(householdId);
   const createBillItem = useCreateBillItem(id);
   const deleteCategory = useDeleteCategory(householdId);
   const updateCategory = useUpdateCategory(householdId);
@@ -344,7 +344,7 @@ export default function CategoryDetail() {
                     }
                     setError(null);
                     try {
-                      await addContribution.mutateAsync({ amount: parsedAmount });
+                      await addContribution.mutateAsync({ categoryId: id, amount: parsedAmount });
                       setAmount('');
                       setAdding(false);
                     } catch (e) {
