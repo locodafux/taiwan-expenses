@@ -19,6 +19,7 @@ const mockUseUpdateLedgerAmount = jest.fn();
 const mockUsePaydayCompletionHistory = jest.fn();
 const mockUseToggleMonthSkip = jest.fn();
 const mockUseAddManualContribution = jest.fn();
+const mockUseGoalShortfalls = jest.fn();
 
 jest.mock('@/lib/queries', () => ({
   ...jest.requireActual('@/lib/queries'),
@@ -33,6 +34,7 @@ jest.mock('@/lib/queries', () => ({
   usePaydayCompletionHistory: (...args: unknown[]) => mockUsePaydayCompletionHistory(...args),
   useToggleMonthSkip: (...args: unknown[]) => mockUseToggleMonthSkip(...args),
   useAddManualContribution: (...args: unknown[]) => mockUseAddManualContribution(...args),
+  useGoalShortfalls: (...args: unknown[]) => mockUseGoalShortfalls(...args),
 }));
 
 import PaydayChecklist from '../checklist';
@@ -83,6 +85,7 @@ beforeEach(() => {
     isPending: false,
   });
   mockUsePaydayCompletionHistory.mockReturnValue(okQuery([]));
+  mockUseGoalShortfalls.mockReturnValue(okQuery([]));
   mockUseToggleMonthSkip.mockReturnValue({ mutate: mockToggleSkipMutate });
   mockUseAddManualContribution.mockReturnValue({
     mutateAsync: mockAddToFundMutateAsync.mockResolvedValue({}),
@@ -99,6 +102,14 @@ describe('PaydayChecklist', () => {
     expect(getByText('Money leaving')).toBeTruthy();
     expect(getByText('Money staying')).toBeTruthy();
     expect(getByText('1 / 2 items checked')).toBeTruthy();
+  });
+
+  it('warns when a goal cannot be fully funded before its deadline', async () => {
+    mockUseCategories.mockReturnValue(okQuery([{ id: 'cat-trip', name: 'Japan trip', kind: 'fund' }]));
+    mockUseGoalShortfalls.mockReturnValue(okQuery([{ category_id: 'cat-trip', shortfall: 5000 }]));
+    const { getByText } = await renderWithTheme(<PaydayChecklist />);
+
+    await waitFor(() => expect(getByText(/Japan trip will be ₱ 5,000 short by its deadline/)).toBeTruthy());
   });
 
   it('checks off an item, posting a checked mutation for that entry', async () => {

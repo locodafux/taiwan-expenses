@@ -1,6 +1,6 @@
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
-import { Alert, BackHandler, Pressable, Text, View } from 'react-native';
+import { Alert, BackHandler, Pressable, Switch, Text, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -28,6 +28,7 @@ import {
   useUpdateBillItem,
   useUpdateCategory,
 } from '@/lib/queries';
+import { useTheme } from '@/theme/ThemeProvider';
 
 // Retired items (end_date passed) are hidden, so there's always >= 1 left here.
 function termLabel(recurringDay: number, endDate: string) {
@@ -38,6 +39,7 @@ function termLabel(recurringDay: number, endDate: string) {
 
 export default function CategoryDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { vars } = useTheme();
   const router = useRouter();
   // Opened from the Dashboard/Checklist, this screen is the only route in the
   // Categories stack, so router.back() would fall through to the tab history
@@ -98,6 +100,7 @@ export default function CategoryDetail() {
   const [editTarget, setEditTarget] = useState('');
   // Goal deadline month ('YYYY-MM'); null = no deadline.
   const [editDeadline, setEditDeadline] = useState<string | null>(null);
+  const [editOneTime, setEditOneTime] = useState(false);
 
   const balance = useMemo(
     () => (history ?? []).reduce((s, h) => s + h.amount, 0),
@@ -172,6 +175,7 @@ export default function CategoryDetail() {
     setEditColor(category!.color ?? '');
     setEditTarget(goal ? String(goal) : '');
     setEditDeadline(category!.rule?.type === 'goal' ? (category!.rule.target_date?.slice(0, 7) ?? null) : null);
+    setEditOneTime(category!.rule?.type === 'goal' && !!category!.rule.one_time);
     setError(null);
     setEditingCategory(true);
   }
@@ -189,6 +193,7 @@ export default function CategoryDetail() {
         ...rule,
         target_amount: parsedTarget,
         target_date: editDeadline ? `${editDeadline}-01` : null,
+        one_time: editOneTime,
       };
     }
     setError(null);
@@ -299,6 +304,20 @@ export default function CategoryDetail() {
                     onChange={setEditDeadline}
                     emptyLabel="No deadline · set a month"
                   />
+                  <View className="flex-row items-center gap-3">
+                    <View className="flex-1">
+                      <Text className="font-body text-base text-ink">One-time expense</Text>
+                      <Text className="font-body text-xs leading-[1.4] text-ink-muted">
+                        Like a trip: taken in one go from the first month with room, instead of spread out.
+                      </Text>
+                    </View>
+                    <Switch
+                      accessibilityLabel="One-time expense"
+                      value={editOneTime}
+                      onValueChange={setEditOneTime}
+                      trackColor={{ true: vars['--accent'] }}
+                    />
+                  </View>
                 </>
               )}
               {error && <Text className="font-body text-sm text-status-bad">{error}</Text>}

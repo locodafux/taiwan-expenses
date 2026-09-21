@@ -386,8 +386,22 @@ describe('CategoryDetail', () => {
         id: 'cat-fund',
         name: 'Japan fund',
         color: '#1f5c56',
-        rule: { type: 'goal', target_amount: 60000, target_date: null },
+        rule: { type: 'goal', target_amount: 60000, target_date: null, one_time: false },
       }),
+    );
+  });
+
+  it('marks a goal as a one-time expense from the edit form', async () => {
+    const { getByText, getByLabelText } = await renderWithTheme(<CategoryDetail />);
+
+    await fireEvent.press(await waitFor(() => getByText('Edit')));
+    await fireEvent(getByLabelText('One-time expense'), 'valueChange', true);
+    await fireEvent.press(getByText('Save'));
+
+    await waitFor(() =>
+      expect(mockUpdateCategoryMutateAsync).toHaveBeenCalledWith(
+        expect.objectContaining({ rule: { type: 'goal', target_amount: 50000, target_date: null, one_time: true } }),
+      ),
     );
   });
 
@@ -405,7 +419,7 @@ describe('CategoryDetail', () => {
 
     await waitFor(() =>
       expect(mockUpdateCategoryMutateAsync).toHaveBeenCalledWith(
-        expect.objectContaining({ rule: { type: 'goal', target_amount: 50000, target_date: '2026-10-01' } }),
+        expect.objectContaining({ rule: { type: 'goal', target_amount: 50000, target_date: '2026-10-01', one_time: false } }),
       ),
     );
     jest.useRealTimers();
@@ -424,7 +438,7 @@ describe('CategoryDetail', () => {
     await fireEvent.press(getByText('Save'));
     await waitFor(() =>
       expect(mockUpdateCategoryMutateAsync).toHaveBeenCalledWith(
-        expect.objectContaining({ rule: { type: 'goal', target_amount: 80000, target_date: '2027-04-01' } }),
+        expect.objectContaining({ rule: { type: 'goal', target_amount: 80000, target_date: '2027-04-01', one_time: false } }),
       ),
     );
 
@@ -433,7 +447,7 @@ describe('CategoryDetail', () => {
     await fireEvent.press(getByText('Save'));
     await waitFor(() =>
       expect(mockUpdateCategoryMutateAsync).toHaveBeenLastCalledWith(
-        expect.objectContaining({ rule: { type: 'goal', target_amount: 80000, target_date: null } }),
+        expect.objectContaining({ rule: { type: 'goal', target_amount: 80000, target_date: null, one_time: false } }),
       ),
     );
     jest.useRealTimers();
