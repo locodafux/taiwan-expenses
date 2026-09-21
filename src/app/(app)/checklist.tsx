@@ -20,6 +20,7 @@ import {
   useAddManualContribution,
   useCategories,
   useCheckLedgerEntry,
+  useGoalShortfalls,
   useHouseholdBillItems,
   useHouseholdMembership,
   useIncomes,
@@ -66,6 +67,7 @@ export default function PaydayChecklist() {
   const toggleSkip = useToggleMonthSkip(householdId, paydayDate);
   const completionHistoryQuery = usePaydayCompletionHistory(householdId);
   const addToFund = useAddManualContribution(householdId);
+  const shortfalls = useGoalShortfalls(householdId, paydayDate).data;
 
   const { isError, refetch } = combineQueryState(
     membershipQuery,
@@ -102,6 +104,16 @@ export default function PaydayChecklist() {
     const worst = rows.reduce((a, b) => (b.leftover < a.leftover ? b : a));
     return `If cash gets tight this month, trim the ${worst.day}th payday first — it carries the least cushion.`;
   }, [incomes, bills]);
+
+  // Goals the months before their deadline can't fully fund: say so rather
+  // than quietly under-saving.
+  const shortfallAdvice = useMemo(() => {
+    const names = new Map((categoriesQuery.data ?? []).map((c) => [c.id, c.name]));
+    const lines = (shortfalls ?? [])
+      .filter((s) => names.has(s.category_id))
+      .map((s) => `${names.get(s.category_id)} will be ${formatPeso(s.shortfall)} short by its deadline`);
+    return lines.length ? `${lines.join('; ')} — there isn't enough room in the months before it.` : null;
+  }, [shortfalls, categoriesQuery.data]);
 
   if (isError) {
     return (
@@ -345,6 +357,7 @@ export default function PaydayChecklist() {
           </Card>
         )}
 
+        {shortfallAdvice && <Callout>{shortfallAdvice}</Callout>}
         {cutAdvice && <Callout>{cutAdvice}</Callout>}
       </KeyboardScroll>
     </SafeAreaView>

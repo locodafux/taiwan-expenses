@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, Switch, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/ui/Button';
@@ -11,6 +11,7 @@ import { ErrorState } from '@/components/ui/ErrorState';
 import { TextField } from '@/components/ui/TextField';
 import { nextMonth } from '@/lib/payday';
 import { combineQueryState, useCreateCategory, useHouseholdMembership } from '@/lib/queries';
+import { useTheme } from '@/theme/ThemeProvider';
 
 type Kind = 'fund' | 'bill';
 
@@ -18,6 +19,7 @@ const inputClass = 'mt-2 rounded-md border border-border bg-surface px-4 py-4 fo
 
 export default function AddCategory() {
   const router = useRouter();
+  const { vars } = useTheme();
   const membershipQuery = useHouseholdMembership();
   const member = membershipQuery.data;
   const createCategory = useCreateCategory(member?.household_id);
@@ -32,6 +34,7 @@ export default function AddCategory() {
   const [target, setTarget] = useState('');
   // Goal deadline month ('YYYY-MM'); stored as rule.target_date = its 1st.
   const [deadline, setDeadline] = useState<string | null>(null);
+  const [oneTime, setOneTime] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function handleSave() {
@@ -49,6 +52,7 @@ export default function AddCategory() {
                 target_amount: Number(target) || 0,
                 percent: target ? undefined : 20,
                 target_date: target && deadline ? `${deadline}-01` : undefined,
+                one_time: target ? oneTime : undefined,
               } as any)
             : undefined,
       });
@@ -140,6 +144,20 @@ export default function AddCategory() {
             <Text className="font-body text-xs leading-[1.4] text-ink-muted">
               Saving is spread over the months before this one.
             </Text>
+            <View className="flex-row items-center gap-3">
+              <View className="flex-1">
+                <Text className="font-body text-base text-ink">One-time expense</Text>
+                <Text className="font-body text-xs leading-[1.4] text-ink-muted">
+                  Like a trip: taken in one go from the first month with room, instead of spread out.
+                </Text>
+              </View>
+              <Switch
+                accessibilityLabel="One-time expense"
+                value={oneTime}
+                onValueChange={setOneTime}
+                trackColor={{ true: vars['--accent'] }}
+              />
+            </View>
           </View>
         )}
 

@@ -26,7 +26,7 @@ function describeCategory(
   }
   if (c.rule?.type === 'goal') {
     const target = c.rule.target_amount;
-    return `Goal · target ₱${target.toLocaleString()}${c.rule.target_date ? ` by ${fromDateOnly(c.rule.target_date).toLocaleDateString(undefined, { month: 'short' })}` : ''}`;
+    return `${c.rule.one_time ? 'One-time' : 'Goal'} · target ₱${target.toLocaleString()}${c.rule.target_date ? ` by ${fromDateOnly(c.rule.target_date).toLocaleDateString(undefined, { month: 'short' })}` : ''}`;
   }
   if (c.rule?.type === 'capped_percent') {
     return `${c.rule.percent}% of leftover${c.rule.cap ? ` · capped ₱${c.rule.cap.toLocaleString()}` : ''}`;

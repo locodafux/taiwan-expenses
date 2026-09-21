@@ -9,7 +9,9 @@ export type CategoryKind = 'bill' | 'fund';
 export type LedgerStatus = 'pending' | 'checked' | 'skipped';
 
 export type CategoryRule =
-  | { type: 'goal'; target_amount: number; target_date?: string | null }
+  // one_time: a lump sum (e.g. a trip) taken from the earliest month that can
+  // cover it, instead of spread evenly (20260921000050_goal_waterfill.sql).
+  | { type: 'goal'; target_amount: number; target_date?: string | null; one_time?: boolean }
   | { type: 'capped_percent'; percent: number; cap?: number | null }
   | { type: 'remainder'; percent: number };
 
@@ -255,6 +257,10 @@ export interface Database {
       materialize_payday: {
         Args: { p_household_id: string; p_payday_date?: string | null };
         Returns: LedgerEntry[];
+      };
+      goal_shortfalls: {
+        Args: { p_household_id: string; p_date?: string };
+        Returns: { category_id: string; shortfall: number }[];
       };
       create_household_invite: {
         Args: { p_ttl?: string };

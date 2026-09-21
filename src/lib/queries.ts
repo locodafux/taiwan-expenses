@@ -311,6 +311,23 @@ export function useHouseholdBillItems(householdId: string | undefined) {
   });
 }
 
+// Goals whose months before the deadline can't cover them (goal_plan's
+// shortfall) as of this payday's month - the checklist's shortfall callout.
+export function useGoalShortfalls(householdId: string | undefined, paydayDate: string | undefined) {
+  return useQuery({
+    queryKey: ['goal-shortfalls', householdId, paydayDate],
+    enabled: !!householdId && !!paydayDate,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('goal_shortfalls', {
+        p_household_id: householdId as string,
+        p_date: paydayDate as string,
+      });
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
 export function useCreateBillItem(categoryId: string | undefined) {
   const queryClient = useQueryClient();
   return useMutation({
@@ -443,6 +460,7 @@ export function useMaterializePayday(householdId: string | undefined) {
     },
     onSuccess: (_data, paydayDate) => {
       queryClient.invalidateQueries({ queryKey: ['ledger-entries', householdId, paydayDate] });
+      queryClient.invalidateQueries({ queryKey: ['goal-shortfalls', householdId] });
     },
   });
 }
