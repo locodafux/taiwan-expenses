@@ -1,4 +1,5 @@
-import { fireEvent, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, waitFor } from '@testing-library/react-native';
+import { Alert } from 'react-native';
 
 import { renderWithTheme } from '@/test/renderWithTheme';
 
@@ -18,6 +19,9 @@ const mockUseBillItems = jest.fn();
 const mockUseAddManualContribution = jest.fn();
 const mockUseCreateBillItem = jest.fn();
 const mockUseDeleteCategory = jest.fn();
+const mockUseUpdateCategory = jest.fn();
+const mockUseUpdateBillItem = jest.fn();
+const mockUseDeleteBillItem = jest.fn();
 
 jest.mock('@/lib/queries', () => ({
   ...jest.requireActual('@/lib/queries'),
@@ -29,6 +33,9 @@ jest.mock('@/lib/queries', () => ({
   useAddManualContribution: (...args: unknown[]) => mockUseAddManualContribution(...args),
   useCreateBillItem: (...args: unknown[]) => mockUseCreateBillItem(...args),
   useDeleteCategory: (...args: unknown[]) => mockUseDeleteCategory(...args),
+  useUpdateCategory: (...args: unknown[]) => mockUseUpdateCategory(...args),
+  useUpdateBillItem: (...args: unknown[]) => mockUseUpdateBillItem(...args),
+  useDeleteBillItem: (...args: unknown[]) => mockUseDeleteBillItem(...args),
 }));
 
 import CategoryDetail from '../[id]';
@@ -57,6 +64,9 @@ const members = [{ id: 'member-1', user_id: 'user-1', display_name: 'Leo' }];
 const mockAddContributionMutateAsync = jest.fn();
 const mockCreateBillItemMutateAsync = jest.fn();
 const mockDeleteCategoryMutateAsync = jest.fn();
+const mockUpdateCategoryMutateAsync = jest.fn();
+const mockUpdateBillItemMutateAsync = jest.fn();
+const mockDeleteBillItemMutateAsync = jest.fn();
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -76,6 +86,18 @@ beforeEach(() => {
   });
   mockUseDeleteCategory.mockReturnValue({
     mutateAsync: mockDeleteCategoryMutateAsync.mockResolvedValue({}),
+    isPending: false,
+  });
+  mockUseUpdateCategory.mockReturnValue({
+    mutateAsync: mockUpdateCategoryMutateAsync.mockResolvedValue({}),
+    isPending: false,
+  });
+  mockUseUpdateBillItem.mockReturnValue({
+    mutateAsync: mockUpdateBillItemMutateAsync.mockResolvedValue({}),
+    isPending: false,
+  });
+  mockUseDeleteBillItem.mockReturnValue({
+    mutateAsync: mockDeleteBillItemMutateAsync.mockResolvedValue({}),
     isPending: false,
   });
 });
@@ -275,5 +297,79 @@ describe('CategoryDetail', () => {
     expect(queryByText('December 2025')).toBeNull();
     // The headline balance still sums every entry, not just the shown 12.
     expect(getByText('₱ 18,000')).toBeTruthy();
+  });
+
+  it('edits a fund category name and goal target, keeping the rest of its rule', async () => {
+    const { getByText, getByDisplayValue } = await renderWithTheme(<CategoryDetail />);
+
+    await fireEvent.press(await waitFor(() => getByText('Edit')));
+    await fireEvent.changeText(getByDisplayValue('Taiwan fund'), 'Japan fund');
+    await fireEvent.changeText(getByDisplayValue('50000'), '60000');
+    await fireEvent.press(getByText('Save'));
+
+    await waitFor(() =>
+      expect(mockUpdateCategoryMutateAsync).toHaveBeenCalledWith({
+        id: 'cat-fund',
+        name: 'Japan fund',
+        color: '#1f5c56',
+        rule: { type: 'goal', target_amount: 60000 },
+      }),
+    );
+  });
+
+  it('edits a bill line item, flagging a moved recurring day', async () => {
+    mockParams.id = 'cat-bill';
+    mockUseBillItems.mockReturnValue({
+      data: [{ id: 'bi-1', label: 'Base rent', amount: 1500, recurring_day: 5, end_date: null }],
+    });
+    const { getByText, getByDisplayValue } = await renderWithTheme(<CategoryDetail />);
+
+    await fireEvent.press(await waitFor(() => getByText('Base rent')));
+    await fireEvent.changeText(getByDisplayValue('1500'), '1600');
+    await fireEvent.changeText(getByDisplayValue('5'), '10');
+    await fireEvent.press(getByText('Save'));
+
+    await waitFor(() =>
+      expect(mockUpdateBillItemMutateAsync).toHaveBeenCalledWith({
+        id: 'bi-1',
+        dayChanged: true,
+        label: 'Base rent',
+        amount: 1600,
+        recurring_day: 10,
+      }),
+    );
+    expect(mockCreateBillItemMutateAsync).not.toHaveBeenCalled();
+  });
+
+  it('deletes a bill line item after confirming', async () => {
+    mockParams.id = 'cat-bill';
+    mockUseBillItems.mockReturnValue({
+      data: [{ id: 'bi-1', label: 'Base rent', amount: 1500, recurring_day: 5, end_date: null }],
+    });
+    const alertSpy = jest.spyOn(Alert, 'alert');
+    const { getByText } = await renderWithTheme(<CategoryDetail />);
+
+    await fireEvent.press(await waitFor(() => getByText('Base rent')));
+    await fireEvent.press(getByText('Delete item'));
+    const buttons = alertSpy.mock.calls[0][2]!;
+    await act(async () => {
+      await buttons.find((b) => b.text === 'Delete')!.onPress!();
+    });
+
+    expect(mockDeleteBillItemMutateAsync).toHaveBeenCalledWith('bi-1');
+  });
+
+  it('hides line items that have already retired', async () => {
+    mockParams.id = 'cat-bill';
+    mockUseBillItems.mockReturnValue({
+      data: [
+        { id: 'bi-1', label: 'Base rent', amount: 1500, recurring_day: 5, end_date: null },
+        { id: 'bi-2', label: 'Old loan', amount: 500, recurring_day: 10, end_date: '2020-01-01' },
+      ],
+    });
+    const { getByText, queryByText } = await renderWithTheme(<CategoryDetail />);
+
+    await waitFor(() => expect(getByText('Base rent')).toBeTruthy());
+    expect(queryByText('Old loan')).toBeNull();
   });
 });

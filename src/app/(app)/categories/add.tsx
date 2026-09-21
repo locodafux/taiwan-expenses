@@ -4,11 +4,11 @@ import { Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/ui/Button';
+import { ColorPicker, useCategoryColors } from '@/components/ui/ColorPicker';
 import { KeyboardScroll } from '@/components/ui/KeyboardScroll';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { TextField } from '@/components/ui/TextField';
 import { combineQueryState, useCreateCategory, useHouseholdMembership } from '@/lib/queries';
-import { useTheme } from '@/theme/ThemeProvider';
 
 type Kind = 'fund' | 'bill';
 
@@ -16,22 +16,13 @@ const inputClass = 'mt-2 rounded-md border border-border bg-surface px-4 py-4 fo
 
 export default function AddCategory() {
   const router = useRouter();
-  const { vars } = useTheme();
   const membershipQuery = useHouseholdMembership();
   const member = membershipQuery.data;
   const createCategory = useCreateCategory(member?.household_id);
 
   const { isError, refetch } = combineQueryState(membershipQuery);
 
-  const colorOptions = [
-    { value: vars['--cat-expenses'], name: 'Blue' },
-    { value: vars['--cat-debt'], name: 'Rust' },
-    { value: vars['--cat-taiwan'], name: 'Teal' },
-    { value: vars['--cat-emergency'], name: 'Gold' },
-    { value: vars['--cat-savings'], name: 'Pink' },
-    { value: vars['--cat-pinatubo'], name: 'Green' },
-    { value: vars['--cat-excess'], name: 'Brown' },
-  ];
+  const colorOptions = useCategoryColors();
 
   const [name, setName] = useState('');
   const [kind, setKind] = useState<Kind>('fund');
@@ -108,22 +99,7 @@ export default function AddCategory() {
 
         <View>
           <Text className="mb-2 font-body text-xs text-ink-muted">Color</Text>
-          <View className="flex-row flex-wrap gap-3">
-            {colorOptions.map((c) => (
-              <Pressable
-                key={c.value}
-                onPress={() => setColor(c.value)}
-                accessibilityLabel={c.name}
-                accessibilityRole="button"
-                className="h-14 w-14 items-center justify-center rounded-full"
-                style={{
-                  backgroundColor: c.value,
-                  borderWidth: color === c.value ? 3 : 0,
-                  borderColor: vars['--ink'],
-                }}
-              />
-            ))}
-          </View>
+          <ColorPicker value={color} onChange={setColor} />
         </View>
 
         {kind === 'bill' && (

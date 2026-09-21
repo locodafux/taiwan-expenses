@@ -5,13 +5,14 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/ui/Button';
+import { ColorPicker } from '@/components/ui/ColorPicker';
 import { KeyboardScroll } from '@/components/ui/KeyboardScroll';
 import { TextField } from '@/components/ui/TextField';
 import { Card, ListRow } from '@/components/ui/Card';
 import { DeleteCategorySheet } from '@/components/ui/DeleteCategorySheet';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { formatPeso } from '@/lib/format';
-import { fromDateOnly } from '@/lib/payday';
+import { fromDateOnly, toDateOnly } from '@/lib/payday';
 import {
   combineQueryState,
   useAddManualContribution,
@@ -19,9 +20,12 @@ import {
   useCategories,
   useCategoryHistory,
   useCreateBillItem,
+  useDeleteBillItem,
   useDeleteCategory,
   useHouseholdMembers,
   useHouseholdMembership,
+  useUpdateBillItem,
+  useUpdateCategory,
 } from '@/lib/queries';
 
 export default function CategoryDetail() {
@@ -44,6 +48,9 @@ export default function CategoryDetail() {
   const addContribution = useAddManualContribution(id, householdId);
   const createBillItem = useCreateBillItem(id);
   const deleteCategory = useDeleteCategory(householdId);
+  const updateCategory = useUpdateCategory(householdId);
+  const updateBillItem = useUpdateBillItem(id);
+  const deleteBillItem = useDeleteBillItem(id);
 
   const { isError, refetch } = combineQueryState(
     membershipQuery,
@@ -59,6 +66,12 @@ export default function CategoryDetail() {
   const [billDay, setBillDay] = useState('5');
   const [error, setError] = useState<string | null>(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  // The bill form doubles as the edit form for an existing line item.
+  const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [editingCategory, setEditingCategory] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editColor, setEditColor] = useState('');
+  const [editTarget, setEditTarget] = useState('');
 
   const balance = useMemo(
     () => (history ?? []).reduce((s, h) => s + h.amount, 0),
@@ -73,6 +86,18 @@ export default function CategoryDetail() {
       })
       .reduce((s, h) => s + h.amount, 0);
   }, [history]);
+
+  const today = toDateOnly(new Date());
+  const activeBillItems = (billItems ?? []).filter((b) => !b.end_date || b.end_date >= today);
+
+  function closeBillForm() {
+    setAdding(false);
+    setEditingItemId(null);
+    setBillLabel('');
+    setAmount('');
+    setBillDay('5');
+    setError(null);
+  }
 
   function memberName(userId: string | null) {
     if (!userId) return 'Manual entry';
@@ -115,6 +140,72 @@ export default function CategoryDetail() {
   const goal = category.rule?.type === 'goal' ? category.rule.target_amount : null;
   const pct = goal ? Math.min(1, balance / goal) : null;
 
+  function startEditingCategory() {
+    setEditName(category!.name);
+    setEditColor(category!.color ?? '');
+    setEditTarget(goal ? String(goal) : '');
+    setError(null);
+    setEditingCategory(true);
+  }
+
+  async function handleSaveCategory() {
+    if (!editName.trim()) return setError('Name is required');
+    const rule = category!.rule;
+    let nextRule = rule;
+    if (rule?.type === 'goal') {
+      const parsedTarget = Number(editTarget);
+      if (!Number.isFinite(parsedTarget) || parsedTarget <= 0) {
+        return setError('Enter a valid target amount');
+      }
+      nextRule = { ...rule, target_amount: parsedTarget };
+    }
+    setError(null);
+    try {
+      await updateCategory.mutateAsync({
+        id: category!.id,
+        name: editName.trim(),
+        color: editColor || null,
+        rule: nextRule,
+      });
+      setEditingCategory(false);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not save category');
+    }
+  }
+
+  function startEditingItem(item: NonNullable<typeof billItems>[number]) {
+    setEditingItemId(item.id);
+    setBillLabel(item.label);
+    setAmount(String(item.amount));
+    setBillDay(String(item.recurring_day));
+    setError(null);
+    setAdding(true);
+  }
+
+  function handleDeleteItem() {
+    const item = billItems?.find((b) => b.id === editingItemId);
+    if (!item) return;
+    Alert.alert(
+      `Delete ${item.label}?`,
+      'It stops appearing on future checklists. Payments already checked off stay in the history.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteBillItem.mutateAsync(item.id);
+              closeBillForm();
+            } catch (e) {
+              setError(e instanceof Error ? e.message : 'Could not delete item');
+            }
+          },
+        },
+      ],
+    );
+  }
+
   async function handleConfirmDelete() {
     try {
       await deleteCategory.mutateAsync(category!.id);
@@ -140,10 +231,61 @@ export default function CategoryDetail() {
               {category.name}
             </Text>
           </View>
-          <Button size="sm" onPress={() => setAdding((v) => !v)}>
+          <Button size="sm" variant="secondary" onPress={startEditingCategory}>
+            Edit
+          </Button>
+          <Button size="sm" onPress={() => (adding ? closeBillForm() : setAdding(true))}>
             {category.kind === 'fund' ? '+ Add contribution' : '+ Add item'}
           </Button>
         </View>
+
+        {editingCategory && (
+          <Animated.View entering={FadeInDown.duration(200)}>
+            <Card className="gap-3 p-4">
+              <Text className="font-body text-xs text-ink-muted">Name</Text>
+              <TextField
+                value={editName}
+                onChangeText={setEditName}
+                className="rounded-md border border-border bg-page px-4 py-4 font-body text-base text-ink"
+              />
+              <Text className="font-body text-xs text-ink-muted">Color</Text>
+              <ColorPicker value={editColor} onChange={setEditColor} />
+              {goal !== null && (
+                <>
+                  <Text className="font-body text-xs text-ink-muted">Target amount</Text>
+                  <TextField
+                    value={editTarget}
+                    onChangeText={setEditTarget}
+                    keyboardType="numeric"
+                    className="rounded-md border border-border bg-page px-4 py-4 font-mono text-base text-ink"
+                  />
+                </>
+              )}
+              {error && <Text className="font-body text-sm text-status-bad">{error}</Text>}
+              <View className="flex-row gap-3">
+                <Button
+                  variant="secondary"
+                  className="flex-1"
+                  onPress={() => {
+                    setEditingCategory(false);
+                    setError(null);
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="primary"
+                  className="flex-1"
+                  disabled={!editName.trim()}
+                  loading={updateCategory.isPending}
+                  onPress={handleSaveCategory}
+                >
+                  Save
+                </Button>
+              </View>
+            </Card>
+          </Animated.View>
+        )}
 
         <Card className="p-4">
           <Text className="font-mono text-2xl" style={{ color: category.color ?? undefined }}>
@@ -244,21 +386,14 @@ export default function CategoryDetail() {
               />
               {error && <Text className="font-body text-sm text-status-bad">{error}</Text>}
               <View className="flex-row gap-3">
-                <Button
-                  variant="secondary"
-                  className="flex-1"
-                  onPress={() => {
-                    setAdding(false);
-                    setError(null);
-                  }}
-                >
+                <Button variant="secondary" className="flex-1" onPress={closeBillForm}>
                   Cancel
                 </Button>
                 <Button
                   variant="primary"
                   className="flex-1"
                   disabled={!billLabel || !amount}
-                  loading={createBillItem.isPending}
+                  loading={createBillItem.isPending || updateBillItem.isPending}
                   onPress={async () => {
                     const parsedAmount = Number(amount);
                     const parsedDay = Number(billDay);
@@ -269,15 +404,19 @@ export default function CategoryDetail() {
                       return setError('Recurring day must be between 1 and 31');
                     }
                     setError(null);
+                    const input = { label: billLabel, amount: parsedAmount, recurring_day: parsedDay };
+                    const editing = billItems?.find((b) => b.id === editingItemId);
                     try {
-                      await createBillItem.mutateAsync({
-                        label: billLabel,
-                        amount: parsedAmount,
-                        recurring_day: parsedDay,
-                      });
-                      setBillLabel('');
-                      setAmount('');
-                      setAdding(false);
+                      if (editing) {
+                        await updateBillItem.mutateAsync({
+                          id: editing.id,
+                          dayChanged: editing.recurring_day !== parsedDay,
+                          ...input,
+                        });
+                      } else {
+                        await createBillItem.mutateAsync(input);
+                      }
+                      closeBillForm();
                     } catch (e) {
                       setError(e instanceof Error ? e.message : 'Could not save item');
                     }
@@ -286,6 +425,15 @@ export default function CategoryDetail() {
                   Save
                 </Button>
               </View>
+              {editingItemId && (
+                <Button
+                  variant="danger"
+                  loading={deleteBillItem.isPending}
+                  onPress={handleDeleteItem}
+                >
+                  Delete item
+                </Button>
+              )}
             </Card>
           </Animated.View>
         )}
@@ -294,8 +442,12 @@ export default function CategoryDetail() {
           <View>
             <Text className="mb-2 font-body-bold text-sm text-ink">Line items</Text>
             <Card>
-              {(billItems ?? []).map((b, i) => (
-                <ListRow key={b.id} isLast={i === (billItems?.length ?? 0) - 1}>
+              {activeBillItems.map((b, i) => (
+                <ListRow
+                  key={b.id}
+                  isLast={i === activeBillItems.length - 1}
+                  onPress={() => startEditingItem(b)}
+                >
                   <View className="flex-1">
                     <Text className="font-body-semibold text-base text-ink">{b.label}</Text>
                     <Text className="mt-[2px] font-body text-xs text-ink-muted">
@@ -305,7 +457,7 @@ export default function CategoryDetail() {
                   <Text className="font-mono text-sm text-ink">{formatPeso(b.amount)}</Text>
                 </ListRow>
               ))}
-              {(billItems ?? []).length === 0 && (
+              {activeBillItems.length === 0 && (
                 <Text className="p-4 font-body text-sm text-ink-muted">No line items yet.</Text>
               )}
             </Card>
