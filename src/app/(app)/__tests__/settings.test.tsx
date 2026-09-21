@@ -25,6 +25,7 @@ const mockUseCreateInvite = jest.fn();
 const mockUseUpdateHouseholdName = jest.fn();
 const mockUseSubmitBugReport = jest.fn();
 const mockUseUpdateDisplayName = jest.fn();
+const mockSetNotificationsMutate = jest.fn();
 
 jest.mock('@/lib/queries', () => ({
   ...jest.requireActual('@/lib/queries'),
@@ -35,6 +36,7 @@ jest.mock('@/lib/queries', () => ({
   useUpdateHouseholdName: (...args: unknown[]) => mockUseUpdateHouseholdName(...args),
   useSubmitBugReport: (...args: unknown[]) => mockUseSubmitBugReport(...args),
   useUpdateDisplayName: (...args: unknown[]) => mockUseUpdateDisplayName(...args),
+  useSetNotificationsEnabled: () => ({ mutate: mockSetNotificationsMutate, isPending: false }),
 }));
 
 import Settings from '../settings';
@@ -74,6 +76,16 @@ beforeEach(() => {
 });
 
 describe('Settings', () => {
+  it('turns push notifications off with the master switch', async () => {
+    const { getByLabelText } = await renderWithTheme(<Settings />);
+
+    const toggle = getByLabelText('Push notifications');
+    expect(toggle.props.value).toBe(true);
+    await fireEvent(toggle, 'valueChange', false);
+
+    expect(mockSetNotificationsMutate).toHaveBeenCalledWith(false, expect.anything());
+  });
+
   it('renders household members and defaults to the warm theme description', async () => {
     const { getByText } = await renderWithTheme(<Settings />);
 

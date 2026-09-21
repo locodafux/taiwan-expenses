@@ -4,6 +4,7 @@ import { Text, type ColorValue } from 'react-native';
 import { GoalCelebration } from '@/components/GoalCelebration';
 import { UpdateBanner } from '@/components/UpdateBanner';
 import { useAuth } from '@/lib/auth';
+import { usePushRegistration } from '@/lib/notifications';
 import { useHouseholdMembership, useUnreadMessageCount } from '@/lib/queries';
 import { useRealtimeSync } from '@/lib/realtime';
 import { THEMES } from '@/theme/tokens';
@@ -19,6 +20,7 @@ export default function AppLayout() {
   const { data: member } = useHouseholdMembership();
   const { data: unreadMessages } = useUnreadMessageCount(member?.household_id);
   useRealtimeSync(member?.household_id);
+  usePushRegistration(member?.notifications_enabled);
   if (initializing) return null;
   if (!session) return <Redirect href="/(auth)" />;
 

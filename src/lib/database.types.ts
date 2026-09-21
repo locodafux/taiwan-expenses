@@ -31,6 +31,7 @@ export type HouseholdMember = {
   user_id: string;
   display_name: string;
   color: string | null;
+  notifications_enabled: boolean;
   created_at: string;
 };
 
@@ -128,6 +129,12 @@ type TableDef<Row, Insert, Relationships extends Relationship[] = []> = {
   Insert: Insert;
   Update: Partial<Insert>;
   Relationships: Relationships;
+};
+
+export type PushToken = {
+  token: string;
+  user_id: string;
+  created_at: string;
 };
 
 export type Message = {
@@ -241,6 +248,7 @@ export interface Database {
       >;
       bug_reports: TableDef<BugReport, Partial<BugReport> & { description: string }>;
       messages: TableDef<Message, Partial<Message> & { household_id: string; body: string }>;
+      push_tokens: TableDef<PushToken, Partial<PushToken> & { token: string; user_id: string }>;
     };
     Views: Record<string, never>;
     Functions: {
@@ -262,6 +270,14 @@ export interface Database {
       };
       clear_chat_history: {
         Args: { p_household_id: string };
+        Returns: undefined;
+      };
+      register_push_token: {
+        Args: { p_token: string };
+        Returns: undefined;
+      };
+      set_notifications_enabled: {
+        Args: { p_enabled: boolean };
         Returns: undefined;
       };
     };
