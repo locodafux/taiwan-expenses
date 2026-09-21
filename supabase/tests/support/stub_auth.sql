@@ -65,7 +65,7 @@ grant usage on schema public to anon, authenticated, service_role;
 -- "publication \"supabase_realtime\" does not exist" before any test runs.
 create publication supabase_realtime;
 
--- pg_net / pg_cron (20260921000020_notifications.sql) aren't installable on a
+-- pg_net / pg_cron (20260921000040_notifications.sql) aren't installable on a
 -- plain Homebrew Postgres. Stand-ins with the same call signatures: http_post
 -- records the request instead of sending it, so tests can assert on exactly
 -- which pushes would have gone out; schedule records the job.

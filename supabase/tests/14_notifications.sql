@@ -1,4 +1,4 @@
--- Push notifications (20260921000020_notifications.sql). net.http_post is
+-- Push notifications (20260921000040_notifications.sql). net.http_post is
 -- stubbed by support/stub_auth.sql to record into net.test_requests, so every
 -- check here is "which pushes would have gone out, to which device".
 

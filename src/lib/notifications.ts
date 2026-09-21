@@ -5,7 +5,7 @@ import { Platform } from 'react-native';
 
 import { supabase } from './supabase';
 
-// Pushes are sent server-side (supabase/migrations/20260921000020_notifications.sql);
+// Pushes are sent server-side (supabase/migrations/20260921000040_notifications.sql);
 // the app's only job is getting this device's Expo push token into push_tokens.
 let registeredToken: string | null = null;
 
