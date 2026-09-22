@@ -9,6 +9,7 @@ import { KeyboardScroll } from '@/components/ui/KeyboardScroll';
 import { MonthPicker } from '@/components/ui/MonthPicker';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { TextField } from '@/components/ui/TextField';
+import { parseAmount } from '@/lib/format';
 import { nextMonth } from '@/lib/payday';
 import { combineQueryState, useCreateCategory, useHouseholdMembership } from '@/lib/queries';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -39,6 +40,8 @@ export default function AddCategory() {
 
   async function handleSave() {
     if (!name.trim()) return setError('Name is required');
+    const parsedTarget = parseAmount(target);
+    if (target && !(parsedTarget > 0)) return setError('Enter a valid target amount');
     setError(null);
     try {
       await createCategory.mutateAsync({
@@ -49,7 +52,7 @@ export default function AddCategory() {
           kind === 'fund'
             ? ({
                 type: target ? 'goal' : 'remainder',
-                target_amount: Number(target) || 0,
+                target_amount: target ? parsedTarget : 0,
                 percent: target ? undefined : 20,
                 target_date: target && deadline ? `${deadline}-01` : undefined,
                 one_time: target ? oneTime : undefined,
