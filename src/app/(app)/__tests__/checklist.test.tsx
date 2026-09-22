@@ -18,7 +18,6 @@ const mockUseCheckLedgerEntry = jest.fn();
 const mockUseUpdateLedgerAmount = jest.fn();
 const mockUsePaydayCompletionHistory = jest.fn();
 const mockUseToggleMonthSkip = jest.fn();
-const mockUseAddManualContribution = jest.fn();
 const mockUseGoalShortfalls = jest.fn();
 
 jest.mock('@/lib/queries', () => ({
@@ -33,7 +32,6 @@ jest.mock('@/lib/queries', () => ({
   useUpdateLedgerAmount: (...args: unknown[]) => mockUseUpdateLedgerAmount(...args),
   usePaydayCompletionHistory: (...args: unknown[]) => mockUsePaydayCompletionHistory(...args),
   useToggleMonthSkip: (...args: unknown[]) => mockUseToggleMonthSkip(...args),
-  useAddManualContribution: (...args: unknown[]) => mockUseAddManualContribution(...args),
   useGoalShortfalls: (...args: unknown[]) => mockUseGoalShortfalls(...args),
 }));
 
@@ -69,7 +67,6 @@ const mockCheckMutate = jest.fn();
 const mockMaterializeMutate = jest.fn();
 const mockUpdateAmountMutateAsync = jest.fn();
 const mockToggleSkipMutate = jest.fn();
-const mockAddToFundMutateAsync = jest.fn();
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -87,10 +84,6 @@ beforeEach(() => {
   mockUsePaydayCompletionHistory.mockReturnValue(okQuery([]));
   mockUseGoalShortfalls.mockReturnValue(okQuery([]));
   mockUseToggleMonthSkip.mockReturnValue({ mutate: mockToggleSkipMutate });
-  mockUseAddManualContribution.mockReturnValue({
-    mutateAsync: mockAddToFundMutateAsync.mockResolvedValue({}),
-    isPending: false,
-  });
 });
 
 describe('PaydayChecklist', () => {
@@ -313,59 +306,13 @@ describe('PaydayChecklist', () => {
     expect(queryByText('Skip')).toBeNull();
   });
 
-  describe('left over', () => {
-    const funds = [
-      { id: 'cat-fund', kind: 'fund', name: 'Taiwan fund', color: '#1f5c56' },
-      { id: 'cat-savings', kind: 'fund', name: 'Savings', color: '#7a8b3f' },
-    ];
+  it('marks an extra deposit and offers no skip on it', async () => {
+    mockUseLedgerEntriesForPayday.mockReturnValue(
+      okQuery([{ ...entries[1], id: 'entry-extra', status: 'checked', manual: true }]),
+    );
+    const { getByText, queryByText } = await renderWithTheme(<PaydayChecklist />);
 
-    // 30000 take-home - 1500 rent - 2000 fund = 26500 nothing is using.
-    it('adds what is left to the chosen fund, dated to this payday', async () => {
-      mockUseCategories.mockReturnValue(okQuery(funds));
-      const { getByText } = await renderWithTheme(<PaydayChecklist />);
-
-      await waitFor(() => expect(getByText('₱ 26,500 left over')).toBeTruthy());
-      await fireEvent.press(getByText('Savings'));
-      await fireEvent.press(getByText("Add what's left to Savings"));
-
-      expect(mockAddToFundMutateAsync).toHaveBeenCalledWith({
-        categoryId: 'cat-savings',
-        amount: 26500,
-        paydayDate: expect.stringMatching(/^\d{4}-\d{2}-05$/),
-      });
-    });
-
-    it('adds a typed amount instead', async () => {
-      mockUseCategories.mockReturnValue(okQuery(funds));
-      const { getByText, getByPlaceholderText } = await renderWithTheme(<PaydayChecklist />);
-
-      await fireEvent.changeText(await waitFor(() => getByPlaceholderText('₱ 26,500')), '1000');
-      await fireEvent.press(getByText('Add ₱ 1,000 to Taiwan fund'));
-
-      expect(mockAddToFundMutateAsync).toHaveBeenCalledWith(
-        expect.objectContaining({ categoryId: 'cat-fund', amount: 1000 }),
-      );
-    });
-
-    it('hides when the checklist already uses the whole take-home', async () => {
-      mockUseCategories.mockReturnValue(okQuery(funds));
-      mockUseLedgerEntriesForPayday.mockReturnValue(
-        okQuery([entries[0], { ...entries[1], amount: 28500 }]),
-      );
-      const { getByText, queryByText } = await renderWithTheme(<PaydayChecklist />);
-
-      await waitFor(() => expect(getByText('Rent')).toBeTruthy());
-      expect(queryByText(/left over/)).toBeNull();
-    });
-
-    it('marks an extra deposit and offers no skip on it', async () => {
-      mockUseLedgerEntriesForPayday.mockReturnValue(
-        okQuery([{ ...entries[1], id: 'entry-extra', status: 'checked', manual: true }]),
-      );
-      const { getByText, queryByText } = await renderWithTheme(<PaydayChecklist />);
-
-      await waitFor(() => expect(getByText('Taiwan fund · extra')).toBeTruthy());
-      expect(queryByText('Skip')).toBeNull();
-    });
+    await waitFor(() => expect(getByText('Taiwan fund · extra')).toBeTruthy());
+    expect(queryByText('Skip')).toBeNull();
   });
 });
