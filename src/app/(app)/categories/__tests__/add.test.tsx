@@ -125,6 +125,33 @@ describe('AddCategorySheet', () => {
     expect(mockCreateCategoryMutateAsync.mock.calls[0][0].rule.target_date).toBeUndefined();
   });
 
+  // Bug report 2026-09-21: "80,000" used to parse to NaN -> saved as a goal
+  // with target 0, which the brand-new (₱0) category had already "reached".
+  it('reads a comma-formatted target as the full amount', async () => {
+    const { getByText, getByPlaceholderText } = await renderWithTheme(<AddCategorySheet />);
+
+    await fireEvent.changeText(getByPlaceholderText('e.g. New laptop fund'), 'Taiwan fund');
+    await fireEvent.changeText(getByPlaceholderText('Leave blank for no limit'), '₱80,000');
+    await fireEvent.press(getByText('Add category'));
+
+    await waitFor(() =>
+      expect(mockCreateCategoryMutateAsync).toHaveBeenCalledWith(
+        expect.objectContaining({ rule: expect.objectContaining({ type: 'goal', target_amount: 80000 }) }),
+      ),
+    );
+  });
+
+  it.each(['0', '80k', 'abc'])('rejects a target of %p instead of saving a ₱0 goal', async (input) => {
+    const { getByText, getByPlaceholderText } = await renderWithTheme(<AddCategorySheet />);
+
+    await fireEvent.changeText(getByPlaceholderText('e.g. New laptop fund'), 'Taiwan fund');
+    await fireEvent.changeText(getByPlaceholderText('Leave blank for no limit'), input);
+    await fireEvent.press(getByText('Add category'));
+
+    expect(await waitFor(() => getByText('Enter a valid target amount'))).toBeTruthy();
+    expect(mockCreateCategoryMutateAsync).not.toHaveBeenCalled();
+  });
+
   it('shows an error message when saving fails', async () => {
     mockCreateCategoryMutateAsync.mockRejectedValue(new Error('Could not save category'));
     const { getByText, getByPlaceholderText } = await renderWithTheme(<AddCategorySheet />);

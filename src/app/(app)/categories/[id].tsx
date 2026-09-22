@@ -12,7 +12,7 @@ import { TextField } from '@/components/ui/TextField';
 import { Card, ListRow } from '@/components/ui/Card';
 import { DeleteCategorySheet } from '@/components/ui/DeleteCategorySheet';
 import { ErrorState } from '@/components/ui/ErrorState';
-import { formatPeso } from '@/lib/format';
+import { formatPeso, parseAmount } from '@/lib/format';
 import { fromDateOnly, monthDueDate, nextMonth, paymentsLeft, toDateOnly } from '@/lib/payday';
 import {
   combineQueryState,
@@ -185,7 +185,7 @@ export default function CategoryDetail() {
     const rule = category!.rule;
     let nextRule = rule;
     if (rule?.type === 'goal') {
-      const parsedTarget = Number(editTarget);
+      const parsedTarget = parseAmount(editTarget);
       if (!Number.isFinite(parsedTarget) || parsedTarget <= 0) {
         return setError('Enter a valid target amount');
       }

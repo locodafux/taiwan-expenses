@@ -30,6 +30,7 @@ export function findGoalToCelebrate(
         c.kind === 'fund' &&
         c.rule?.type === 'goal' &&
         !c.goal_celebrated_at &&
+        c.rule.target_amount > 0 &&
         (balances[c.id] ?? 0) >= c.rule.target_amount,
     ) ?? null
   );

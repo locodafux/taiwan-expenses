@@ -50,6 +50,11 @@ describe('findGoalToCelebrate (pure trigger logic)', () => {
     expect(findGoalToCelebrate([celebrated], { 'cat-fund': 150000 })).toBeNull();
   });
 
+  it('never matches a goal with no positive target (a new ₱0 fund has not reached anything)', () => {
+    const zero = { ...goalCategory, rule: { type: 'goal' as const, target_amount: 0 } };
+    expect(findGoalToCelebrate([zero], {})).toBeNull();
+  });
+
   it('ignores bill categories and non-goal fund rules', () => {
     const bill: Category = { ...goalCategory, id: 'cat-bill', kind: 'bill', rule: null };
     const capped: Category = {
