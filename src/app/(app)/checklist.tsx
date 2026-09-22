@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Text, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { KeyboardScroll } from '@/components/ui/KeyboardScroll';
 import { TextField } from '@/components/ui/TextField';
 import { Callout } from '@/components/ui/Callout';
-import { Card, CategoryMark } from '@/components/ui/Card';
+import { Card } from '@/components/ui/Card';
 import { ChecklistGroup, ChecklistRow } from '@/components/ui/Checklist';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
@@ -17,7 +17,6 @@ import { PaydayCelebration } from '@/components/ui/PaydayCelebration';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import {
   combineQueryState,
-  useAddManualContribution,
   useCategories,
   useCheckLedgerEntry,
   useGoalShortfalls,
@@ -66,7 +65,6 @@ export default function PaydayChecklist() {
   const updateAmount = useUpdateLedgerAmount(householdId, paydayDate);
   const toggleSkip = useToggleMonthSkip(householdId, paydayDate);
   const completionHistoryQuery = usePaydayCompletionHistory(householdId);
-  const addToFund = useAddManualContribution(householdId);
   const shortfalls = useGoalShortfalls(householdId, paydayDate).data;
 
   const { isError, refetch } = combineQueryState(
@@ -80,9 +78,6 @@ export default function PaydayChecklist() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editAmount, setEditAmount] = useState('');
   const [editError, setEditError] = useState<string | null>(null);
-  const [extraFundId, setExtraFundId] = useState<string | null>(null);
-  const [extraAmount, setExtraAmount] = useState('');
-  const [extraError, setExtraError] = useState<string | null>(null);
 
   // Ledger rows only exist once materialize_payday has run, and this tab stays
   // mounted — so re-run it whenever the categories/bill items it reads change
@@ -164,15 +159,6 @@ export default function PaydayChecklist() {
 
   const outgoing = visible.filter((e) => e.categories?.kind !== 'fund');
   const staying = visible.filter((e) => e.categories?.kind === 'fund');
-
-  // Take-home nothing on the checklist claims yet - freed up by a skipped fund,
-  // an amount trimmed by hand, or a plan with no remainder fund to absorb it.
-  // Extra deposits made from here are dated to this payday, so they count in
-  // totalAmount and use it up.
-  const leftover = takeHome - totalAmount;
-  const funds = (categoriesQuery.data ?? []).filter((c) => c.kind === 'fund');
-  const extraFund = funds.find((c) => c.id === extraFundId) ?? funds[0];
-  const extraValue = extraAmount ? Number(extraAmount) : leftover;
 
   const allChecked = total > 0 && checked === total;
   const streak = allChecked
@@ -294,67 +280,6 @@ export default function PaydayChecklist() {
               </View>
             </Card>
           </Animated.View>
-        )}
-
-        {leftover > 0 && extraFund && (
-          <Card className="gap-3 rounded-bl-sm bg-sage-soft p-4">
-            <View>
-              <Text className="font-display text-md text-ink">{formatPeso(leftover)} left over</Text>
-              <Text className="mt-1 font-body text-xs text-ink-2">
-                Take-home nothing above is using. Add it to savings, or type a different amount.
-              </Text>
-            </View>
-            <View className="flex-row flex-wrap gap-2">
-              {funds.map((f) => (
-                <Pressable
-                  key={f.id}
-                  onPress={() => setExtraFundId(f.id)}
-                  className={`flex-row items-center gap-2 rounded-pill px-3 py-2 ${
-                    f.id === extraFund.id ? 'bg-ink' : 'bg-surface'
-                  }`}
-                >
-                  <CategoryMark color={f.color} size={8} />
-                  <Text
-                    className={`font-body-semibold text-xs ${f.id === extraFund.id ? 'text-page' : 'text-ink'}`}
-                  >
-                    {f.name}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-            <TextField
-              value={extraAmount}
-              onChangeText={setExtraAmount}
-              placeholder={formatPeso(leftover)}
-              keyboardType="numeric"
-              className="rounded-md border border-border bg-page px-4 py-4 font-mono text-base text-ink"
-            />
-            {extraError && <Text className="font-body text-sm text-status-bad">{extraError}</Text>}
-            <Button
-              variant="primary"
-              loading={addToFund.isPending}
-              onPress={async () => {
-                if (!Number.isFinite(extraValue) || extraValue <= 0) {
-                  return setExtraError('Enter a valid amount');
-                }
-                setExtraError(null);
-                try {
-                  await addToFund.mutateAsync({
-                    categoryId: extraFund.id,
-                    amount: extraValue,
-                    paydayDate,
-                  });
-                  setExtraAmount('');
-                } catch (e) {
-                  setExtraError(e instanceof Error ? e.message : 'Could not add to savings');
-                }
-              }}
-            >
-              {extraAmount
-                ? `Add ${Number.isFinite(extraValue) ? formatPeso(extraValue) : ''} to ${extraFund.name}`
-                : `Add what's left to ${extraFund.name}`}
-            </Button>
-          </Card>
         )}
 
         {shortfallAdvice && <Callout>{shortfallAdvice}</Callout>}

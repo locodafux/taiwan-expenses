@@ -725,29 +725,19 @@ export function useCategoryHistory(categoryId: string | undefined) {
 }
 
 // An extra deposit into a fund on top of the plan (`manual` rows, see
-// 20260921000010_manual_contributions.sql). Dated today by default; the
-// checklist's "add what's left" dates it to its payday instead, so the deposit
-// shows on that payday's checklist and uses up its left-over.
+// 20260921000010_manual_contributions.sql), dated today.
 export function useAddManualContribution(householdId: string | undefined) {
   const queryClient = useQueryClient();
   const { session } = useAuth();
   return useMutation({
-    mutationFn: async ({
-      categoryId,
-      amount,
-      paydayDate,
-    }: {
-      categoryId: string;
-      amount: number;
-      paydayDate?: string;
-    }) => {
+    mutationFn: async ({ categoryId, amount }: { categoryId: string; amount: number }) => {
       const { data, error } = await supabase
         .from('ledger_entries')
         .insert({
           household_id: householdId as string,
           category_id: categoryId,
           bill_item_id: null,
-          payday_date: paydayDate ?? toDateOnly(new Date()),
+          payday_date: toDateOnly(new Date()),
           amount,
           status: 'checked',
           manual: true,
