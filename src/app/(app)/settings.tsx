@@ -1,4 +1,5 @@
 import * as Clipboard from 'expo-clipboard';
+import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Alert, Pressable, Switch, Text, View } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
@@ -35,6 +36,7 @@ const THEME_DESCRIPTIONS = {
 
 export default function Settings() {
   const { theme, setTheme, vars } = useTheme();
+  const router = useRouter();
   const { session, signOut, deleteAccount, changePassword } = useAuth();
   const membershipQuery = useHouseholdMembership();
   const member = membershipQuery.data;
@@ -63,6 +65,7 @@ export default function Settings() {
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [passwordResult, setPasswordResult] = useState<{ ok: boolean; message: string } | null>(null);
   const [copied, setCopied] = useState(false);
+  const [showDangerZone, setShowDangerZone] = useState(false);
   const hasPartner = (members?.length ?? 0) > 1;
 
   function confirmDeleteAccount() {
@@ -225,6 +228,13 @@ export default function Settings() {
               Change password
             </Button>
           </Card>
+          <Card className="mt-3">
+            <ListRow isLast onPress={() => router.push('/(app)/income')}>
+              <Icon name="peso" size={20} color={vars['--ink-2']} />
+              <Text className="flex-1 font-body text-base text-ink">Income</Text>
+              <Icon name="chevronRight" size={16} color={vars['--ink-muted']} />
+            </ListRow>
+          </Card>
         </View>
 
         <View>
@@ -376,11 +386,22 @@ export default function Settings() {
           </Button>
         </View>
 
+        {/* Collapsed by default so Delete account isn't in view every visit. */}
         <View className="gap-3 border-t border-border pt-5">
-          <Text className="font-body-semibold text-sm text-status-bad">Danger zone</Text>
-          <Button variant="ghost" loading={isDeleting} onPress={confirmDeleteAccount}>
-            Delete account
-          </Button>
+          <Pressable
+            onPress={() => setShowDangerZone((v) => !v)}
+            accessibilityRole="button"
+            accessibilityState={{ expanded: showDangerZone }}
+            className="flex-row items-center justify-between py-1"
+          >
+            <Text className="font-body-semibold text-sm text-status-bad">Danger zone</Text>
+            <Text className="font-body text-sm text-ink-muted">{showDangerZone ? 'Hide' : 'Show'}</Text>
+          </Pressable>
+          {showDangerZone && (
+            <Button variant="ghost" loading={isDeleting} onPress={confirmDeleteAccount}>
+              Delete account
+            </Button>
+          )}
         </View>
       </KeyboardScroll>
     </SafeAreaView>

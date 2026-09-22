@@ -70,7 +70,8 @@ export default function AppLayout() {
         />
         <Tabs.Screen
           name="income"
-          options={{ title: 'Income', tabBarIcon: tabIcon('peso') }}
+          // Lives under Settings -> Your profile now (bug report: "hide the income bar").
+          options={{ title: 'Income', href: null }}
         />
         <Tabs.Screen
           name="settings"

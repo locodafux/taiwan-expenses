@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -29,6 +30,7 @@ function ordinal(day: number) {
 
 export default function IncomeManagement() {
   const { vars } = useTheme();
+  const router = useRouter();
   const membershipQuery = useHouseholdMembership();
   const member = membershipQuery.data;
   const householdId = member?.household_id;
@@ -109,6 +111,15 @@ export default function IncomeManagement() {
   return (
     <SafeAreaView className="flex-1 bg-page" edges={['top']}>
       <KeyboardScroll contentContainerClassName="gap-4 px-6 py-5">
+        {/* Not a tab any more - reached from Settings -> Your profile. */}
+        <Pressable
+          onPress={() => router.navigate('/(app)/settings')}
+          hitSlop={13}
+          accessibilityRole="button"
+          className="self-start py-3"
+        >
+          <Text className="font-body text-sm text-ink-2">‹ Settings</Text>
+        </Pressable>
         <View className="flex-row items-center justify-between gap-3">
           <Text className="flex-1 font-display-semibold text-lg text-ink">Incomes</Text>
           <Button

@@ -15,6 +15,9 @@ jest.mock('@/lib/auth', () => ({
   }),
 }));
 
+const mockPush = jest.fn();
+jest.mock('expo-router', () => ({ useRouter: () => ({ push: mockPush }) }));
+
 const mockSetStringAsync = jest.fn();
 jest.mock('expo-clipboard', () => ({ setStringAsync: (...args: unknown[]) => mockSetStringAsync(...args) }));
 
@@ -139,6 +142,20 @@ describe('Settings', () => {
     expect(mockSignOut).toHaveBeenCalled();
   });
 
+  it('keeps Delete account hidden until the danger zone is expanded', async () => {
+    const { getByText, queryByText } = await renderWithTheme(<Settings />);
+    await waitFor(() => getByText('Danger zone'));
+    expect(queryByText('Delete account')).toBeNull();
+    await fireEvent.press(getByText('Danger zone'));
+    expect(getByText('Delete account')).toBeTruthy();
+  });
+
+  it('opens income management from the profile section', async () => {
+    const { getByText } = await renderWithTheme(<Settings />);
+    await fireEvent.press(await waitFor(() => getByText('Income')));
+    expect(mockPush).toHaveBeenCalledWith('/(app)/income');
+  });
+
   it('deletes the account after confirming, warning that it cannot be undone', async () => {
     const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation((_title, _message, buttons) => {
       const confirm = buttons?.find((b) => b.text === 'Delete account');
@@ -146,7 +163,8 @@ describe('Settings', () => {
     });
 
     const { getByText } = await renderWithTheme(<Settings />);
-    await fireEvent.press(await waitFor(() => getByText('Delete account')));
+    await fireEvent.press(await waitFor(() => getByText('Danger zone')));
+    await fireEvent.press(getByText('Delete account'));
 
     expect(alertSpy).toHaveBeenCalledWith(
       'Delete your account?',
@@ -162,7 +180,8 @@ describe('Settings', () => {
     const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
 
     const { getByText } = await renderWithTheme(<Settings />);
-    await fireEvent.press(await waitFor(() => getByText('Delete account')));
+    await fireEvent.press(await waitFor(() => getByText('Danger zone')));
+    await fireEvent.press(getByText('Delete account'));
 
     expect(alertSpy).toHaveBeenCalledWith(
       'Delete your account?',
@@ -177,7 +196,8 @@ describe('Settings', () => {
     const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
 
     const { getByText } = await renderWithTheme(<Settings />);
-    await fireEvent.press(await waitFor(() => getByText('Delete account')));
+    await fireEvent.press(await waitFor(() => getByText('Danger zone')));
+    await fireEvent.press(getByText('Delete account'));
 
     expect(alertSpy).toHaveBeenCalled();
     expect(mockDeleteAccount).not.toHaveBeenCalled();

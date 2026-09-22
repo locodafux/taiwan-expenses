@@ -2,6 +2,8 @@ import { fireEvent, waitFor } from '@testing-library/react-native';
 
 import { renderWithTheme } from '@/test/renderWithTheme';
 
+jest.mock('expo-router', () => ({ useRouter: () => ({ navigate: jest.fn() }) }));
+
 const mockUseHouseholdMembership = jest.fn();
 const mockUseIncomes = jest.fn();
 const mockUseCreateIncome = jest.fn();
