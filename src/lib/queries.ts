@@ -328,6 +328,23 @@ export function useGoalShortfalls(householdId: string | undefined, paydayDate: s
   });
 }
 
+// Money one payday keeps for another this month that can't cover its own bills
+// (from_payday null: no payday this month can).
+export function usePaydayCarries(householdId: string | undefined, paydayDate: string | undefined) {
+  return useQuery({
+    queryKey: ['payday-carries', householdId, paydayDate],
+    enabled: !!householdId && !!paydayDate,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('payday_carries', {
+        p_household_id: householdId as string,
+        p_date: paydayDate as string,
+      });
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
 export function useCreateBillItem(categoryId: string | undefined) {
   const queryClient = useQueryClient();
   return useMutation({
@@ -461,6 +478,7 @@ export function useMaterializePayday(householdId: string | undefined) {
     onSuccess: (_data, paydayDate) => {
       queryClient.invalidateQueries({ queryKey: ['ledger-entries', householdId, paydayDate] });
       queryClient.invalidateQueries({ queryKey: ['goal-shortfalls', householdId] });
+      queryClient.invalidateQueries({ queryKey: ['payday-carries', householdId] });
     },
   });
 }
@@ -518,9 +536,9 @@ export function usePaydayCompletionHistory(householdId: string | undefined) {
     queryKey: ['ledger-payday-status', householdId],
     enabled: !!householdId,
     queryFn: async () => {
-      // Zero-amount rows are hidden from the checklist (nothing to set aside)
-      // and skipped rows are always zero, so neither can ever be ticked -
-      // counting them would freeze the streak at 0 forever.
+      // Zero-amount rows (nothing to set aside) and skipped rows (always zero)
+      // are out of the checklist's count - counting them here would freeze the
+      // streak at 0 forever.
       const { data, error } = await supabase
         .from('ledger_entries')
         .select('payday_date, status')

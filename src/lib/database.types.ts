@@ -262,6 +262,10 @@ export interface Database {
         Args: { p_household_id: string; p_date?: string };
         Returns: { category_id: string; shortfall: number }[];
       };
+      payday_carries: {
+        Args: { p_household_id: string; p_date: string };
+        Returns: { from_payday: string | null; to_payday: string; amount: number }[];
+      };
       create_household_invite: {
         Args: { p_ttl?: string };
         Returns: HouseholdInvite;

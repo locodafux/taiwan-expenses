@@ -10,8 +10,9 @@
 -- uncapped), SAVINGS=3584 (50%), EXCESS=1433 (20%+residual). Per-payday
 -- weights that month (leftoverBase, :458-459) are [10380,6500,5760,3500] for
 -- paydays [5,15,20,30], and allocateProportional (:433-450) onto the 20th
--- (index 3) gives TAIWAN=4181, EMERGENCY=474, SAVINGS=790, EXCESS=316 — see
--- docs/plan.md and the PR description for the full hand computation.
+-- (index 3) gives TAIWAN=4181 (4180 here, see below), EMERGENCY=474,
+-- SAVINGS=790, EXCESS=316 — see docs/plan.md and the PR description for the
+-- full hand computation.
 --
 -- Note: psql does not interpolate :'var' inside DO $$ ... $$ bodies, so the
 -- assertion block below looks values up itself (via auth.uid(), which is a
@@ -66,8 +67,10 @@ begin
   select amount into v_excess from public.ledger_entries
     where category_id = v_excess_id and payday_date = '2026-12-20' and bill_item_id is null;
 
-  if v_taiwan is distinct from 4181 then
-    raise exception 'FAIL: Taiwan Fund allocation for 2026-12-20 was %, expected 4181', v_taiwan;
+  -- The original's 4181: its per-fund rounding put this payday's funds ₱1
+  -- over its 5760 cushion; since 20260923000020 the largest fund absorbs it.
+  if v_taiwan is distinct from 4180 then
+    raise exception 'FAIL: Taiwan Fund allocation for 2026-12-20 was %, expected 4180', v_taiwan;
   end if;
   if v_emergency is distinct from 474 then
     raise exception 'FAIL: Emergency Fund allocation for 2026-12-20 was %, expected 474', v_emergency;
@@ -79,11 +82,11 @@ begin
     raise exception 'FAIL: Excess allocation for 2026-12-20 was %, expected 316', v_excess;
   end if;
 
-  -- 4181+474+790+316: this payday's share of the month's 7167 leftover
-  -- (allocateProportional weighted by this payday's own cushion, not the
-  -- whole month's — the month total is split across all 4 paydays).
-  if v_taiwan + v_emergency + v_savings + v_excess <> 5761 then
-    raise exception 'FAIL: fund allocations for 2026-12-20 sum to %, expected 5761',
+  -- 4180+474+790+316: exactly this payday's own cushion (its share of the
+  -- month's 7167 leftover, weighted by that cushion - the month total is
+  -- split across all 4 paydays).
+  if v_taiwan + v_emergency + v_savings + v_excess <> 5760 then
+    raise exception 'FAIL: fund allocations for 2026-12-20 sum to %, expected 5760',
       v_taiwan + v_emergency + v_savings + v_excess;
   end if;
 

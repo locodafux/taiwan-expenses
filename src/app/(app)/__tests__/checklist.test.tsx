@@ -1,5 +1,6 @@
 import { fireEvent, waitFor } from '@testing-library/react-native';
 
+import { nextPayday, toDateOnly } from '@/lib/payday';
 import { renderWithTheme } from '@/test/renderWithTheme';
 import { ThemeProvider } from '@/theme/ThemeProvider';
 
@@ -19,6 +20,7 @@ const mockUseUpdateLedgerAmount = jest.fn();
 const mockUsePaydayCompletionHistory = jest.fn();
 const mockUseToggleMonthSkip = jest.fn();
 const mockUseGoalShortfalls = jest.fn();
+const mockUsePaydayCarries = jest.fn();
 
 jest.mock('@/lib/queries', () => ({
   ...jest.requireActual('@/lib/queries'),
@@ -33,6 +35,7 @@ jest.mock('@/lib/queries', () => ({
   usePaydayCompletionHistory: (...args: unknown[]) => mockUsePaydayCompletionHistory(...args),
   useToggleMonthSkip: (...args: unknown[]) => mockUseToggleMonthSkip(...args),
   useGoalShortfalls: (...args: unknown[]) => mockUseGoalShortfalls(...args),
+  usePaydayCarries: (...args: unknown[]) => mockUsePaydayCarries(...args),
 }));
 
 import PaydayChecklist from '../checklist';
@@ -83,6 +86,7 @@ beforeEach(() => {
   });
   mockUsePaydayCompletionHistory.mockReturnValue(okQuery([]));
   mockUseGoalShortfalls.mockReturnValue(okQuery([]));
+  mockUsePaydayCarries.mockReturnValue(okQuery([]));
   mockUseToggleMonthSkip.mockReturnValue({ mutate: mockToggleSkipMutate });
 });
 
@@ -103,6 +107,23 @@ describe('PaydayChecklist', () => {
     const { getByText } = await renderWithTheme(<PaydayChecklist />);
 
     await waitFor(() => expect(getByText(/Japan trip will be ₱ 5,000 short by its deadline/)).toBeTruthy());
+  });
+
+  it('says what this payday keeps for a short one, and what covers its own bills', async () => {
+    const payday = toDateOnly(nextPayday([5]));
+    const month = payday.slice(0, 8);
+    mockUsePaydayCarries.mockReturnValue(
+      okQuery([
+        { from_payday: payday, to_payday: `${month}15`, amount: 1700 },
+        { from_payday: `${month}04`, to_payday: payday, amount: 300 },
+        { from_payday: `${month}20`, to_payday: `${month}30`, amount: 999 },
+      ]),
+    );
+    const { getByText, queryByText } = await renderWithTheme(<PaydayChecklist />);
+
+    await waitFor(() => expect(getByText(/Keep ₱ 1,700 of this pay aside for the 15th/)).toBeTruthy());
+    expect(getByText(/₱ 300 of these bills is paid from what you kept aside on the 4th/)).toBeTruthy();
+    expect(queryByText(/999/)).toBeNull();
   });
 
   it('checks off an item, posting a checked mutation for that entry', async () => {
@@ -228,7 +249,7 @@ describe('PaydayChecklist', () => {
     expect(mockMaterializeMutate).toHaveBeenCalledTimes(1);
   });
 
-  it('hides a ₱0 fund row - there is nothing to set aside for it', async () => {
+  it('shows a ₱0 fund row but leaves it out of the count', async () => {
     mockUseLedgerEntriesForPayday.mockReturnValue(
       okQuery([
         ...entries,
@@ -243,11 +264,11 @@ describe('PaydayChecklist', () => {
       ]),
     );
 
-    const { getByText, queryByText } = await renderWithTheme(<PaydayChecklist />);
+    const { getByText } = await renderWithTheme(<PaydayChecklist />);
 
-    await waitFor(() => expect(getByText('Taiwan fund')).toBeTruthy());
-    expect(queryByText('Excess')).toBeNull();
-    // ...and it is out of the count, so the two real rows are the whole list.
+    await waitFor(() => expect(getByText('Excess')).toBeTruthy());
+    expect(getByText('₱ 0')).toBeTruthy();
+    // ...but there is nothing to tick off, so the two real rows are the whole count.
     expect(getByText('1 / 2 items checked')).toBeTruthy();
   });
 

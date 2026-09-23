@@ -11,6 +11,7 @@ import { Callout } from '@/components/ui/Callout';
 import { Card } from '@/components/ui/Card';
 import { ChecklistGroup, ChecklistRow } from '@/components/ui/Checklist';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { Icon } from '@/components/ui/Icon';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { ScreenHeader } from '@/components/ui/Heading';
 import { PaydayCelebration } from '@/components/ui/PaydayCelebration';
@@ -25,6 +26,7 @@ import {
   useIncomes,
   useLedgerEntriesForPayday,
   useMaterializePayday,
+  usePaydayCarries,
   usePaydayCompletionHistory,
   useToggleMonthSkip,
   useUpdateLedgerAmount,
@@ -66,6 +68,7 @@ export default function PaydayChecklist() {
   const toggleSkip = useToggleMonthSkip(householdId, paydayDate);
   const completionHistoryQuery = usePaydayCompletionHistory(householdId);
   const shortfalls = useGoalShortfalls(householdId, paydayDate).data;
+  const carries = usePaydayCarries(householdId, paydayDate).data;
 
   const { isError, refetch } = combineQueryState(
     membershipQuery,
@@ -139,14 +142,13 @@ export default function PaydayChecklist() {
 
   const paydayDay = fromDateOnly(paydayDate).getDate();
 
-  // A ₱0 row is nothing to act on: bills can never be 0 (bill_items.amount has
-  // a > 0 check and the amount editor rejects <= 0), so a 0 is always a fund
-  // whose rule allocated nothing this payday. Skipped rows are 0 too, but stay
-  // visible - they are the only way back to un-skipping the month.
-  const visible = (entries ?? []).filter((e) => e.amount !== 0 || e.status === 'skipped');
-  // A skipped fund is not something to tick off, so it is out of the count,
-  // the progress bar and both totals.
-  const countable = visible.filter((e) => e.status !== 'skipped');
+  // Every row shows, ₱0 included: a fund its rule gave nothing this payday is
+  // still listed at ₱0, not hidden (a hidden fund read as a missing category).
+  const visible = entries ?? [];
+  // A skipped or ₱0 fund is nothing to tick off (bills can never be 0), so it
+  // is out of the count, the progress bar and both totals - the same rows
+  // usePaydayCompletionHistory leaves out of the streak.
+  const countable = visible.filter((e) => e.status !== 'skipped' && e.amount !== 0);
   const total = countable.length;
   const checked = countable.filter((e) => e.status === 'checked').length;
   const totalAmount = countable.reduce((s, e) => s + e.amount, 0);
@@ -156,6 +158,21 @@ export default function PaydayChecklist() {
   const takeHome = (incomes ?? [])
     .filter((i) => i.active && i.recurring_day === paydayDay)
     .reduce((s, i) => s + i.amount, 0);
+
+  // A payday whose bills are more than its pay is covered by an earlier one
+  // (materialize_payday leaves that money out of the earlier payday's funds),
+  // so both paydays say what is held and what for. Plain notes, not rows:
+  // there is nothing to tick off.
+  const carryNotes = (carries ?? []).flatMap((c) => {
+    if (c.from_payday === paydayDate) {
+      const day = fromDateOnly(c.to_payday).getDate();
+      return [`Keep ${formatPeso(c.amount)} of this pay aside for the ${day}th — that payday's pay doesn't cover its bills.`];
+    }
+    if (c.to_payday !== paydayDate) return [];
+    if (!c.from_payday) return [`${formatPeso(c.amount)} of these bills isn't covered by this month's pay.`];
+    const day = fromDateOnly(c.from_payday).getDate();
+    return [`${formatPeso(c.amount)} of these bills is paid from what you kept aside on the ${day}th.`];
+  });
 
   const outgoing = visible.filter((e) => e.categories?.kind !== 'fund');
   const staying = visible.filter((e) => e.categories?.kind === 'fund');
@@ -241,6 +258,13 @@ export default function PaydayChecklist() {
                 ))}
               </ChecklistGroup>
             )}
+
+            {carryNotes.map((note) => (
+              <View key={note} className="flex-row items-start gap-3 pb-1">
+                <Icon name="peso" size={16} color={vars['--ink-muted']} />
+                <Text className="flex-1 font-body text-sm italic leading-[1.5] text-ink-2">{note}</Text>
+              </View>
+            ))}
           </Card>
         )}
 
