@@ -139,14 +139,13 @@ export default function PaydayChecklist() {
 
   const paydayDay = fromDateOnly(paydayDate).getDate();
 
-  // A ₱0 row is nothing to act on: bills can never be 0 (bill_items.amount has
-  // a > 0 check and the amount editor rejects <= 0), so a 0 is always a fund
-  // whose rule allocated nothing this payday. Skipped rows are 0 too, but stay
-  // visible - they are the only way back to un-skipping the month.
-  const visible = (entries ?? []).filter((e) => e.amount !== 0 || e.status === 'skipped');
-  // A skipped fund is not something to tick off, so it is out of the count,
-  // the progress bar and both totals.
-  const countable = visible.filter((e) => e.status !== 'skipped');
+  // Every row shows, ₱0 included: a fund its rule gave nothing this payday is
+  // still listed at ₱0, not hidden (a hidden fund read as a missing category).
+  const visible = entries ?? [];
+  // A skipped or ₱0 fund is nothing to tick off (bills can never be 0), so it
+  // is out of the count, the progress bar and both totals - the same rows
+  // usePaydayCompletionHistory leaves out of the streak.
+  const countable = visible.filter((e) => e.status !== 'skipped' && e.amount !== 0);
   const total = countable.length;
   const checked = countable.filter((e) => e.status === 'checked').length;
   const totalAmount = countable.reduce((s, e) => s + e.amount, 0);

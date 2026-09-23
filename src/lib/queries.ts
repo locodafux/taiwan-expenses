@@ -518,9 +518,9 @@ export function usePaydayCompletionHistory(householdId: string | undefined) {
     queryKey: ['ledger-payday-status', householdId],
     enabled: !!householdId,
     queryFn: async () => {
-      // Zero-amount rows are hidden from the checklist (nothing to set aside)
-      // and skipped rows are always zero, so neither can ever be ticked -
-      // counting them would freeze the streak at 0 forever.
+      // Zero-amount rows (nothing to set aside) and skipped rows (always zero)
+      // are out of the checklist's count - counting them here would freeze the
+      // streak at 0 forever.
       const { data, error } = await supabase
         .from('ledger_entries')
         .select('payday_date, status')

@@ -228,7 +228,7 @@ describe('PaydayChecklist', () => {
     expect(mockMaterializeMutate).toHaveBeenCalledTimes(1);
   });
 
-  it('hides a ₱0 fund row - there is nothing to set aside for it', async () => {
+  it('shows a ₱0 fund row but leaves it out of the count', async () => {
     mockUseLedgerEntriesForPayday.mockReturnValue(
       okQuery([
         ...entries,
@@ -243,11 +243,11 @@ describe('PaydayChecklist', () => {
       ]),
     );
 
-    const { getByText, queryByText } = await renderWithTheme(<PaydayChecklist />);
+    const { getByText } = await renderWithTheme(<PaydayChecklist />);
 
-    await waitFor(() => expect(getByText('Taiwan fund')).toBeTruthy());
-    expect(queryByText('Excess')).toBeNull();
-    // ...and it is out of the count, so the two real rows are the whole list.
+    await waitFor(() => expect(getByText('Excess')).toBeTruthy());
+    expect(getByText('₱ 0')).toBeTruthy();
+    // ...but there is nothing to tick off, so the two real rows are the whole count.
     expect(getByText('1 / 2 items checked')).toBeTruthy();
   });
 
