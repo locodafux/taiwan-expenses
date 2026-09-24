@@ -162,7 +162,7 @@ describe('Settings', () => {
     expect(mockPush).toHaveBeenCalledWith('/(app)/income');
   });
 
-  it("opens the full What's new list from the About section", async () => {
+  it("opens the full What's new list from Settings", async () => {
     const { getByText, queryByText } = await renderWithTheme(<Settings />);
     expect(queryByText(CHANGELOG[1].items[0])).toBeNull();
     await fireEvent.press(await waitFor(() => getByText('What’s new')));
