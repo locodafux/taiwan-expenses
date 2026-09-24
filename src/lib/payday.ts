@@ -104,12 +104,6 @@ export function leftoverByPaydayInMonth(
     .sort((a, b) => a.day - b.day);
 }
 
-// First of the month a date-only string falls in, as another date-only
-// string - the shape category_month_skips.month is constrained to.
-export function monthStart(dateOnly: string): string {
-  return `${dateOnly.slice(0, 7)}-01`;
-}
-
 // Loan/bill payment terms (captain's bug report, 2026-09-20). The term is
 // stored as bill_items.end_date = the last due date; materialize_payday and
 // leftoverByPaydayInMonth already stop a bill once its end_date has passed.

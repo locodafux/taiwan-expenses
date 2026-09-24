@@ -57,7 +57,6 @@ function buildDeleteChain(result: { error: null | { message: string }; count: nu
 
 import {
   useCheckLedgerEntry,
-  useToggleMonthSkip,
   useCreateBillItem,
   useDeleteCategory,
   usePaydayStreak,
@@ -397,46 +396,5 @@ describe('useUnreadMessageCount (chat tab badge)', () => {
     const stored = await AsyncStorage.getItem('chat:last-read:household-1');
     expect(stored).toBeTruthy();
     expect(chain.gt).toHaveBeenCalledWith('created_at', stored);
-  });
-});
-
-describe('useToggleMonthSkip (per-month fund skip)', () => {
-  const mockInsert = jest.fn();
-
-  beforeEach(() => {
-    jest.clearAllMocks();
-    mockRpc.mockResolvedValue({ error: null });
-  });
-
-  it('records the skip against the first of the payday\'s month, then re-materializes', async () => {
-    mockInsert.mockResolvedValue({ error: null });
-    mockFrom.mockReturnValue({ insert: mockInsert });
-
-    const { result } = await renderHook(() => useToggleMonthSkip('household-1', '2027-01-20'), { wrapper });
-    await result.current.mutateAsync({ categoryId: 'cat-savings', skipped: true });
-
-    expect(mockFrom).toHaveBeenCalledWith('category_month_skips');
-    expect(mockInsert).toHaveBeenCalledWith({
-      household_id: 'household-1',
-      category_id: 'cat-savings',
-      month: '2027-01-01',
-    });
-    // The ledger rows only mirror the skip once materialize_payday reruns.
-    expect(mockRpc).toHaveBeenCalledWith('materialize_payday', {
-      p_household_id: 'household-1',
-      p_payday_date: '2027-01-20',
-    });
-  });
-
-  it('treats an un-skip that matched zero rows as an error, not a silent success', async () => {
-    buildDeleteChain({ error: null, count: 0 });
-    mockDeleteEq.mockReturnValue({ eq: jest.fn().mockResolvedValue({ error: null, count: 0 }) });
-
-    const { result } = await renderHook(() => useToggleMonthSkip('household-1', '2027-01-20'), { wrapper });
-
-    await expect(
-      result.current.mutateAsync({ categoryId: 'cat-savings', skipped: false }),
-    ).rejects.toThrow('Could not un-skip this month');
-    expect(mockRpc).not.toHaveBeenCalled();
   });
 });

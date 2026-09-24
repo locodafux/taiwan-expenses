@@ -28,7 +28,6 @@ import {
   useMaterializePayday,
   usePaydayCarries,
   usePaydayCompletionHistory,
-  useToggleMonthSkip,
   useUpdateLedgerAmount,
 } from '@/lib/queries';
 import { formatFolioDate, formatPeso } from '@/lib/format';
@@ -65,7 +64,6 @@ export default function PaydayChecklist() {
   const isLoading = entriesQuery.isLoading || incomesQuery.isLoading || membershipQuery.isLoading;
   const checkEntry = useCheckLedgerEntry(householdId, paydayDate);
   const updateAmount = useUpdateLedgerAmount(householdId, paydayDate);
-  const toggleSkip = useToggleMonthSkip(householdId, paydayDate);
   const completionHistoryQuery = usePaydayCompletionHistory(householdId);
   const shortfalls = useGoalShortfalls(householdId, paydayDate).data;
   const carries = usePaydayCarries(householdId, paydayDate).data;
@@ -148,10 +146,10 @@ export default function PaydayChecklist() {
   const visible = [...(entries ?? [])].sort(
     (a, b) => Number(a.status === 'checked') - Number(b.status === 'checked'),
   );
-  // A skipped or ₱0 fund is nothing to tick off (bills can never be 0), so it
-  // is out of the count, the progress bar and both totals - the same rows
+  // A ₱0 fund is nothing to tick off (bills can never be 0), so it is out of
+  // the count, the progress bar and both totals - the same rows
   // usePaydayCompletionHistory leaves out of the streak.
-  const countable = visible.filter((e) => e.status !== 'skipped' && e.amount !== 0);
+  const countable = visible.filter((e) => e.amount !== 0);
   const total = countable.length;
   const checked = countable.filter((e) => e.status === 'checked').length;
   const totalAmount = countable.reduce((s, e) => s + e.amount, 0);
@@ -231,7 +229,7 @@ export default function PaydayChecklist() {
             )}
 
             {staying.length > 0 && (
-              <ChecklistGroup heading="Money staying" note="Fund contributions kept in the household. Skip one to sit a month out.">
+              <ChecklistGroup heading="Money staying" note="Fund contributions kept in the household.">
                 {staying.map((entry) => (
                   <ChecklistRow
                     key={entry.id}
@@ -239,17 +237,6 @@ export default function PaydayChecklist() {
                     amount={formatPeso(entry.amount)}
                     color={entry.categories?.color ?? '#999'}
                     checked={entry.status === 'checked'}
-                    skipped={entry.status === 'skipped'}
-                    // An extra deposit isn't part of the plan, so there's no month to skip.
-                    onSkipToggle={
-                      entry.manual
-                        ? undefined
-                        : () =>
-                            toggleSkip.mutate({
-                              categoryId: entry.category_id,
-                              skipped: entry.status !== 'skipped',
-                            })
-                    }
                     onToggle={() => checkEntry.mutate({ id: entry.id, checked: entry.status !== 'checked' })}
                     onAmountPress={() => {
                       setEditingId(entry.id);
