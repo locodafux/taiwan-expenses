@@ -5,7 +5,7 @@ import { GoalCelebration } from '@/components/GoalCelebration';
 import { Icon, type IconName } from '@/components/ui/Icon';
 import { UpdateBanner } from '@/components/UpdateBanner';
 import { useAuth } from '@/lib/auth';
-import { usePushRegistration } from '@/lib/notifications';
+import { useOpenChatOnPushTap, usePushRegistration } from '@/lib/notifications';
 import { useHouseholdMembership, useUnreadMessageCount } from '@/lib/queries';
 import { useRealtimeSync } from '@/lib/realtime';
 import { THEMES } from '@/theme/tokens';
@@ -24,6 +24,7 @@ export default function AppLayout() {
   const { data: unreadMessages } = useUnreadMessageCount(member?.household_id);
   useRealtimeSync(member?.household_id);
   usePushRegistration(member?.notifications_enabled);
+  useOpenChatOnPushTap();
   if (initializing) return null;
   if (!session) return <Redirect href="/(auth)" />;
 

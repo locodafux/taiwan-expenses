@@ -1,5 +1,6 @@
 import Constants from 'expo-constants';
 import * as Notifications from 'expo-notifications';
+import { router } from 'expo-router';
 import { useEffect } from 'react';
 import { Platform } from 'react-native';
 
@@ -13,16 +14,16 @@ export async function registerForPushNotifications() {
   if (Platform.OS === 'web') return;
 
   Notifications.setNotificationHandler({
-    handleNotification: async () => ({
-      shouldShowBanner: true,
-      shouldShowList: true,
-      shouldPlaySound: false,
-      shouldSetBadge: false,
-    }),
+    // Only runs while the app is open. A chat push is redundant then - the
+    // Chat tab's unread badge and realtime already show the new message.
+    handleNotification: async (notification) => {
+      const show = notification.request.content.data?.type !== 'chat';
+      return { shouldShowBanner: show, shouldShowList: show, shouldPlaySound: false, shouldSetBadge: false };
+    },
   });
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync('default', {
-      name: 'Reminders and activity',
+      name: 'Reminders, activity and chat',
       importance: Notifications.AndroidImportance.DEFAULT,
     });
   }
@@ -58,4 +59,20 @@ export function usePushRegistration(enabled: boolean | undefined) {
       console.warn('Push registration failed:', e instanceof Error ? e.message : e),
     );
   }, [enabled]);
+}
+
+// Tapping a chat push (app open, backgrounded or killed) opens the Chat tab.
+export function useOpenChatOnPushTap() {
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+    const open = (response: Notifications.NotificationResponse | null) => {
+      if (response?.notification.request.content.data?.type !== 'chat') return;
+      // Cleared so a later remount (sign out and back in) doesn't jump to Chat again.
+      Notifications.clearLastNotificationResponse();
+      router.navigate('/(app)/chat');
+    };
+    open(Notifications.getLastNotificationResponse());
+    const sub = Notifications.addNotificationResponseReceivedListener(open);
+    return () => sub.remove();
+  }, []);
 }
