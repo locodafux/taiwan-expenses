@@ -391,6 +391,26 @@ describe('CategoryDetail', () => {
     );
   });
 
+  it('edits a remainder fund\'s share of what is left', async () => {
+    mockUseCategories.mockReturnValue({
+      data: [{ ...fundCategory, name: 'Savings', rule: { type: 'remainder', percent: 20 } }],
+    });
+    const { getByText, getByDisplayValue } = await renderWithTheme(<CategoryDetail />);
+
+    await fireEvent.press(await waitFor(() => getByText('Edit')));
+    await fireEvent.changeText(getByDisplayValue('20'), '0');
+    await fireEvent.press(getByText('Save'));
+    expect(await waitFor(() => getByText('Enter a share between 1 and 100'))).toBeTruthy();
+
+    await fireEvent.changeText(getByDisplayValue('0'), '35');
+    await fireEvent.press(getByText('Save'));
+    await waitFor(() =>
+      expect(mockUpdateCategoryMutateAsync).toHaveBeenCalledWith(
+        expect.objectContaining({ rule: { type: 'remainder', percent: 35 } }),
+      ),
+    );
+  });
+
   it('marks a goal as a one-time expense from the edit form', async () => {
     const { getByText, getByLabelText } = await renderWithTheme(<CategoryDetail />);
 

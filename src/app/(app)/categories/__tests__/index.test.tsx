@@ -54,6 +54,20 @@ describe('CategoryManagement', () => {
     expect(getByText('Bill · 2 recurring items')).toBeTruthy();
   });
 
+  // Shares are weights: 30 and 20 split the left-over 60/40, and the list says so.
+  it('states each remainder fund\'s share and what it actually gets', async () => {
+    mockUseCategories.mockReturnValue(
+      okQuery([
+        { id: 'a', name: 'Taiwan', kind: 'fund', color: '#111', rule: { type: 'remainder', percent: 30 } },
+        { id: 'b', name: 'Savings', kind: 'fund', color: '#222', rule: { type: 'remainder', percent: 20 } },
+      ]),
+    );
+    const { getByText } = await renderWithTheme(<CategoryManagement />);
+
+    await waitFor(() => expect(getByText("30% share · gets 60% of what's left")).toBeTruthy());
+    expect(getByText("20% share · gets 40% of what's left")).toBeTruthy();
+  });
+
   it('shows an empty state when there are no categories yet', async () => {
     mockUseCategories.mockReturnValue(okQuery([]));
     const { getByText } = await renderWithTheme(<CategoryManagement />);

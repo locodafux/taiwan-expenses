@@ -36,12 +36,18 @@ export default function AddCategory() {
   // Goal deadline month ('YYYY-MM'); stored as rule.target_date = its 1st.
   const [deadline, setDeadline] = useState<string | null>(null);
   const [oneTime, setOneTime] = useState(false);
+  // Weight in the leftover split, not a hard percent - see the hint below.
+  const [share, setShare] = useState('20');
   const [error, setError] = useState<string | null>(null);
 
   async function handleSave() {
     if (!name.trim()) return setError('Name is required');
     const parsedTarget = parseAmount(target);
     if (target && !(parsedTarget > 0)) return setError('Enter a valid target amount');
+    const parsedShare = parseAmount(share);
+    if (kind === 'fund' && !target && !(parsedShare > 0 && parsedShare <= 100)) {
+      return setError('Enter a share between 1 and 100');
+    }
     setError(null);
     try {
       await createCategory.mutateAsync({
@@ -53,7 +59,7 @@ export default function AddCategory() {
             ? ({
                 type: target ? 'goal' : 'remainder',
                 target_amount: target ? parsedTarget : 0,
-                percent: target ? undefined : 20,
+                percent: target ? undefined : parsedShare,
                 target_date: target && deadline ? `${deadline}-01` : undefined,
                 one_time: target ? oneTime : undefined,
               } as any)
@@ -132,6 +138,21 @@ export default function AddCategory() {
             <Text className="mt-1 font-body text-xs leading-[1.4] text-ink-muted">
               Set it and this category stops taking a share once full. Leave blank and it keeps its
               percentage share indefinitely.
+            </Text>
+          </View>
+        )}
+        {kind === 'fund' && target === '' && (
+          <View>
+            <Text className="font-body text-xs text-ink-muted">Share of what&apos;s left (%)</Text>
+            <TextField
+              value={share}
+              onChangeText={setShare}
+              keyboardType="numeric"
+              className={`${inputClass} font-mono`}
+            />
+            <Text className="mt-1 font-body text-xs leading-[1.4] text-ink-muted">
+              The money left over each month is split between funds like this one by their shares.
+              Shares are weighed against each other: two funds at 30 and 20 get 60% and 40%.
             </Text>
           </View>
         )}

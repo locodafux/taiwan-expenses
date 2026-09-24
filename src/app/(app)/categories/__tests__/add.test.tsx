@@ -65,6 +65,37 @@ describe('AddCategorySheet', () => {
     expect(mockBack).toHaveBeenCalled();
   });
 
+  it('saves the share of what is left that the user picks, and hides it for a goal', async () => {
+    const { getByText, getByPlaceholderText, getByDisplayValue, queryByDisplayValue } =
+      await renderWithTheme(<AddCategorySheet />);
+
+    await fireEvent.changeText(getByPlaceholderText('e.g. New laptop fund'), 'Savings');
+    await fireEvent.changeText(getByDisplayValue('20'), '30');
+    await fireEvent.press(getByText('Add category'));
+
+    await waitFor(() =>
+      expect(mockCreateCategoryMutateAsync).toHaveBeenCalledWith(
+        expect.objectContaining({ rule: expect.objectContaining({ type: 'remainder', percent: 30 }) }),
+      ),
+    );
+
+    await fireEvent.changeText(getByPlaceholderText('Leave blank for no limit'), '80000');
+    expect(queryByDisplayValue('30')).toBeNull();
+  });
+
+  it.each(['0', '101', 'abc'])('rejects a share of %p', async (input) => {
+    const { getByText, getByPlaceholderText, getByDisplayValue } = await renderWithTheme(
+      <AddCategorySheet />,
+    );
+
+    await fireEvent.changeText(getByPlaceholderText('e.g. New laptop fund'), 'Savings');
+    await fireEvent.changeText(getByDisplayValue('20'), input);
+    await fireEvent.press(getByText('Add category'));
+
+    expect(await waitFor(() => getByText('Enter a share between 1 and 100'))).toBeTruthy();
+    expect(mockCreateCategoryMutateAsync).not.toHaveBeenCalled();
+  });
+
   // Amounts belong to the bill items inside a category, not the category itself,
   // so adding a bill category asks for no amount and creates no bill item.
   it('creates a bill category without asking for an amount or creating a bill item', async () => {
