@@ -11,10 +11,10 @@ const WINDOW_HEIGHT = Dimensions.get('window').height;
 
 export function ChangeList({ items, small }: { items: string[]; small?: boolean }) {
   return (
-    <View className={small ? 'gap-1.5' : 'gap-2.5'}>
+    <View className={small ? 'gap-2' : 'gap-4'}>
       {items.map((item) => (
-        <View key={item} className="flex-row gap-2.5">
-          <View className={`h-1.5 w-1.5 rounded-pill bg-accent ${small ? 'mt-[7px]' : 'mt-2'}`} />
+        <View key={item} className="flex-row gap-3">
+          <View className="mt-2 h-2 w-2 rounded-pill bg-accent" />
           <Text className={`flex-1 font-body leading-[1.55] text-ink-2 ${small ? 'text-xs' : 'text-sm'}`}>
             {item}
           </Text>
@@ -48,20 +48,23 @@ export function WhatsNewSheet({
     <Modal transparent animationType="fade" visible={visible} onRequestClose={onClose}>
       <SafeAreaView edges={['bottom']} className="flex-1 justify-end bg-black/30">
         <Pressable className="absolute inset-0" onPress={onClose} />
-        <Animated.View style={{ transform: [{ translateY }] }} className="rounded-t-xl bg-surface px-7 pb-6 pt-4">
-          <View className="mb-4 h-1 w-9 self-center rounded-pill bg-baseline" />
-          <Text className="mb-4 font-display text-lg text-ink">What’s new</Text>
-          <ScrollView style={{ maxHeight: WINDOW_HEIGHT * 0.6 }} contentContainerClassName="gap-5 pb-2">
-            {entries.map((entry) => (
-              <View key={entry.id} className="gap-2.5">
-                <Text className="font-body-semibold text-xs text-ink-muted">{entry.date}</Text>
-                <ChangeList items={entry.items} />
-              </View>
-            ))}
-          </ScrollView>
-          <Button onPress={onClose} className="mt-5 w-full">
-            Got it
-          </Button>
+        {/* className on an inner View: Animated.View drops it on web. */}
+        <Animated.View style={{ transform: [{ translateY }] }}>
+          <View className="rounded-t-xl bg-surface px-7 pb-6 pt-4">
+            <View className="mb-4 h-1 w-9 self-center rounded-pill bg-baseline" />
+            <Text className="mb-4 font-display text-lg text-ink">What’s new</Text>
+            <ScrollView style={{ maxHeight: WINDOW_HEIGHT * 0.6 }} contentContainerClassName="gap-9 pb-2">
+              {entries.map((entry) => (
+                <View key={entry.id} className="gap-4">
+                  <Text className="font-body-semibold text-xs text-ink-muted">{entry.date}</Text>
+                  <ChangeList items={entry.items} />
+                </View>
+              ))}
+            </ScrollView>
+            <Button onPress={onClose} className="mt-7 w-full">
+              Got it
+            </Button>
+          </View>
         </Animated.View>
       </SafeAreaView>
     </Modal>
