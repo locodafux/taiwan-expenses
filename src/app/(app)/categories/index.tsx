@@ -20,6 +20,7 @@ function describeCategory(
   c: { kind: string; rule: any },
   billCount: number,
   balance: number,
+  shareTotal: number,
 ) {
   if (c.kind === 'bill') {
     return `Bill · ${billCount} recurring item${billCount === 1 ? '' : 's'}`;
@@ -32,7 +33,9 @@ function describeCategory(
     return `${c.rule.percent}% of leftover${c.rule.cap ? ` · capped ₱${c.rule.cap.toLocaleString()}` : ''}`;
   }
   if (c.rule?.type === 'remainder') {
-    return `${c.rule.percent}% of leftover · no cap`;
+    // Shares are weights across all remainder funds (materialize_payday tier 3).
+    const effective = shareTotal > 0 ? Math.round((c.rule.percent / shareTotal) * 100) : 0;
+    return `${c.rule.percent}% share · gets ${effective}% of what's left`;
   }
   return '';
 }
@@ -55,6 +58,11 @@ export default function CategoryManagement() {
     categoriesQuery,
     billItemsQuery,
     balancesQuery,
+  );
+
+  const shareTotal = (categories ?? []).reduce(
+    (s, c) => (c.kind === 'fund' && c.rule?.type === 'remainder' ? s + c.rule.percent : s),
+    0,
   );
 
   const billCountByCategory = (billItems ?? []).reduce<Record<string, number>>((acc, b) => {
@@ -91,7 +99,7 @@ export default function CategoryManagement() {
               <View className="flex-1">
                 <Text className="font-body-semibold text-base text-ink">{c.name}</Text>
                 <Text className="mt-[2px] font-body text-xs text-ink-muted">
-                  {describeCategory(c, billCountByCategory[c.id] ?? 0, balances?.[c.id] ?? 0)}
+                  {describeCategory(c, billCountByCategory[c.id] ?? 0, balances?.[c.id] ?? 0, shareTotal)}
                 </Text>
               </View>
               <Icon name="chevronRight" size={16} color={vars['--ink-muted']} />
@@ -104,7 +112,9 @@ export default function CategoryManagement() {
 
         <Text className="font-body text-xs leading-[1.5] text-ink-muted">
           Every fund category has one optional field: a target amount. Set it and the category stops
-          taking a share once full; leave it blank and it keeps its percentage share indefinitely.
+          taking a share once full; leave it blank and it keeps its share of what&apos;s left
+          indefinitely. Shares are weighed against each other, so they don&apos;t need to add up to
+          100.
         </Text>
       </ScrollView>
     </SafeAreaView>

@@ -101,6 +101,7 @@ export default function CategoryDetail() {
   // Goal deadline month ('YYYY-MM'); null = no deadline.
   const [editDeadline, setEditDeadline] = useState<string | null>(null);
   const [editOneTime, setEditOneTime] = useState(false);
+  const [editShare, setEditShare] = useState('');
 
   const balance = useMemo(
     () => (history ?? []).reduce((s, h) => s + h.amount, 0),
@@ -176,6 +177,7 @@ export default function CategoryDetail() {
     setEditTarget(goal ? String(goal) : '');
     setEditDeadline(category!.rule?.type === 'goal' ? (category!.rule.target_date?.slice(0, 7) ?? null) : null);
     setEditOneTime(category!.rule?.type === 'goal' && !!category!.rule.one_time);
+    setEditShare(category!.rule?.type === 'remainder' ? String(category!.rule.percent) : '');
     setError(null);
     setEditingCategory(true);
   }
@@ -195,6 +197,12 @@ export default function CategoryDetail() {
         target_date: editDeadline ? `${editDeadline}-01` : null,
         one_time: editOneTime,
       };
+    } else if (rule?.type === 'remainder') {
+      const parsedShare = parseAmount(editShare);
+      if (!(parsedShare > 0 && parsedShare <= 100)) {
+        return setError('Enter a share between 1 and 100');
+      }
+      nextRule = { ...rule, percent: parsedShare };
     }
     setError(null);
     try {
@@ -288,6 +296,21 @@ export default function CategoryDetail() {
               />
               <Text className="font-body text-xs text-ink-muted">Color</Text>
               <ColorPicker value={editColor} onChange={setEditColor} />
+              {category.rule?.type === 'remainder' && (
+                <>
+                  <Text className="font-body text-xs text-ink-muted">Share of what&apos;s left (%)</Text>
+                  <TextField
+                    value={editShare}
+                    onChangeText={setEditShare}
+                    keyboardType="numeric"
+                    className="rounded-md border border-border bg-page px-4 py-4 font-mono text-base text-ink"
+                  />
+                  <Text className="font-body text-xs leading-[1.4] text-ink-muted">
+                    Shares are weighed against the other funds: two funds at 30 and 20 get 60% and
+                    40% of what&apos;s left.
+                  </Text>
+                </>
+              )}
               {goal !== null && (
                 <>
                   <Text className="font-body text-xs text-ink-muted">Target amount</Text>
