@@ -5,7 +5,7 @@ import { Platform } from 'react-native';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useAuth } from './auth';
-import { monthStart, toDateOnly } from './payday';
+import { toDateOnly } from './payday';
 import { supabase } from './supabase';
 import type { Category, CategoryRule, Income } from './database.types';
 
@@ -536,8 +536,8 @@ export function usePaydayCompletionHistory(householdId: string | undefined) {
     queryKey: ['ledger-payday-status', householdId],
     enabled: !!householdId,
     queryFn: async () => {
-      // Zero-amount rows (nothing to set aside) and skipped rows (always zero)
-      // are out of the checklist's count - counting them here would freeze the
+      // Zero-amount rows (nothing to set aside) are out of the checklist's
+      // count - counting them here would freeze the
       // streak at 0 forever.
       const { data, error } = await supabase
         .from('ledger_entries')
@@ -565,44 +565,6 @@ export function useUpdateLedgerAmount(householdId: string | undefined, paydayDat
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ledger-entries', householdId, paydayDate] });
-    },
-  });
-}
-
-// Skip (or un-skip) one fund category for the month a payday falls in
-// (20260920000003_category_month_skips.sql). The table is the source of truth;
-// materialize_payday mirrors it onto the month's ledger rows as
-// status = 'skipped', amount 0 - so the write is always followed by a
-// re-materialization rather than patching ledger_entries here.
-export function useToggleMonthSkip(householdId: string | undefined, paydayDate: string | undefined) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async ({ categoryId, skipped }: { categoryId: string; skipped: boolean }) => {
-      const month = monthStart(paydayDate as string);
-      if (skipped) {
-        const { error } = await supabase
-          .from('category_month_skips')
-          .insert({ household_id: householdId as string, category_id: categoryId, month });
-        if (error) throw error;
-      } else {
-        const { error, count } = await supabase
-          .from('category_month_skips')
-          .delete({ count: 'exact' })
-          .eq('category_id', categoryId)
-          .eq('month', month);
-        if (error) throw error;
-        // RLS filtering the row out returns success with zero rows affected.
-        if (count === 0) throw new Error('Could not un-skip this month');
-      }
-      const { error: rpcError } = await supabase.rpc('materialize_payday', {
-        p_household_id: householdId as string,
-        p_payday_date: paydayDate as string,
-      });
-      if (rpcError) throw rpcError;
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['ledger-entries', householdId, paydayDate] });
-      queryClient.invalidateQueries({ queryKey: ['ledger-payday-status', householdId] });
     },
   });
 }

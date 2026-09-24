@@ -21,23 +21,17 @@ export function ChecklistRow({
   amount,
   color,
   checked,
-  skipped,
   onToggle,
   onAmountPress,
   onLabelPress,
-  onSkipToggle,
 }: {
   label: string;
   amount: string;
   color: string;
   checked: boolean;
-  // Skipped for this month (fund rows only) - shown, but not something to
-  // tick off, so the checkbox and the amount edit are both inert.
-  skipped?: boolean;
   onToggle: () => void;
   onAmountPress?: () => void;
   onLabelPress?: () => void;
-  onSkipToggle?: () => void;
 }) {
   const { vars } = useTheme();
   const isFirstRender = useRef(true);
@@ -57,12 +51,11 @@ export function ChecklistRow({
     <View className="flex-row items-center gap-3 border-b border-gridline py-3">
       <AnimatedPressable
         onPress={onToggle}
-        disabled={skipped}
         hitSlop={13}
         style={animatedStyle}
         className={`h-[22px] w-[22px] items-center justify-center rounded-[8px] border-2 ${
           checked ? 'border-status-good bg-status-good' : 'border-baseline bg-surface'
-        } ${skipped ? 'opacity-40' : ''}`}
+        }`}
       >
         {checked && (
           <Animated.View entering={ZoomIn.duration(120)}>
@@ -71,29 +64,14 @@ export function ChecklistRow({
         )}
       </AnimatedPressable>
       <CategoryMark color={color} size={8} />
-      <Pressable className="flex-1" onPress={onToggle} disabled={skipped}>
-        <Text
-          className={`font-body text-base ${
-            skipped || checked ? 'text-ink-muted line-through' : 'text-ink'
-          }`}
-        >
+      <Pressable className="flex-1" onPress={onToggle}>
+        <Text className={`font-body text-base ${checked ? 'text-ink-muted line-through' : 'text-ink'}`}>
           {label}
         </Text>
       </Pressable>
-      {skipped ? (
-        <Text className="rounded-pill bg-surface-2 px-3 py-[2px] font-body-semibold text-xs text-ink-muted">
-          Skipped
-        </Text>
-      ) : (
-        <Pressable onPress={onAmountPress} disabled={!onAmountPress}>
-          <Text className={`font-mono text-sm ${checked ? 'text-ink-muted' : 'text-ink'}`}>{amount}</Text>
-        </Pressable>
-      )}
-      {onSkipToggle && (
-        <Pressable onPress={onSkipToggle} hitSlop={8}>
-          <Text className="font-body-semibold text-xs text-accent">{skipped ? 'Unskip' : 'Skip'}</Text>
-        </Pressable>
-      )}
+      <Pressable onPress={onAmountPress} disabled={!onAmountPress}>
+        <Text className={`font-mono text-sm ${checked ? 'text-ink-muted' : 'text-ink'}`}>{amount}</Text>
+      </Pressable>
       {onLabelPress && (
         <Pressable onPress={onLabelPress} hitSlop={8}>
           <Icon name="chevronRight" size={16} color={vars['--ink-muted']} />
