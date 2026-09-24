@@ -1,4 +1,4 @@
--- Chat pushes (20260924000010_chat_notifications.sql): a message pushes to the
+-- Chat pushes (20260924000011_chat_notifications.sql): a message pushes to the
 -- sender's partner, never to the sender, tagged so the app can recognise it.
 
 do $$
