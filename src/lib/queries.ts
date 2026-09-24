@@ -736,12 +736,29 @@ export function useAddManualContribution(householdId: string | undefined) {
   });
 }
 
-// --- Bug reports ------------------------------------------------------------
+// --- Feedback (bug reports + feature requests; table is still bug_reports) --
 
-// Insert-only: bug_reports has no SELECT policy (reports are read from the
-// Supabase dashboard), so don't chain .select() - returning the row would
-// fail RLS. user_id and created_at are filled in by column defaults.
-export function useSubmitBugReport(householdId: string | undefined) {
+// The whole household's feedback, newest first. Status is maintained outside
+// the app, so refetch-on-focus is enough to pick up changes.
+export function useFeedback(householdId: string | undefined) {
+  return useQuery({
+    queryKey: ['feedback', householdId],
+    enabled: !!householdId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('bug_reports')
+        .select('id, user_id, description, status, created_at')
+        .eq('household_id', householdId as string)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
+// user_id, status ('open') and created_at are filled in by column defaults.
+export function useSubmitFeedback(householdId: string | undefined) {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (description: string) => {
       const { error } = await supabase.from('bug_reports').insert({
@@ -753,6 +770,7 @@ export function useSubmitBugReport(householdId: string | undefined) {
       });
       if (error) throw error;
     },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['feedback', householdId] }),
   });
 }
 

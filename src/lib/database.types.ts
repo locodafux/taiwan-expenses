@@ -112,6 +112,8 @@ export type BugReport = {
   app_version: string | null;
   platform: string | null;
   os_version: string | null;
+  // Set outside the app (Supabase dashboard) as work lands; clients file 'open'.
+  status: 'open' | 'planned' | 'done';
   created_at: string;
 };
 
