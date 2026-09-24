@@ -4,6 +4,7 @@ import type { ColorValue } from 'react-native';
 import { GoalCelebration } from '@/components/GoalCelebration';
 import { Icon, type IconName } from '@/components/ui/Icon';
 import { UpdateBanner } from '@/components/UpdateBanner';
+import { WhatsNew } from '@/components/WhatsNew';
 import { useAuth } from '@/lib/auth';
 import { useOpenChatOnPushTap, usePushRegistration } from '@/lib/notifications';
 import { useHouseholdMembership, useUnreadMessageCount } from '@/lib/queries';
@@ -34,6 +35,7 @@ export default function AppLayout() {
     <>
       <GoalCelebration householdId={member?.household_id} />
       <UpdateBanner />
+      <WhatsNew />
       <Tabs
         screenOptions={{
           headerShown: false,

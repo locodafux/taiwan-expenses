@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { ChangeList } from '@/components/WhatsNew';
 import { checkForUpdate, downloadAndInstall, type AvailableUpdate } from '@/lib/appUpdate';
 
 // Mounted once above the tab navigator so it checks at most once per app
@@ -49,13 +50,16 @@ export function UpdateBanner() {
               <Text className="mt-1 font-body text-xs text-ink-muted">
                 {error
                   ? "Couldn't complete the download or install. Try again."
-                  : 'Download it to update the app.'}
+                  : update.notes.length > 0
+                    ? 'What’s in it:'
+                    : 'Download it to update the app.'}
               </Text>
             </View>
             <Text className="text-ink-muted" onPress={() => setDismissed(true)}>
               ✕
             </Text>
           </View>
+          {update.notes.length > 0 && <ChangeList small items={update.notes} />}
           <Button size="sm" onPress={handleDownload} loading={progress !== null}>
             Download
           </Button>

@@ -20,6 +20,7 @@ const ASSET_NAME_PREFERENCE = ['app-release.apk'];
 export type AvailableUpdate = {
   downloadUrl: string;
   assetName: string;
+  notes: string[];
 };
 
 type GithubAsset = {
@@ -30,7 +31,24 @@ type GithubAsset = {
 
 type GithubRelease = {
   assets: GithubAsset[];
+  body?: string | null;
 };
+
+// The release body mirrors the newest changelog entry as "- " bullets under a
+// "## What's new" heading (see AGENTS.md); the rest of it is build notes, not
+// for users, so a body without that heading yields no notes.
+export function releaseNotes(body: string | null | undefined): string[] {
+  const lines = (body ?? '').split('\n').map((l) => l.trim());
+  const start = lines.findIndex((l) => /^#+\s*what.?s new/i.test(l));
+  if (start === -1) return [];
+  const notes: string[] = [];
+  for (const line of lines.slice(start + 1)) {
+    if (line.startsWith('#')) break;
+    const bullet = /^[-*]\s+(.+)/.exec(line);
+    if (bullet) notes.push(bullet[1]);
+  }
+  return notes;
+}
 
 function pickApkAsset(assets: GithubAsset[]): GithubAsset | undefined {
   for (const preferred of ASSET_NAME_PREFERENCE) {
@@ -55,7 +73,7 @@ export async function checkForUpdate(): Promise<AvailableUpdate | null> {
   const installedAt = await Application.getLastUpdateTimeAsync();
   if (new Date(asset.updated_at) <= installedAt) return null;
 
-  return { downloadUrl: asset.browser_download_url, assetName: asset.name };
+  return { downloadUrl: asset.browser_download_url, assetName: asset.name, notes: releaseNotes(release.body) };
 }
 
 // Downloads the APK to the cache dir and hands it to Android's package
