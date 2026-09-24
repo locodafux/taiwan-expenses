@@ -144,7 +144,10 @@ export default function PaydayChecklist() {
 
   // Every row shows, ₱0 included: a fund its rule gave nothing this payday is
   // still listed at ₱0, not hidden (a hidden fund read as a missing category).
-  const visible = entries ?? [];
+  // Checked rows sink to the bottom of their group so what's left stays on top.
+  const visible = [...(entries ?? [])].sort(
+    (a, b) => Number(a.status === 'checked') - Number(b.status === 'checked'),
+  );
   // A skipped or ₱0 fund is nothing to tick off (bills can never be 0), so it
   // is out of the count, the progress bar and both totals - the same rows
   // usePaydayCompletionHistory leaves out of the streak.
