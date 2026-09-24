@@ -61,7 +61,7 @@ import {
   useDeleteCategory,
   usePaydayStreak,
   useSavedThisQuarter,
-  useSubmitBugReport,
+  useSubmitFeedback,
   useUnreadMessageCount,
   useUpdateIncome,
 } from '../queries';
@@ -315,15 +315,15 @@ describe('useCreateBillItem (regression: checklist stale after adding a bill)', 
   });
 });
 
-describe('useSubmitBugReport', () => {
+describe('useSubmitFeedback', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  it('inserts the report with household and device context, without reading it back', async () => {
+  it('inserts the feedback with household and device context', async () => {
     const mockInsert = jest.fn().mockResolvedValue({ error: null });
     mockFrom.mockReturnValue({ insert: mockInsert });
-    const { result } = await renderHook(() => useSubmitBugReport('household-1'), { wrapper });
+    const { result } = await renderHook(() => useSubmitFeedback('household-1'), { wrapper });
 
     result.current.mutate('Checklist froze');
 
@@ -342,7 +342,7 @@ describe('useSubmitBugReport', () => {
 
   it('surfaces an insert error', async () => {
     mockFrom.mockReturnValue({ insert: jest.fn().mockResolvedValue({ error: { message: 'RLS denied' } }) });
-    const { result } = await renderHook(() => useSubmitBugReport('household-1'), { wrapper });
+    const { result } = await renderHook(() => useSubmitFeedback('household-1'), { wrapper });
 
     result.current.mutate('Checklist froze');
 

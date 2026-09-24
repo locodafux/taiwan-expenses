@@ -75,6 +75,11 @@ export default function AppLayout() {
           options={{ title: 'Income', href: null }}
         />
         <Tabs.Screen
+          name="feedback"
+          // Reached from Settings -> Feedback.
+          options={{ title: 'Feedback', href: null }}
+        />
+        <Tabs.Screen
           name="settings"
           options={{ title: 'Settings', tabBarIcon: tabIcon('sliders') }}
         />

@@ -1,7 +1,8 @@
--- Verifies bug_reports RLS (firstmate spec: in-app bug report): an
--- authenticated user can insert a report as themselves only, tagged with
--- their own household only, and can never read reports back. Reports also
--- survive the reporter deleting their account.
+-- Verifies bug_reports ("Feedback") RLS: an authenticated user can insert a
+-- report as themselves only, tagged with their own household only, always as
+-- 'open'; they can read their own household's reports (with status) but not
+-- another household's, and can't change a status. Reports also survive the
+-- reporter deleting their account.
 do $$
 declare
   v_a uuid := gen_random_uuid();
@@ -46,9 +47,33 @@ begin
   exception when insufficient_privilege then null;
   end;
 
+  begin
+    insert into public.bug_reports (household_id, description, status) values (v_household_a, 'pre-done', 'done');
+    raise exception 'FAIL: filing a report with a non-open status should be rejected';
+  exception when insufficient_privilege then null;
+  end;
+
+  perform set_config('request.jwt.claim.sub', v_b::text, false);
+  insert into public.bug_reports (household_id, description) values (v_household_b, 'B idea');
   select count(*) into v_count from public.bug_reports;
+  if v_count <> 1 then
+    raise exception 'FAIL: B should see only their own household''s report (saw %)', v_count;
+  end if;
+
+  perform set_config('request.jwt.claim.sub', v_a::text, false);
+  select count(*) into v_count from public.bug_reports where description = 'Checklist froze' and status = 'open';
+  if v_count <> 1 then
+    raise exception 'FAIL: A should read back their household''s report as open (saw %)', v_count;
+  end if;
+  select count(*) into v_count from public.bug_reports where household_id = v_household_b;
   if v_count <> 0 then
-    raise exception 'FAIL: users must not be able to read bug reports (saw %)', v_count;
+    raise exception 'FAIL: A must not read another household''s reports (saw %)', v_count;
+  end if;
+
+  update public.bug_reports set status = 'done';
+  get diagnostics v_count = row_count;
+  if v_count <> 0 then
+    raise exception 'FAIL: users must not be able to change a report''s status';
   end if;
 
   perform public.delete_own_account();

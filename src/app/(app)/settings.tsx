@@ -2,7 +2,6 @@ import * as Clipboard from 'expo-clipboard';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Alert, Pressable, Switch, Text, View } from 'react-native';
-import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/ui/Avatar';
@@ -21,7 +20,6 @@ import {
   useHouseholdMembers,
   useHouseholdMembership,
   useSetNotificationsEnabled,
-  useSubmitBugReport,
   useUpdateDisplayName,
   useUpdateHouseholdName,
 } from '@/lib/queries';
@@ -46,7 +44,6 @@ export default function Settings() {
   const members = membersQuery.data;
   const createInvite = useCreateInvite();
   const updateHouseholdName = useUpdateHouseholdName(member?.household_id);
-  const submitBugReport = useSubmitBugReport(member?.household_id);
   const updateDisplayName = useUpdateDisplayName(member?.household_id);
   const setNotificationsEnabled = useSetNotificationsEnabled();
 
@@ -57,8 +54,6 @@ export default function Settings() {
   const [isEditingName, setIsEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
-  const [bugDraft, setBugDraft] = useState('');
-  const [bugResult, setBugResult] = useState<{ ok: boolean; message: string } | null>(null);
   const [profileName, setProfileName] = useState<string | null>(null);
   const [profileResult, setProfileResult] = useState<{ ok: boolean; message: string } | null>(null);
   const [newPassword, setNewPassword] = useState('');
@@ -123,27 +118,6 @@ export default function Settings() {
       setIsChangingPassword(false);
     }
   }
-
-  async function sendBugReport() {
-    const description = bugDraft.trim();
-    if (!description) return setBugResult({ ok: false, message: 'Describe what went wrong first.' });
-    setBugResult(null);
-    try {
-      await submitBugReport.mutateAsync(description);
-      setBugDraft('');
-      setBugResult({ ok: true, message: 'Thanks - your report was sent.' });
-    } catch (e) {
-      setBugResult({ ok: false, message: e instanceof Error ? e.message : 'Could not send report. Try again.' });
-    }
-  }
-
-  // The success note is a transient confirmation, not a state - clear it after
-  // a few seconds so the form reads as ready for another report.
-  useEffect(() => {
-    if (!bugResult?.ok) return;
-    const t = setTimeout(() => setBugResult(null), 4000);
-    return () => clearTimeout(t);
-  }, [bugResult]);
 
   useEffect(() => {
     if (!copied) return;
@@ -345,40 +319,16 @@ export default function Settings() {
           </Card>
         </View>
 
-        <View>
-          <Text className="mb-2 font-body-semibold text-sm text-ink">Report a bug</Text>
-          <Card className="gap-3 p-4">
-            <TextField
-              multiline
-              value={bugDraft}
-              onChangeText={setBugDraft}
-              placeholder="What went wrong? Steps to reproduce help too."
-              accessibilityLabel="Bug description"
-              className="min-h-24 rounded-md border border-border bg-page px-4 py-3 font-body text-base text-ink"
-              textAlignVertical="top"
-            />
-            {bugResult && !bugResult.ok && (
-              <Text className="font-body text-sm text-status-bad">{bugResult.message}</Text>
-            )}
-            {bugResult?.ok && (
-              <Animated.View entering={FadeIn.duration(200)} exiting={FadeOut.duration(300)}>
-                <View
-                  accessibilityLiveRegion="polite"
-                  className="flex-row items-center gap-3 rounded-lg rounded-bl-sm bg-sage-soft px-4 py-3"
-                >
-                  <Icon name="check" size={22} strokeWidth={2.6} color={vars['--accent-2']} />
-                  <View className="flex-1">
-                    <Text className="font-body-semibold text-sm text-ink">{bugResult.message}</Text>
-                    <Text className="font-body text-xs text-ink-2">We&apos;ll take a look. Thank you!</Text>
-                  </View>
-                </View>
-              </Animated.View>
-            )}
-            <Button variant="secondary" loading={submitBugReport.isPending} onPress={sendBugReport}>
-              Send report
-            </Button>
-          </Card>
-        </View>
+        <Card>
+          <ListRow isLast onPress={() => router.push('/(app)/feedback')}>
+            <Icon name="chat" size={20} color={vars['--ink-2']} />
+            <View className="flex-1">
+              <Text className="font-body text-base text-ink">Feedback</Text>
+              <Text className="font-body text-xs text-ink-muted">Report a problem or suggest an idea, and see what&apos;s done.</Text>
+            </View>
+            <Icon name="chevronRight" size={16} color={vars['--ink-muted']} />
+          </ListRow>
+        </Card>
 
         <View className="border-t border-border pt-5">
           <Button variant="ghost" onPress={() => signOut()}>

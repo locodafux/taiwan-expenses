@@ -1,4 +1,4 @@
-import { act, fireEvent, waitFor } from '@testing-library/react-native';
+import { fireEvent, waitFor } from '@testing-library/react-native';
 import { Alert } from 'react-native';
 
 import { renderWithTheme } from '@/test/renderWithTheme';
@@ -26,7 +26,6 @@ const mockUseHousehold = jest.fn();
 const mockUseHouseholdMembers = jest.fn();
 const mockUseCreateInvite = jest.fn();
 const mockUseUpdateHouseholdName = jest.fn();
-const mockUseSubmitBugReport = jest.fn();
 const mockUseUpdateDisplayName = jest.fn();
 const mockSetNotificationsMutate = jest.fn();
 
@@ -37,7 +36,6 @@ jest.mock('@/lib/queries', () => ({
   useHouseholdMembers: (...args: unknown[]) => mockUseHouseholdMembers(...args),
   useCreateInvite: (...args: unknown[]) => mockUseCreateInvite(...args),
   useUpdateHouseholdName: (...args: unknown[]) => mockUseUpdateHouseholdName(...args),
-  useSubmitBugReport: (...args: unknown[]) => mockUseSubmitBugReport(...args),
   useUpdateDisplayName: (...args: unknown[]) => mockUseUpdateDisplayName(...args),
   useSetNotificationsEnabled: () => ({ mutate: mockSetNotificationsMutate, isPending: false }),
 }));
@@ -52,7 +50,6 @@ const members = [
 
 const mockCreateInviteMutateAsync = jest.fn();
 const mockUpdateHouseholdNameMutateAsync = jest.fn();
-const mockSubmitBugReportMutateAsync = jest.fn();
 const mockUpdateDisplayNameMutateAsync = jest.fn();
 
 beforeEach(() => {
@@ -72,10 +69,6 @@ beforeEach(() => {
     isPending: false,
   });
   mockChangePassword.mockResolvedValue(undefined);
-  mockUseSubmitBugReport.mockReturnValue({
-    mutateAsync: mockSubmitBugReportMutateAsync.mockResolvedValue(undefined),
-    isPending: false,
-  });
 });
 
 describe('Settings', () => {
@@ -205,35 +198,6 @@ describe('Settings', () => {
     alertSpy.mockRestore();
   });
 
-  it('sends a bug report for the household and confirms success', async () => {
-    const { getByText, getByLabelText } = await renderWithTheme(<Settings />);
-
-    await fireEvent.changeText(await waitFor(() => getByLabelText('Bug description')), '  Checklist froze  ');
-    await fireEvent.press(getByText('Send report'));
-
-    await waitFor(() => expect(mockSubmitBugReportMutateAsync).toHaveBeenCalledWith('Checklist froze'));
-    expect(mockUseSubmitBugReport).toHaveBeenCalledWith('household-1');
-    expect(await waitFor(() => getByText('Thanks - your report was sent.'))).toBeTruthy();
-    expect(getByLabelText('Bug description').props.value).toBe('');
-  });
-
-  it('dismisses the bug report confirmation after a few seconds', async () => {
-    jest.useFakeTimers();
-    try {
-      const { getByText, getByLabelText, queryByText } = await renderWithTheme(<Settings />);
-
-      await fireEvent.changeText(getByLabelText('Bug description'), 'Checklist froze');
-      await fireEvent.press(getByText('Send report'));
-      await waitFor(() => getByText('Thanks - your report was sent.'));
-
-      await act(() => jest.advanceTimersByTime(4000));
-
-      expect(queryByText('Thanks - your report was sent.')).toBeNull();
-    } finally {
-      jest.useRealTimers();
-    }
-  });
-
   it('copies a generated invite code to the clipboard', async () => {
     const { getByText, getByLabelText } = await renderWithTheme(<Settings />);
 
@@ -244,24 +208,12 @@ describe('Settings', () => {
     expect(await waitFor(() => getByText('Copied ✓'))).toBeTruthy();
   });
 
-  it('requires a description before sending a bug report', async () => {
+  it('opens the Feedback screen', async () => {
     const { getByText } = await renderWithTheme(<Settings />);
 
-    await fireEvent.press(await waitFor(() => getByText('Send report')));
+    await fireEvent.press(await waitFor(() => getByText('Feedback')));
 
-    expect(await waitFor(() => getByText('Describe what went wrong first.'))).toBeTruthy();
-    expect(mockSubmitBugReportMutateAsync).not.toHaveBeenCalled();
-  });
-
-  it('shows an error and keeps the draft when sending a bug report fails', async () => {
-    mockSubmitBugReportMutateAsync.mockRejectedValue(new Error('Network request failed'));
-    const { getByText, getByLabelText } = await renderWithTheme(<Settings />);
-
-    await fireEvent.changeText(await waitFor(() => getByLabelText('Bug description')), 'Checklist froze');
-    await fireEvent.press(getByText('Send report'));
-
-    expect(await waitFor(() => getByText('Network request failed'))).toBeTruthy();
-    expect(getByLabelText('Bug description').props.value).toBe('Checklist froze');
+    expect(mockPush).toHaveBeenCalledWith('/(app)/feedback');
   });
 
   it('shows the account email read-only', async () => {
