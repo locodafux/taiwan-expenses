@@ -22,6 +22,7 @@ export type CategoryRule =
 export type Household = {
   id: string;
   name: string;
+  auto_check_past_paydays: boolean;
   created_at: string;
 };
 

@@ -20,6 +20,7 @@ import {
   useHousehold,
   useHouseholdMembers,
   useHouseholdMembership,
+  useSetAutoCheckPastPaydays,
   useSetNotificationsEnabled,
   useSubmitBugReport,
   useUpdateDisplayName,
@@ -49,6 +50,7 @@ export default function Settings() {
   const submitBugReport = useSubmitBugReport(member?.household_id);
   const updateDisplayName = useUpdateDisplayName(member?.household_id);
   const setNotificationsEnabled = useSetNotificationsEnabled();
+  const setAutoCheck = useSetAutoCheckPastPaydays(member?.household_id);
 
   const { isError, refetch } = combineQueryState(membershipQuery, householdQuery, membersQuery);
 
@@ -253,6 +255,30 @@ export default function Settings() {
               onValueChange={(v) =>
                 setNotificationsEnabled.mutate(v, {
                   onError: (e) => Alert.alert('Could not update notifications', e.message),
+                })
+              }
+              trackColor={{ true: vars['--accent'] }}
+            />
+          </Card>
+        </View>
+
+        <View>
+          <Text className="mb-2 font-body-semibold text-sm text-ink">Checklist</Text>
+          <Card className="flex-row items-center gap-3 p-4">
+            <View className="flex-1">
+              <Text className="font-body text-base text-ink">Tick off past paydays automatically</Text>
+              <Text className="font-body text-xs leading-[1.55] text-ink-muted">
+                When a new cutoff starts, anything left unticked on the last one is marked done. Applies
+                to both of you.
+              </Text>
+            </View>
+            <Switch
+              accessibilityLabel="Tick off past paydays automatically"
+              value={setAutoCheck.isPending ? setAutoCheck.variables : (household?.auto_check_past_paydays ?? false)}
+              disabled={!household || setAutoCheck.isPending}
+              onValueChange={(v) =>
+                setAutoCheck.mutate(v, {
+                  onError: (e) => Alert.alert('Could not update the checklist setting', e.message),
                 })
               }
               trackColor={{ true: vars['--accent'] }}

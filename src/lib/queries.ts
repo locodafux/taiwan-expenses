@@ -85,6 +85,22 @@ export function useUpdateHouseholdName(householdId: string | undefined) {
   });
 }
 
+// materialize_payday does the ticking off (next time the checklist opens).
+export function useSetAutoCheckPastPaydays(householdId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (enabled: boolean) => {
+      const { error, count } = await supabase
+        .from('households')
+        .update({ auto_check_past_paydays: enabled }, { count: 'exact' })
+        .eq('id', householdId as string);
+      if (error) throw error;
+      if (count === 0) throw new Error('Household not found');
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['household', householdId] }),
+  });
+}
+
 // household_members has no client UPDATE policy; the RPC only ever renames
 // the caller's own row. Incomes embed display_name, so refresh them too.
 export function useUpdateDisplayName(householdId: string | undefined) {
