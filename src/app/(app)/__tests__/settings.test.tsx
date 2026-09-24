@@ -28,6 +28,7 @@ const mockUseCreateInvite = jest.fn();
 const mockUseUpdateHouseholdName = jest.fn();
 const mockUseUpdateDisplayName = jest.fn();
 const mockSetNotificationsMutate = jest.fn();
+const mockSetAutoCheckMutate = jest.fn();
 
 jest.mock('@/lib/queries', () => ({
   ...jest.requireActual('@/lib/queries'),
@@ -38,6 +39,7 @@ jest.mock('@/lib/queries', () => ({
   useUpdateHouseholdName: (...args: unknown[]) => mockUseUpdateHouseholdName(...args),
   useUpdateDisplayName: (...args: unknown[]) => mockUseUpdateDisplayName(...args),
   useSetNotificationsEnabled: () => ({ mutate: mockSetNotificationsMutate, isPending: false }),
+  useSetAutoCheckPastPaydays: () => ({ mutate: mockSetAutoCheckMutate, isPending: false }),
 }));
 
 import Settings from '../settings';
@@ -80,6 +82,16 @@ describe('Settings', () => {
     await fireEvent(toggle, 'valueChange', false);
 
     expect(mockSetNotificationsMutate).toHaveBeenCalledWith(false, expect.anything());
+  });
+
+  it('turns on auto-ticking past paydays, off by default', async () => {
+    const { getByLabelText } = await renderWithTheme(<Settings />);
+
+    const toggle = getByLabelText('Tick off past paydays automatically');
+    expect(toggle.props.value).toBe(false);
+    await fireEvent(toggle, 'valueChange', true);
+
+    expect(mockSetAutoCheckMutate).toHaveBeenCalledWith(true, expect.anything());
   });
 
   it('renders household members and defaults to the warm theme description', async () => {
