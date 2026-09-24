@@ -142,6 +142,20 @@ describe('PaydayChecklist', () => {
     expect(mockCheckMutate).toHaveBeenCalledWith({ id: 'entry-2', checked: false });
   });
 
+  it('moves checked items below unchecked ones', async () => {
+    mockUseLedgerEntriesForPayday.mockReturnValue(
+      okQuery([
+        { ...entries[0], id: 'entry-paid', status: 'checked', bill_items: { label: 'Internet' } },
+        entries[0],
+      ]),
+    );
+    const { getAllByText } = await renderWithTheme(<PaydayChecklist />);
+
+    await waitFor(() =>
+      expect(getAllByText(/^(Rent|Internet)$/).map((n) => n.props.children)).toEqual(['Rent', 'Internet']),
+    );
+  });
+
   it('shows an error state with retry when a query fails', async () => {
     const refetch = jest.fn();
     mockUseLedgerEntriesForPayday.mockReturnValue({ data: undefined, isLoading: false, isError: true, refetch });
