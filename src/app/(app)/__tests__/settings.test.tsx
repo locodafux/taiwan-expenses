@@ -1,6 +1,7 @@
 import { fireEvent, waitFor } from '@testing-library/react-native';
 import { Alert } from 'react-native';
 
+import { CHANGELOG } from '@/lib/changelog';
 import { renderWithTheme } from '@/test/renderWithTheme';
 
 const mockSignOut = jest.fn();
@@ -159,6 +160,16 @@ describe('Settings', () => {
     const { getByText } = await renderWithTheme(<Settings />);
     await fireEvent.press(await waitFor(() => getByText('Income')));
     expect(mockPush).toHaveBeenCalledWith('/(app)/income');
+  });
+
+  it("opens the full What's new list from Settings", async () => {
+    const { getByText, queryByText } = await renderWithTheme(<Settings />);
+    expect(queryByText(CHANGELOG[1].items[0])).toBeNull();
+    await fireEvent.press(await waitFor(() => getByText('What’s new')));
+    expect(getByText(CHANGELOG[0].items[0])).toBeTruthy();
+    expect(getByText(CHANGELOG[1].items[0])).toBeTruthy();
+    await fireEvent.press(getByText('Got it'));
+    expect(queryByText(CHANGELOG[1].items[0])).toBeNull();
   });
 
   it('deletes the account after confirming, warning that it cannot be undone', async () => {

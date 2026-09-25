@@ -12,7 +12,9 @@ import { ErrorState } from '@/components/ui/ErrorState';
 import { KeyboardScroll } from '@/components/ui/KeyboardScroll';
 import { TextField } from '@/components/ui/TextField';
 import { ThemeSwitcher } from '@/components/ui/ThemeSwitcher';
+import { WhatsNewSheet } from '@/components/WhatsNew';
 import { useAuth } from '@/lib/auth';
+import { CHANGELOG } from '@/lib/changelog';
 import {
   combineQueryState,
   useCreateInvite,
@@ -63,6 +65,7 @@ export default function Settings() {
   const [passwordResult, setPasswordResult] = useState<{ ok: boolean; message: string } | null>(null);
   const [copied, setCopied] = useState(false);
   const [showDangerZone, setShowDangerZone] = useState(false);
+  const [showWhatsNew, setShowWhatsNew] = useState(false);
   const hasPartner = (members?.length ?? 0) > 1;
 
   function confirmDeleteAccount() {
@@ -346,12 +349,17 @@ export default function Settings() {
         </View>
 
         <Card>
-          <ListRow isLast onPress={() => router.push('/(app)/feedback')}>
+          <ListRow onPress={() => router.push('/(app)/feedback')}>
             <Icon name="chat" size={20} color={vars['--ink-2']} />
             <View className="flex-1">
               <Text className="font-body text-base text-ink">Feedback</Text>
               <Text className="font-body text-xs text-ink-muted">Report a problem or suggest an idea, and see what&apos;s done.</Text>
             </View>
+            <Icon name="chevronRight" size={16} color={vars['--ink-muted']} />
+          </ListRow>
+          <ListRow isLast onPress={() => setShowWhatsNew(true)}>
+            <Icon name="sparkle" size={20} color={vars['--ink-2']} />
+            <Text className="flex-1 font-body text-base text-ink">What’s new</Text>
             <Icon name="chevronRight" size={16} color={vars['--ink-muted']} />
           </ListRow>
         </Card>
@@ -380,6 +388,7 @@ export default function Settings() {
           )}
         </View>
       </KeyboardScroll>
+      <WhatsNewSheet entries={CHANGELOG} visible={showWhatsNew} onClose={() => setShowWhatsNew(false)} />
     </SafeAreaView>
   );
 }

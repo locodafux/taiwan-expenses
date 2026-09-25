@@ -17,6 +17,7 @@ const PATHS = {
   plus: ['M12 5v14', 'M5 12h14'],
   flame: ['M12 3c.8 3.6 5.5 5.6 5.5 11a5.5 5.5 0 0 1-11 0c0-2.6 1.4-4.2 2.6-5.6.4 1.8 1.3 2.9 2.6 3.1-.8-2.6-.6-5.4.3-8.5z'],
   scissors: ['M8.2 8.4 20 18', 'M8.2 15.6 20 6'],
+  sparkle: ['M12 4c.6 4.2 3.8 7.4 8 8-4.2.6-7.4 3.8-8 8-.6-4.2-3.8-7.4-8-8 4.2-.6 7.4-3.8 8-8z'],
 } as const;
 
 // Extra round parts that are not worth expressing as arcs in a path.

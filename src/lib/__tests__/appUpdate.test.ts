@@ -21,11 +21,12 @@ jest.mock('expo-file-system/legacy', () => ({
 
 import { getLastUpdateTimeAsync } from 'expo-application';
 
-import { checkForUpdate } from '../appUpdate';
+import { checkForUpdate, releaseNotes } from '../appUpdate';
 
 // Mirrors the real `latest` release's assets as of 2026-09-18.
 const UPLOADED_AT = '2026-09-18T04:19:47Z';
 const releaseResponse = {
+  body: '## What’s new\r\n- Checklist adds up to your pay\r\n- Income moved to Settings\r\n\r\n## Build\r\n- Built from commit abc123',
   assets: [
     { name: 'app-release.apk', browser_download_url: 'https://example.com/app-release.apk', updated_at: UPLOADED_AT },
     {
@@ -58,6 +59,7 @@ describe('checkForUpdate', () => {
     expect(await checkForUpdate()).toEqual({
       downloadUrl: 'https://example.com/app-release.apk',
       assetName: 'app-release.apk',
+      notes: ['Checklist adds up to your pay', 'Income moved to Settings'],
     });
   });
 
@@ -71,5 +73,20 @@ describe('checkForUpdate', () => {
     installedAt('2026-09-17T00:00:00Z');
     (globalThis.fetch as jest.Mock).mockResolvedValue({ ok: false, json: async () => ({}) });
     expect(await checkForUpdate()).toBeNull();
+  });
+});
+
+describe('releaseNotes', () => {
+  it("reads only the bullets under the What's new heading", () => {
+    expect(releaseNotes("Intro\n\n### What's New\n* One\n- Two\nnot a bullet\n## Build notes\n- Commit abc")).toEqual([
+      'One',
+      'Two',
+    ]);
+  });
+
+  // The body predating the convention is all build notes - don't show those.
+  it("returns nothing when the body has no What's new heading", () => {
+    expect(releaseNotes('Latest build\n\n- Built from commit fee4082')).toEqual([]);
+    expect(releaseNotes(null)).toEqual([]);
   });
 });
