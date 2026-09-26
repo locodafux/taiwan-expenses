@@ -68,7 +68,7 @@ describe('AddCategorySheet', () => {
     expect(mockBack).toHaveBeenCalled();
   });
 
-  it('links a new fund to an excess group with the chosen percentage', async () => {
+  it('links a new fund to a category group with the chosen percentage', async () => {
     mockUseCategories.mockReturnValue({
       data: [
         {
@@ -92,7 +92,44 @@ describe('AddCategorySheet', () => {
     await waitFor(() =>
       expect(mockCreateCategoryMutateAsync).toHaveBeenCalledWith(
         expect.objectContaining({
-          rule: { type: 'excess', parent_id: 'group-1', percent: 35 },
+          rule: { type: 'group_child', parent_id: 'group-1', percent: 35 },
+        }),
+      ),
+    );
+  });
+
+  it('keeps a child target when selecting its category parent', async () => {
+    mockUseCategories.mockReturnValue({
+      data: [
+        {
+          id: 'group-1',
+          name: 'Savings parent',
+          kind: 'fund',
+          archived: false,
+          is_group_parent: true,
+          rule: { type: 'remainder', percent: 20 },
+        },
+      ],
+      isError: false,
+      refetch: jest.fn(),
+    });
+    const { getByText, getByPlaceholderText, getByDisplayValue } = await renderWithTheme(<AddCategorySheet />);
+
+    await fireEvent.changeText(getByPlaceholderText('e.g. New laptop fund'), 'Laptop fund');
+    await fireEvent.changeText(getByPlaceholderText('Leave blank for no limit'), '80000');
+    await fireEvent.press(getByText('Savings parent'));
+    await fireEvent.changeText(getByDisplayValue('20'), '40');
+    await fireEvent.press(getByText('Add category'));
+
+    await waitFor(() =>
+      expect(mockCreateCategoryMutateAsync).toHaveBeenCalledWith(
+        expect.objectContaining({
+          rule: {
+            type: 'group_child',
+            parent_id: 'group-1',
+            percent: 40,
+            goal: { target_amount: 80000, target_date: undefined, one_time: false },
+          },
         }),
       ),
     );

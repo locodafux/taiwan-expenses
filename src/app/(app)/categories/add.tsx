@@ -46,7 +46,11 @@ export default function AddCategory() {
   const [error, setError] = useState<string | null>(null);
 
   const groupParents = (categoriesQuery.data ?? []).filter(
-    (c) => c.kind === 'fund' && c.rule?.type !== 'excess' && c.rule?.excess_source,
+    (c) =>
+      !c.archived &&
+      c.rule?.type !== 'excess' &&
+      c.rule?.type !== 'group_child' &&
+      (c.is_group_parent || c.rule?.excess_source),
   );
 
   async function handleSave() {
@@ -68,7 +72,20 @@ export default function AddCategory() {
     let rule: CategoryRule | undefined;
     if (kind === 'fund') {
       rule = excessParentId
-        ? { type: 'excess', parent_id: excessParentId, percent: parsedExcessPercent }
+        ? {
+            type: 'group_child',
+            parent_id: excessParentId,
+            percent: parsedExcessPercent,
+            ...(target
+              ? {
+                  goal: {
+                    target_amount: parsedTarget,
+                    target_date: deadline ? `${deadline}-01` : undefined,
+                    one_time: oneTime,
+                  },
+                }
+              : {}),
+          }
         : target
           ? {
               type: 'goal',
@@ -85,6 +102,7 @@ export default function AddCategory() {
         kind,
         color,
         rule,
+        ...(excessSource ? { is_group_parent: true } : {}),
       });
       router.back();
     } catch (e) {
@@ -152,7 +170,7 @@ export default function AddCategory() {
             Amounts live on the bills inside this category. Open it after saving to add them.
           </Text>
         )}
-        {kind === 'fund' && !excessParentId && (
+        {kind === 'fund' && (
           <View>
             <Text className="font-body text-xs text-ink-muted">Target amount (optional)</Text>
             <TextField
@@ -163,22 +181,23 @@ export default function AddCategory() {
               className={`${inputClass} font-mono`}
             />
             <Text className="mt-1 font-body text-xs leading-[1.4] text-ink-muted">
-              Set it and this category stops taking a share once full. Leave blank and it keeps its
-              percentage share indefinitely.
+              Set it and this category stops taking its share once full. Leave blank and it keeps
+              its percentage share indefinitely.
             </Text>
           </View>
         )}
-        {kind === 'fund' && (
+        {(kind === 'fund' || kind === 'bill') && (
           <View className="gap-3">
             <View className="flex-row items-center gap-3">
               <View className="flex-1">
-                <Text className="font-body text-base text-ink">Excess group source</Text>
+                <Text className="font-body text-base text-ink">Group parent</Text>
                 <Text className="font-body text-xs leading-[1.4] text-ink-muted">
-                  Let linked funds receive a percentage of this category&apos;s payday allocation.
+                  Let other categories appear under this one. A bill parent is structural only and
+                  does not provide a savings pool.
                 </Text>
               </View>
               <Switch
-                accessibilityLabel="Excess group source"
+                accessibilityLabel="Group parent"
                 value={excessSource}
                 onValueChange={(value) => {
                   setExcessSource(value);
@@ -187,26 +206,27 @@ export default function AddCategory() {
                 trackColor={{ true: vars['--accent'] }}
               />
             </View>
-            {!excessSource && groupParents.length > 0 && (
+            {kind === 'fund' && !excessSource && groupParents.length > 0 && (
               <View>
-                <Text className="font-body text-xs text-ink-muted">Link to an excess group (optional)</Text>
+                <Text className="font-body text-xs text-ink-muted">Parent category (optional)</Text>
                 <View className="mt-2 gap-2">
                   <Pressable
                     onPress={() => setExcessParentId(null)}
                     className={`rounded-md border px-3 py-3 ${!excessParentId ? 'border-accent bg-surface' : 'border-border bg-surface-2'}`}
                   >
-                    <Text className="font-body text-sm text-ink">No group · use this fund&apos;s own rule</Text>
+                    <Text className="font-body text-sm text-ink">No parent · use this fund&apos;s own rule</Text>
                   </Pressable>
                   {groupParents.map((parent) => (
                     <Pressable
                       key={parent.id}
                       onPress={() => {
                         setExcessParentId(parent.id);
-                        setTarget('');
                       }}
                       className={`rounded-md border px-3 py-3 ${excessParentId === parent.id ? 'border-accent bg-surface' : 'border-border bg-surface-2'}`}
                     >
-                      <Text className="font-body text-sm text-ink">{parent.name}</Text>
+                      <Text className="font-body text-sm text-ink">
+                        {parent.name}{parent.kind === 'bill' ? ' · structural only' : ''}
+                      </Text>
                     </Pressable>
                   ))}
                 </View>
@@ -214,7 +234,7 @@ export default function AddCategory() {
             )}
             {excessParentId && (
               <View>
-                <Text className="font-body text-xs text-ink-muted">Share of that group&apos;s payday allocation (%)</Text>
+                <Text className="font-body text-xs text-ink-muted">Share of the parent&apos;s payday allocation (%)</Text>
                 <TextField
                   value={excessPercent}
                   onChangeText={setExcessPercent}
@@ -222,7 +242,8 @@ export default function AddCategory() {
                   className={`${inputClass} font-mono`}
                 />
                 <Text className="mt-1 font-body text-xs leading-[1.4] text-ink-muted">
-                  This replaces the fund&apos;s own allocation rule. Linked shares for one group must total 100% or less.
+                  This is the maximum share. If this fund has a target, the share counts toward it
+                  and stops when the target is full. Sibling shares must total 100% or less.
                 </Text>
               </View>
             )}

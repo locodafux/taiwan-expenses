@@ -168,6 +168,7 @@ export function useCreateCategory(householdId: string | undefined) {
       kind: 'bill' | 'fund';
       color: string;
       rule?: CategoryRule;
+      is_group_parent?: boolean;
       sort_order?: number;
     }) => {
       const { data, error } = await supabase
