@@ -27,20 +27,31 @@ export function fromDateOnly(dateOnly: string): Date {
 }
 
 export function nextPayday(recurringDays: number[], from: Date = new Date()): Date {
+  return paydayAtOffset(recurringDays, 0, from);
+}
+
+// Finds a payday relative to the next one (0 = next, -1 = previous, 1 = the
+// one after next). Dates are generated from calendar months so recurring days
+// that fall on a short month stay clamped in the same way as nextPayday.
+export function paydayAtOffset(recurringDays: number[], offset: number, from: Date = new Date()): Date {
   const uniqueDays = Array.from(new Set(recurringDays));
   if (uniqueDays.length === 0) throw new Error('No active incomes to compute a payday from');
 
-  const fromMonthStart = new Date(from.getFullYear(), from.getMonth(), 1);
-  const nextMonthStart = new Date(from.getFullYear(), from.getMonth() + 1, 1);
   const fromDateOnly = new Date(from.getFullYear(), from.getMonth(), from.getDate());
+  const firstMonthOffset = Math.min(offset, 0) - 1;
+  const lastMonthOffset = Math.max(offset, 0) + 1;
+  const candidates: Date[] = [];
 
-  const candidates = [
-    ...uniqueDays.map((d) => clampDayToMonth(d, fromMonthStart)),
-    ...uniqueDays.map((d) => clampDayToMonth(d, nextMonthStart)),
-  ].filter((d) => d.getTime() >= fromDateOnly.getTime());
+  for (let monthOffset = firstMonthOffset; monthOffset <= lastMonthOffset; monthOffset++) {
+    const monthStart = new Date(from.getFullYear(), from.getMonth() + monthOffset, 1);
+    candidates.push(...uniqueDays.map((day) => clampDayToMonth(day, monthStart)));
+  }
 
-  candidates.sort((a, b) => a.getTime() - b.getTime());
-  return candidates[0];
+  const uniqueCandidates = Array.from(new Map(candidates.map((date) => [toDateOnly(date), date])).values()).sort(
+    (a, b) => a.getTime() - b.getTime(),
+  );
+  const nextIndex = uniqueCandidates.findIndex((date) => date.getTime() >= fromDateOnly.getTime());
+  return uniqueCandidates[nextIndex + offset];
 }
 
 export function daysUntil(target: Date, from: Date = new Date()): number {
@@ -73,8 +84,20 @@ export function completedPaydayStreak(
   return streak;
 }
 
-type IncomeLike = { amount: number; recurring_day: number; active: boolean };
+export type IncomeLike = { amount: number; recurring_day: number; active: boolean };
 type BillLike = { amount: number; recurring_day: number; end_date: string | null };
+
+// The projected pay for one payday, including incomes whose recurring day is
+// clamped into a shorter month (for example, the 31st in February).
+export function incomeAmountForPayday(incomes: IncomeLike[], paydayDate: Date): number {
+  const monthStart = new Date(paydayDate.getFullYear(), paydayDate.getMonth(), 1);
+  return incomes
+    .filter(
+      (income) =>
+        income.active && clampDayToMonth(income.recurring_day, monthStart).getDate() === paydayDate.getDate(),
+    )
+    .reduce((sum, income) => sum + income.amount, 0);
+}
 
 // Mirrors private.payday_leftover: that payday's income minus bills/debts due
 // the same day, for every active payday in the given month - the basis for

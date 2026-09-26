@@ -38,6 +38,7 @@ function buildSelectChain(result: { data: unknown; error: null }) {
     select: jest.fn(() => chain),
     eq: jest.fn(() => chain),
     gte: jest.fn(() => chain),
+    lt: jest.fn(() => chain),
     order: jest.fn(() => chain),
     then: (resolve: (value: unknown) => unknown) => Promise.resolve(result).then(resolve),
   };
@@ -59,6 +60,7 @@ import {
   useCheckLedgerEntry,
   useCreateBillItem,
   useDeleteCategory,
+  usePaydayAmounts,
   usePaydayStreak,
   useSavedThisQuarter,
   useSubmitFeedback,
@@ -254,6 +256,30 @@ describe('usePaydayStreak (dashboard momentum chip)', () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
     expect(result.current.data).toBe(1);
+  });
+});
+
+describe('usePaydayAmounts (dashboard payday preview)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('groups materialized non-manual ledger amounts by historical payday', async () => {
+    const chain = buildSelectChain({
+      data: [
+        { payday_date: '2026-09-05', amount: 18000 },
+        { payday_date: '2026-09-05', amount: 12000 },
+        { payday_date: '2026-09-20', amount: 25000 },
+      ],
+      error: null,
+    });
+    const { result } = await renderHook(() => usePaydayAmounts('household-1'), { wrapper });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(result.current.data).toEqual({ '2026-09-05': 30000, '2026-09-20': 25000 });
+    expect(chain.eq).toHaveBeenCalledWith('manual', false);
+    expect(chain.lt).toHaveBeenCalledWith('payday_date', expect.any(String));
   });
 });
 

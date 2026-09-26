@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import Animated, { Easing, useAnimatedProps, useSharedValue, withTiming } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -21,11 +21,12 @@ import {
   useHouseholdMembers,
   useHouseholdMembership,
   useIncomes,
+  usePaydayAmounts,
   usePaydayStreak,
   useSavedThisQuarter,
 } from '@/lib/queries';
 import { formatPeso } from '@/lib/format';
-import { daysUntil, nextPayday } from '@/lib/payday';
+import { daysUntil, incomeAmountForPayday, paydayAtOffset, toDateOnly } from '@/lib/payday';
 import { useTheme } from '@/theme/ThemeProvider';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
@@ -88,6 +89,7 @@ export default function Dashboard() {
   const balancesThisMonth = balancesThisMonthQuery.data;
   const incomesQuery = useIncomes(householdId);
   const incomes = incomesQuery.data;
+  const paydayAmountsQuery = usePaydayAmounts(householdId);
   const savedThisQuarterQuery = useSavedThisQuarter(householdId);
   const savedThisQuarter = savedThisQuarterQuery.data;
   const streakQuery = usePaydayStreak(householdId);
@@ -100,19 +102,22 @@ export default function Dashboard() {
     balancesQuery,
     balancesThisMonthQuery,
     incomesQuery,
+    paydayAmountsQuery,
     savedThisQuarterQuery,
     streakQuery,
   );
 
+  const activeDays = useMemo(() => (incomes ?? []).filter((i) => i.active).map((i) => i.recurring_day), [incomes]);
+  const [paydayOffset, setPaydayOffset] = useState(0);
+
   const payday = useMemo(() => {
-    const activeDays = (incomes ?? []).filter((i) => i.active).map((i) => i.recurring_day);
     if (activeDays.length === 0) return null;
-    const date = nextPayday(activeDays);
-    const amount = (incomes ?? [])
-      .filter((i) => i.active && i.recurring_day === date.getDate())
-      .reduce((s, i) => s + i.amount, 0);
+    const date = paydayAtOffset(activeDays, paydayOffset);
+    const dateOnly = toDateOnly(date);
+    const actualAmount = dateOnly < toDateOnly(new Date()) ? paydayAmountsQuery.data?.[dateOnly] : undefined;
+    const amount = actualAmount ?? incomeAmountForPayday(incomes ?? [], date);
     return { date, amount, daysAway: daysUntil(date) };
-  }, [incomes]);
+  }, [activeDays, incomes, paydayAmountsQuery.data, paydayOffset]);
 
   if (isError) {
     return (
@@ -211,13 +216,34 @@ export default function Dashboard() {
 
         {payday && (
           <View className="flex-row items-center gap-3 rounded-lg rounded-tl-sm bg-accent-soft px-5 py-4">
+            <Pressable
+              accessibilityLabel="Previous payday"
+              accessibilityRole="button"
+              hitSlop={8}
+              onPress={() => setPaydayOffset((offset) => offset - 1)}
+              className="h-9 w-9 items-center justify-center rounded-full bg-surface active:opacity-70"
+            >
+              <Icon name="chevronLeft" size={18} color={vars['--accent']} />
+            </Pressable>
             <View className="flex-1">
               <Text className="font-body-semibold text-sm text-accent">
-                Next payday · {payday.date.getDate()}th · in {payday.daysAway} day
-                {payday.daysAway === 1 ? '' : 's'}
+                {paydayOffset < 0 ? 'Previous payday' : paydayOffset === 0 ? 'Next payday' : 'Upcoming payday'} ·{' '}
+                {payday.date.getDate()}th ·{' '}
+                {payday.daysAway < 0
+                  ? `${Math.abs(payday.daysAway)} day${payday.daysAway === -1 ? '' : 's'} ago`
+                  : `in ${payday.daysAway} day${payday.daysAway === 1 ? '' : 's'}`}
               </Text>
               <Text className="font-mono text-xl text-ink">{formatPeso(payday.amount)}</Text>
             </View>
+            <Pressable
+              accessibilityLabel="Next payday"
+              accessibilityRole="button"
+              hitSlop={8}
+              onPress={() => setPaydayOffset((offset) => offset + 1)}
+              className="h-9 w-9 items-center justify-center rounded-full bg-surface active:opacity-70"
+            >
+              <Icon name="chevronRight" size={18} color={vars['--accent']} />
+            </Pressable>
             <Button size="sm" onPress={() => router.push('/(app)/checklist')}>
               Review
             </Button>

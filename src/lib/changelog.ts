@@ -11,6 +11,13 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-09-26-2',
+    date: 'Sep 26, 2026',
+    items: [
+      'The Next payday card now has arrows so you can look back at your last payday or step forward to upcoming ones.',
+    ],
+  },
+  {
     id: '2026-09-26',
     date: 'Sep 26, 2026',
     items: [

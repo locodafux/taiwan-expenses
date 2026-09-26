@@ -566,6 +566,31 @@ export function usePaydayCompletionHistory(householdId: string | undefined) {
   });
 }
 
+// Actual non-manual ledger totals for historical paydays. Future dates stay
+// projected from active incomes on the dashboard, even if a row was somehow
+// materialized ahead of time.
+export function usePaydayAmounts(householdId: string | undefined) {
+  const today = toDateOnly(new Date());
+  return useQuery({
+    queryKey: ['payday-amounts', householdId, today],
+    enabled: !!householdId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('ledger_entries')
+        .select('payday_date, amount')
+        .eq('household_id', householdId as string)
+        .eq('manual', false)
+        .lt('payday_date', today);
+      if (error) throw error;
+      const amounts: Record<string, number> = {};
+      for (const row of data) {
+        amounts[row.payday_date] = (amounts[row.payday_date] ?? 0) + row.amount;
+      }
+      return amounts;
+    },
+  });
+}
+
 export function useUpdateLedgerAmount(householdId: string | undefined, paydayDate: string | undefined) {
   const queryClient = useQueryClient();
   return useMutation({
