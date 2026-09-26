@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/ui/Button';
 import { Card, CategoryMark, ListRow } from '@/components/ui/Card';
 import { Icon } from '@/components/ui/Icon';
+import { formatPeso } from '@/lib/format';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { fromDateOnly } from '@/lib/payday';
 import {
@@ -97,7 +98,10 @@ export default function CategoryManagement() {
             >
               <CategoryMark color={c.color} size={32} label={c.name} />
               <View className="flex-1">
-                <Text className="font-body-semibold text-base text-ink">{c.name}</Text>
+                <View className="flex-row items-center justify-between gap-2">
+                  <Text className="flex-1 font-body-semibold text-base text-ink">{c.name}</Text>
+                  <Text className="font-mono text-sm text-ink">{formatPeso(balances?.[c.id] ?? 0)}</Text>
+                </View>
                 <Text className="mt-[2px] font-body text-xs text-ink-muted">
                   {describeCategory(c, billCountByCategory[c.id] ?? 0, balances?.[c.id] ?? 0, shareTotal)}
                 </Text>
