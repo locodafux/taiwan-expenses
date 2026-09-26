@@ -49,6 +49,8 @@ describe('CategoryManagement', () => {
     const { getByText } = await renderWithTheme(<CategoryManagement />);
 
     await waitFor(() => expect(getByText('Taiwan fund')).toBeTruthy());
+    expect(getByText('₱ 12,000')).toBeTruthy();
+    expect(getByText('₱ 0')).toBeTruthy();
     expect(getByText(/Goal · target ₱50,000/)).toBeTruthy();
     expect(getByText('Rent & utilities')).toBeTruthy();
     expect(getByText('Bill · 2 recurring items')).toBeTruthy();
