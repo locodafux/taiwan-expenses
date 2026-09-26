@@ -102,6 +102,9 @@ export default function CategoryDetail() {
   const [editDeadline, setEditDeadline] = useState<string | null>(null);
   const [editOneTime, setEditOneTime] = useState(false);
   const [editShare, setEditShare] = useState('');
+  const [editExcessSource, setEditExcessSource] = useState(false);
+  const [editExcessParentId, setEditExcessParentId] = useState<string | null>(null);
+  const [editExcessPercent, setEditExcessPercent] = useState('20');
 
   const balance = useMemo(
     () => (history ?? []).reduce((s, h) => s + h.amount, 0),
@@ -170,6 +173,14 @@ export default function CategoryDetail() {
 
   const goal = category.rule?.type === 'goal' ? category.rule.target_amount : null;
   const pct = goal ? Math.min(1, balance / goal) : null;
+  const groupParents = (categories ?? []).filter(
+    (c) => !c.archived && c.kind === 'fund' && c.id !== category.id && c.rule?.type !== 'excess' && c.rule?.excess_source,
+  );
+  const linkedChildren = (categories ?? []).filter(
+    (c) => c.rule?.type === 'excess' && c.rule.parent_id === category.id,
+  );
+  const linkedParentId = category.rule?.type === 'excess' ? category.rule.parent_id : null;
+  const linkedParent = linkedParentId ? categories?.find((c) => c.id === linkedParentId) : undefined;
 
   function startEditingCategory() {
     setEditName(category!.name);
@@ -178,6 +189,9 @@ export default function CategoryDetail() {
     setEditDeadline(category!.rule?.type === 'goal' ? (category!.rule.target_date?.slice(0, 7) ?? null) : null);
     setEditOneTime(category!.rule?.type === 'goal' && !!category!.rule.one_time);
     setEditShare(category!.rule?.type === 'remainder' ? String(category!.rule.percent) : '');
+    setEditExcessSource(category!.rule?.type !== 'excess' && !!category!.rule?.excess_source);
+    setEditExcessParentId(category!.rule?.type === 'excess' ? category!.rule.parent_id : null);
+    setEditExcessPercent(category!.rule?.type === 'excess' ? String(category!.rule.percent) : '20');
     setError(null);
     setEditingCategory(true);
   }
@@ -186,7 +200,25 @@ export default function CategoryDetail() {
     if (!editName.trim()) return setError('Name is required');
     const rule = category!.rule;
     let nextRule = rule;
-    if (rule?.type === 'goal') {
+    if (rule?.type === 'excess' && editExcessParentId) {
+      const parsedPercent = parseAmount(editExcessPercent);
+      if (!(parsedPercent > 0 && parsedPercent <= 100)) {
+        return setError('Enter an excess share between 1 and 100');
+      }
+      nextRule = { type: 'excess', parent_id: editExcessParentId, percent: parsedPercent };
+    } else if (rule?.type === 'excess') {
+      const parsedShare = parseAmount(editShare);
+      if (!(parsedShare > 0 && parsedShare <= 100)) {
+        return setError('Enter a share between 1 and 100 to unlink this fund');
+      }
+      nextRule = { type: 'remainder', percent: parsedShare };
+    } else if (editExcessParentId) {
+      const parsedPercent = parseAmount(editExcessPercent);
+      if (!(parsedPercent > 0 && parsedPercent <= 100)) {
+        return setError('Enter an excess share between 1 and 100');
+      }
+      nextRule = { type: 'excess', parent_id: editExcessParentId, percent: parsedPercent };
+    } else if (rule?.type === 'goal') {
       const parsedTarget = parseAmount(editTarget);
       if (!Number.isFinite(parsedTarget) || parsedTarget <= 0) {
         return setError('Enter a valid target amount');
@@ -196,13 +228,16 @@ export default function CategoryDetail() {
         target_amount: parsedTarget,
         target_date: editDeadline ? `${editDeadline}-01` : null,
         one_time: editOneTime,
+        excess_source: editExcessSource || undefined,
       };
     } else if (rule?.type === 'remainder') {
       const parsedShare = parseAmount(editShare);
       if (!(parsedShare > 0 && parsedShare <= 100)) {
         return setError('Enter a share between 1 and 100');
       }
-      nextRule = { ...rule, percent: parsedShare };
+      nextRule = { ...rule, percent: parsedShare, excess_source: editExcessSource || undefined };
+    } else if (rule?.type === 'capped_percent') {
+      nextRule = { ...rule, excess_source: editExcessSource || undefined };
     }
     setError(null);
     try {
@@ -296,6 +331,77 @@ export default function CategoryDetail() {
               />
               <Text className="font-body text-xs text-ink-muted">Color</Text>
               <ColorPicker value={editColor} onChange={setEditColor} />
+              {category.kind === 'fund' && category.rule?.type !== 'excess' && (
+                <View className="flex-row items-center gap-3">
+                  <View className="flex-1">
+                    <Text className="font-body text-base text-ink">Excess group source</Text>
+                    <Text className="font-body text-xs leading-[1.4] text-ink-muted">
+                      Let linked funds receive a percentage of this category&apos;s payday allocation.
+                    </Text>
+                  </View>
+                  <Switch
+                    accessibilityLabel="Excess group source"
+                    value={editExcessSource}
+                    onValueChange={(value) => {
+                      setEditExcessSource(value);
+                      if (value) setEditExcessParentId(null);
+                    }}
+                    trackColor={{ true: vars['--accent'] }}
+                  />
+                </View>
+              )}
+              {category.kind === 'fund' && (
+                <View>
+                  <Text className="font-body text-xs text-ink-muted">
+                    {category.rule?.type === 'excess' ? 'Excess group' : 'Link to an excess group (optional)'}
+                  </Text>
+                  {category.rule?.type === 'excess' && (
+                    <Pressable
+                      onPress={() => setEditExcessParentId(null)}
+                      className={`mt-2 rounded-md border px-3 py-3 ${!editExcessParentId ? 'border-accent bg-surface' : 'border-border bg-surface-2'}`}
+                    >
+                      <Text className="font-body text-sm text-ink">No group · use a normal fund rule</Text>
+                    </Pressable>
+                  )}
+                  {groupParents.map((parent) => (
+                    <Pressable
+                      key={parent.id}
+                      onPress={() => {
+                        setEditExcessParentId(parent.id);
+                        setEditExcessSource(false);
+                      }}
+                      className={`mt-2 rounded-md border px-3 py-3 ${editExcessParentId === parent.id ? 'border-accent bg-surface' : 'border-border bg-surface-2'}`}
+                    >
+                      <Text className="font-body text-sm text-ink">{parent.name}</Text>
+                    </Pressable>
+                  ))}
+                  {editExcessParentId && (
+                    <>
+                      <Text className="mt-3 font-body text-xs text-ink-muted">Share of that group&apos;s payday allocation (%)</Text>
+                      <TextField
+                        value={editExcessPercent}
+                        onChangeText={setEditExcessPercent}
+                        keyboardType="numeric"
+                        className="rounded-md border border-border bg-page px-4 py-4 font-mono text-base text-ink"
+                      />
+                      <Text className="mt-1 font-body text-xs leading-[1.4] text-ink-muted">
+                        This replaces the fund&apos;s own allocation rule. Linked shares for one group must total 100% or less.
+                      </Text>
+                    </>
+                  )}
+                  {category.rule?.type === 'excess' && !editExcessParentId && (
+                    <>
+                      <Text className="mt-3 font-body text-xs text-ink-muted">New share of what&apos;s left (%)</Text>
+                      <TextField
+                        value={editShare}
+                        onChangeText={setEditShare}
+                        keyboardType="numeric"
+                        className="rounded-md border border-border bg-page px-4 py-4 font-mono text-base text-ink"
+                      />
+                    </>
+                  )}
+                </View>
+              )}
               {category.rule?.type === 'remainder' && (
                 <>
                   <Text className="font-body text-xs text-ink-muted">Share of what&apos;s left (%)</Text>
@@ -389,6 +495,34 @@ export default function CategoryDetail() {
             </View>
           )}
         </Card>
+
+        {category.kind === 'fund' && category.rule?.type === 'excess' && (
+          <Card className="gap-1 p-4">
+            <Text className="font-body-semibold text-sm text-ink">Excess group link</Text>
+            <Text className="font-body text-sm text-ink-muted">
+              {linkedParent ? `Receives ${category.rule.percent}% of ${linkedParent.name} on each payday.` : 'The linked group no longer exists.'}
+            </Text>
+          </Card>
+        )}
+        {category.kind === 'fund' && category.rule?.type !== 'excess' && category.rule?.excess_source && (
+          <Card className="gap-2 p-4">
+            <Text className="font-body-semibold text-sm text-ink">Excess group</Text>
+            <Text className="font-body text-sm text-ink-muted">
+              Linked funds receive a share of this category&apos;s payday allocation; the rest stays here.
+            </Text>
+            {linkedChildren.map((child) => (
+              <View key={child.id} className="flex-row items-center justify-between gap-3">
+                <Text className="flex-1 font-body text-sm text-ink">{child.name}</Text>
+                <Text className="font-mono text-xs text-ink-muted">
+                  {child.rule?.type === 'excess' ? `${child.rule.percent}%` : ''}
+                </Text>
+              </View>
+            ))}
+            {linkedChildren.length === 0 && (
+              <Text className="font-body text-xs text-ink-muted">No linked funds yet.</Text>
+            )}
+          </Card>
+        )}
 
         {adding && category.kind === 'fund' && (
           <Animated.View entering={FadeInDown.duration(200)}>

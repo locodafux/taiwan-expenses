@@ -11,7 +11,8 @@ import { ErrorState } from '@/components/ui/ErrorState';
 import { TextField } from '@/components/ui/TextField';
 import { parseAmount } from '@/lib/format';
 import { nextMonth } from '@/lib/payday';
-import { combineQueryState, useCreateCategory, useHouseholdMembership } from '@/lib/queries';
+import { combineQueryState, useCategories, useCreateCategory, useHouseholdMembership } from '@/lib/queries';
+import type { CategoryRule } from '@/lib/database.types';
 import { useTheme } from '@/theme/ThemeProvider';
 
 type Kind = 'fund' | 'bill';
@@ -24,8 +25,9 @@ export default function AddCategory() {
   const membershipQuery = useHouseholdMembership();
   const member = membershipQuery.data;
   const createCategory = useCreateCategory(member?.household_id);
+  const categoriesQuery = useCategories(member?.household_id);
 
-  const { isError, refetch } = combineQueryState(membershipQuery);
+  const { isError, refetch } = combineQueryState(membershipQuery, categoriesQuery);
 
   const colorOptions = useCategoryColors();
 
@@ -38,7 +40,14 @@ export default function AddCategory() {
   const [oneTime, setOneTime] = useState(false);
   // Weight in the leftover split, not a hard percent - see the hint below.
   const [share, setShare] = useState('20');
+  const [excessSource, setExcessSource] = useState(false);
+  const [excessParentId, setExcessParentId] = useState<string | null>(null);
+  const [excessPercent, setExcessPercent] = useState('20');
   const [error, setError] = useState<string | null>(null);
+
+  const groupParents = (categoriesQuery.data ?? []).filter(
+    (c) => c.kind === 'fund' && c.rule?.type !== 'excess' && c.rule?.excess_source,
+  );
 
   async function handleSave() {
     if (!name.trim()) return setError('Name is required');
@@ -48,22 +57,34 @@ export default function AddCategory() {
     if (kind === 'fund' && !target && !(parsedShare > 0 && parsedShare <= 100)) {
       return setError('Enter a share between 1 and 100');
     }
+    const parsedExcessPercent = parseAmount(excessPercent);
+    if (kind === 'fund' && excessParentId && !(parsedExcessPercent > 0 && parsedExcessPercent <= 100)) {
+      return setError('Enter an excess share between 1 and 100');
+    }
+    if (kind === 'fund' && excessParentId && excessSource) {
+      return setError('A category can be a group source or a linked child, not both');
+    }
     setError(null);
+    let rule: CategoryRule | undefined;
+    if (kind === 'fund') {
+      rule = excessParentId
+        ? { type: 'excess', parent_id: excessParentId, percent: parsedExcessPercent }
+        : target
+          ? {
+              type: 'goal',
+              target_amount: parsedTarget,
+              target_date: deadline ? `${deadline}-01` : undefined,
+              one_time: oneTime,
+              excess_source: excessSource || undefined,
+            }
+          : { type: 'remainder', percent: parsedShare, excess_source: excessSource || undefined };
+    }
     try {
       await createCategory.mutateAsync({
         name: name.trim(),
         kind,
         color,
-        rule:
-          kind === 'fund'
-            ? ({
-                type: target ? 'goal' : 'remainder',
-                target_amount: target ? parsedTarget : 0,
-                percent: target ? undefined : parsedShare,
-                target_date: target && deadline ? `${deadline}-01` : undefined,
-                one_time: target ? oneTime : undefined,
-              } as any)
-            : undefined,
+        rule,
       });
       router.back();
     } catch (e) {
@@ -104,7 +125,13 @@ export default function AddCategory() {
             {(['fund', 'bill'] as const).map((k) => (
               <Pressable
                 key={k}
-                onPress={() => setKind(k)}
+                onPress={() => {
+                  setKind(k);
+                  if (k === 'bill') {
+                    setExcessSource(false);
+                    setExcessParentId(null);
+                  }
+                }}
                 className={`flex-1 items-center rounded-sm px-2 py-3 ${kind === k ? 'bg-surface' : ''}`}
               >
                 <Text className={`font-body-semibold text-xs ${kind === k ? 'text-ink' : 'text-ink-2'}`}>
@@ -125,7 +152,7 @@ export default function AddCategory() {
             Amounts live on the bills inside this category. Open it after saving to add them.
           </Text>
         )}
-        {kind === 'fund' && (
+        {kind === 'fund' && !excessParentId && (
           <View>
             <Text className="font-body text-xs text-ink-muted">Target amount (optional)</Text>
             <TextField
@@ -141,7 +168,67 @@ export default function AddCategory() {
             </Text>
           </View>
         )}
-        {kind === 'fund' && target === '' && (
+        {kind === 'fund' && (
+          <View className="gap-3">
+            <View className="flex-row items-center gap-3">
+              <View className="flex-1">
+                <Text className="font-body text-base text-ink">Excess group source</Text>
+                <Text className="font-body text-xs leading-[1.4] text-ink-muted">
+                  Let linked funds receive a percentage of this category&apos;s payday allocation.
+                </Text>
+              </View>
+              <Switch
+                accessibilityLabel="Excess group source"
+                value={excessSource}
+                onValueChange={(value) => {
+                  setExcessSource(value);
+                  if (value) setExcessParentId(null);
+                }}
+                trackColor={{ true: vars['--accent'] }}
+              />
+            </View>
+            {!excessSource && groupParents.length > 0 && (
+              <View>
+                <Text className="font-body text-xs text-ink-muted">Link to an excess group (optional)</Text>
+                <View className="mt-2 gap-2">
+                  <Pressable
+                    onPress={() => setExcessParentId(null)}
+                    className={`rounded-md border px-3 py-3 ${!excessParentId ? 'border-accent bg-surface' : 'border-border bg-surface-2'}`}
+                  >
+                    <Text className="font-body text-sm text-ink">No group · use this fund&apos;s own rule</Text>
+                  </Pressable>
+                  {groupParents.map((parent) => (
+                    <Pressable
+                      key={parent.id}
+                      onPress={() => {
+                        setExcessParentId(parent.id);
+                        setTarget('');
+                      }}
+                      className={`rounded-md border px-3 py-3 ${excessParentId === parent.id ? 'border-accent bg-surface' : 'border-border bg-surface-2'}`}
+                    >
+                      <Text className="font-body text-sm text-ink">{parent.name}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
+            )}
+            {excessParentId && (
+              <View>
+                <Text className="font-body text-xs text-ink-muted">Share of that group&apos;s payday allocation (%)</Text>
+                <TextField
+                  value={excessPercent}
+                  onChangeText={setExcessPercent}
+                  keyboardType="numeric"
+                  className={`${inputClass} font-mono`}
+                />
+                <Text className="mt-1 font-body text-xs leading-[1.4] text-ink-muted">
+                  This replaces the fund&apos;s own allocation rule. Linked shares for one group must total 100% or less.
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
+        {kind === 'fund' && target === '' && !excessParentId && (
           <View>
             <Text className="font-body text-xs text-ink-muted">Share of what&apos;s left (%)</Text>
             <TextField

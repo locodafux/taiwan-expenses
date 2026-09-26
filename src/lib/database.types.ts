@@ -9,9 +9,12 @@ export type LedgerStatus = 'pending' | 'checked';
 export type CategoryRule =
   // one_time: a lump sum (e.g. a trip) taken from the earliest month that can
   // cover it, instead of spread evenly (20260921000050_goal_waterfill.sql).
-  | { type: 'goal'; target_amount: number; target_date?: string | null; one_time?: boolean }
-  | { type: 'capped_percent'; percent: number; cap?: number | null }
-  | { type: 'remainder'; percent: number };
+  | { type: 'goal'; target_amount: number; target_date?: string | null; one_time?: boolean; excess_source?: boolean }
+  | { type: 'capped_percent'; percent: number; cap?: number | null; excess_source?: boolean }
+  | { type: 'remainder'; percent: number; excess_source?: boolean }
+  // A linked child replaces its normal allocation rule and receives this
+  // percentage of its marked parent's payday allocation.
+  | { type: 'excess'; parent_id: string; percent: number };
 
 // These must be `type` aliases, not `interface` declarations -
 // @supabase/postgrest-js's select-query-parser resolves embedded/`*` select

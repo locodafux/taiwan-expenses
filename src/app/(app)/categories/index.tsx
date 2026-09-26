@@ -18,25 +18,36 @@ import {
 import { useTheme } from '@/theme/ThemeProvider';
 
 function describeCategory(
-  c: { kind: string; rule: any },
+  c: { id: string; kind: string; rule: any },
   billCount: number,
   balance: number,
   shareTotal: number,
+  categories: { id: string; name: string; kind: string; rule: any }[],
 ) {
   if (c.kind === 'bill') {
     return `Bill · ${billCount} recurring item${billCount === 1 ? '' : 's'}`;
   }
+  if (c.rule?.type === 'excess') {
+    const parent = categories.find((candidate) => candidate.id === c.rule.parent_id);
+    return `Excess share · ${c.rule.percent}% of ${parent?.name ?? 'missing group'}`;
+  }
+  const childCount = categories.filter(
+    (candidate) => candidate.rule?.type === 'excess' && candidate.rule.parent_id === c.id,
+  ).length;
+  const groupSuffix = c.rule?.excess_source
+    ? ` · group for ${childCount} fund${childCount === 1 ? '' : 's'}`
+    : '';
   if (c.rule?.type === 'goal') {
     const target = c.rule.target_amount;
-    return `${c.rule.one_time ? 'One-time' : 'Goal'} · target ₱${target.toLocaleString()}${c.rule.target_date ? ` by ${fromDateOnly(c.rule.target_date).toLocaleDateString(undefined, { month: 'short' })}` : ''}`;
+    return `${c.rule.one_time ? 'One-time' : 'Goal'} · target ₱${target.toLocaleString()}${c.rule.target_date ? ` by ${fromDateOnly(c.rule.target_date).toLocaleDateString(undefined, { month: 'short' })}` : ''}${groupSuffix}`;
   }
   if (c.rule?.type === 'capped_percent') {
-    return `${c.rule.percent}% of leftover${c.rule.cap ? ` · capped ₱${c.rule.cap.toLocaleString()}` : ''}`;
+    return `${c.rule.percent}% of leftover${c.rule.cap ? ` · capped ₱${c.rule.cap.toLocaleString()}` : ''}${groupSuffix}`;
   }
   if (c.rule?.type === 'remainder') {
     // Shares are weights across all remainder funds (materialize_payday tier 3).
     const effective = shareTotal > 0 ? Math.round((c.rule.percent / shareTotal) * 100) : 0;
-    return `${c.rule.percent}% share · gets ${effective}% of what's left`;
+    return `${c.rule.percent}% share · gets ${effective}% of what's left${groupSuffix}`;
   }
   return '';
 }
@@ -103,7 +114,7 @@ export default function CategoryManagement() {
                   <Text className="font-mono text-sm text-ink">{formatPeso(balances?.[c.id] ?? 0)}</Text>
                 </View>
                 <Text className="mt-[2px] font-body text-xs text-ink-muted">
-                  {describeCategory(c, billCountByCategory[c.id] ?? 0, balances?.[c.id] ?? 0, shareTotal)}
+                  {describeCategory(c, billCountByCategory[c.id] ?? 0, balances?.[c.id] ?? 0, shareTotal, categories ?? [])}
                 </Text>
               </View>
               <Icon name="chevronRight" size={16} color={vars['--ink-muted']} />
