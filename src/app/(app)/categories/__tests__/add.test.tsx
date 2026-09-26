@@ -8,6 +8,7 @@ jest.mock('expo-router', () => ({
 }));
 
 const mockUseHouseholdMembership = jest.fn();
+const mockUseCategories = jest.fn();
 const mockCreateCategoryMutateAsync = jest.fn();
 const mockUseCreateCategory = jest.fn();
 const mockCreateBillItemMutateAsync = jest.fn();
@@ -16,6 +17,7 @@ const mockUseCreateBillItem = jest.fn();
 jest.mock('@/lib/queries', () => ({
   ...jest.requireActual('@/lib/queries'),
   useHouseholdMembership: (...args: unknown[]) => mockUseHouseholdMembership(...args),
+  useCategories: (...args: unknown[]) => mockUseCategories(...args),
   useCreateCategory: (...args: unknown[]) => mockUseCreateCategory(...args),
   useCreateBillItem: (...args: unknown[]) => mockUseCreateBillItem(...args),
 }));
@@ -27,6 +29,7 @@ const member = { id: 'member-1', household_id: 'household-1', user_id: 'user-1' 
 beforeEach(() => {
   jest.clearAllMocks();
   mockUseHouseholdMembership.mockReturnValue({ data: member });
+  mockUseCategories.mockReturnValue({ data: [], isError: false, refetch: jest.fn() });
   mockUseCreateCategory.mockReturnValue({
     mutateAsync: mockCreateCategoryMutateAsync.mockResolvedValue({ id: 'new-cat' }),
     isPending: false,
@@ -63,6 +66,36 @@ describe('AddCategorySheet', () => {
       ),
     );
     expect(mockBack).toHaveBeenCalled();
+  });
+
+  it('links a new fund to an excess group with the chosen percentage', async () => {
+    mockUseCategories.mockReturnValue({
+      data: [
+        {
+          id: 'group-1',
+          name: 'Savings excess',
+          kind: 'fund',
+          archived: false,
+          rule: { type: 'remainder', percent: 20, excess_source: true },
+        },
+      ],
+      isError: false,
+      refetch: jest.fn(),
+    });
+    const { getByText, getByPlaceholderText, getByDisplayValue } = await renderWithTheme(<AddCategorySheet />);
+
+    await fireEvent.changeText(getByPlaceholderText('e.g. New laptop fund'), 'Emergency top-up');
+    await fireEvent.press(getByText('Savings excess'));
+    await fireEvent.changeText(getByDisplayValue('20'), '35');
+    await fireEvent.press(getByText('Add category'));
+
+    await waitFor(() =>
+      expect(mockCreateCategoryMutateAsync).toHaveBeenCalledWith(
+        expect.objectContaining({
+          rule: { type: 'excess', parent_id: 'group-1', percent: 35 },
+        }),
+      ),
+    );
   });
 
   it('saves the share of what is left that the user picks, and hides it for a goal', async () => {
