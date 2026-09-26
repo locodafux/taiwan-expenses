@@ -249,6 +249,40 @@ begin
 end;
 $$;
 
+-- A parent in a different household is rejected even though it is otherwise
+-- a valid group parent.
+do $$
+declare
+  v_hid uuid;
+  v_other_user uuid := extensions.gen_random_uuid();
+  v_other_hid uuid;
+  v_other_parent_id uuid;
+begin
+  select household_id into v_hid from public.categories where name = 'Generic source';
+
+  insert into auth.users (instance_id, id, aud, role, email, raw_app_meta_data, raw_user_meta_data)
+  values ('00000000-0000-0000-0000-000000000000', v_other_user, 'authenticated', 'authenticated',
+    'other-household@example.com', '{"provider":"email","providers":["email"]}',
+    jsonb_build_object('display_name', 'Other'));
+  select household_id into v_other_hid from public.household_members where user_id = v_other_user;
+
+  insert into public.categories (household_id, kind, name, rule, is_group_parent)
+  values (v_other_hid, 'fund', 'Other household parent', '{"type":"remainder","percent":50}', true)
+  returning id into v_other_parent_id;
+
+  begin
+    insert into public.categories (household_id, kind, name, rule)
+    values (v_hid, 'fund', 'Cross household child', jsonb_build_object(
+      'type', 'group_child', 'parent_id', v_other_parent_id, 'percent', 10));
+    raise exception 'FAIL: cross-household child was accepted';
+  exception when others then
+    if position('same household' in sqlerrm) = 0 then
+      raise exception 'FAIL: unexpected cross-household error: %', sqlerrm;
+    end if;
+  end;
+end;
+$$;
+
 rollback;
 
 select 'PASS: 19_excess_groups' as result;
