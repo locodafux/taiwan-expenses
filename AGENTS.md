@@ -7,6 +7,7 @@ This file is the project's committed home for project-intrinsic agent knowledge:
 ## Supabase backend
 
 - **Excess groups** (`20260926000001_excess_groups.sql`): a fund's existing rule can set `excess_source: true`; linked child funds use `{"type":"excess","parent_id":"...","percent":N}` and replace their normal tier allocation. `materialize_payday` splits the parent's pending payday amount, leaves any unclaimed share in the parent, and rejects linked percentages over 100% at the rule trigger. Multi-level groups and re-splitting checked history are intentionally unsupported; see `supabase/tests/19_excess_groups.sql`.
+- **Generic category groups** (`20260926000002_nested_category_groups.sql`): `categories.is_group_parent` marks any category as a structural parent; fund children use `{"type":"group_child","parent_id":"...","percent":N,"goal":{...}}`. Legacy `excess` rows remain valid. Only fund parents emit a payday pool; nested child goals cap the percentage transfer and leave unused money in the parent. Bill parents are structural only, and multi-level groups remain rejected.
 
 Schema/RLS/allocation-engine spec lives in `docs/plan.md` and `docs/techspec.md` (already reviewed/approved); the original algorithm being reproduced is `taiwan-fund-planner.html`'s `allocateProportional`/`fundAllocation` (search that file for the line-number references cited in migration comments).
 

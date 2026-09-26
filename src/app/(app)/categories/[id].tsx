@@ -171,27 +171,77 @@ export default function CategoryDetail() {
 
   if (!category) return null;
 
-  const goal = category.rule?.type === 'goal' ? category.rule.target_amount : null;
+  const goal =
+    category.rule?.type === 'goal'
+      ? category.rule.target_amount
+      : category.rule?.type === 'group_child' && category.rule.goal
+        ? category.rule.goal.target_amount
+        : null;
   const pct = goal ? Math.min(1, balance / goal) : null;
+  const isGroupChild = category.rule?.type === 'excess' || category.rule?.type === 'group_child';
+  const linkedPercent =
+    category.rule?.type === 'excess' || category.rule?.type === 'group_child'
+      ? category.rule.percent
+      : null;
   const groupParents = (categories ?? []).filter(
-    (c) => !c.archived && c.kind === 'fund' && c.id !== category.id && c.rule?.type !== 'excess' && c.rule?.excess_source,
+    (c) =>
+      !c.archived &&
+      c.id !== category.id &&
+      c.rule?.type !== 'excess' &&
+      c.rule?.type !== 'group_child' &&
+      (c.is_group_parent || c.rule?.excess_source),
   );
   const linkedChildren = (categories ?? []).filter(
-    (c) => c.rule?.type === 'excess' && c.rule.parent_id === category.id,
+    (c) =>
+      (c.rule?.type === 'excess' || c.rule?.type === 'group_child') &&
+      c.rule.parent_id === category.id,
   );
-  const linkedParentId = category.rule?.type === 'excess' ? category.rule.parent_id : null;
+  const linkedParentId =
+    category.rule?.type === 'excess' || category.rule?.type === 'group_child'
+      ? category.rule.parent_id
+      : null;
   const linkedParent = linkedParentId ? categories?.find((c) => c.id === linkedParentId) : undefined;
+  const goalDate =
+    category.rule?.type === 'goal'
+      ? category.rule.target_date
+      : category.rule?.type === 'group_child'
+        ? category.rule.goal?.target_date
+        : null;
 
   function startEditingCategory() {
     setEditName(category!.name);
     setEditColor(category!.color ?? '');
     setEditTarget(goal ? String(goal) : '');
-    setEditDeadline(category!.rule?.type === 'goal' ? (category!.rule.target_date?.slice(0, 7) ?? null) : null);
-    setEditOneTime(category!.rule?.type === 'goal' && !!category!.rule.one_time);
-    setEditShare(category!.rule?.type === 'remainder' ? String(category!.rule.percent) : '');
-    setEditExcessSource(category!.rule?.type !== 'excess' && !!category!.rule?.excess_source);
-    setEditExcessParentId(category!.rule?.type === 'excess' ? category!.rule.parent_id : null);
-    setEditExcessPercent(category!.rule?.type === 'excess' ? String(category!.rule.percent) : '20');
+    const childGoal = category!.rule?.type === 'group_child' ? category!.rule.goal : null;
+    setEditDeadline(
+      category!.rule?.type === 'goal'
+        ? (category!.rule.target_date?.slice(0, 7) ?? null)
+        : (childGoal?.target_date?.slice(0, 7) ?? null),
+    );
+    setEditOneTime(
+      category!.rule?.type === 'goal' ? !!category!.rule.one_time : !!childGoal?.one_time,
+    );
+    setEditShare(
+      category!.rule?.type === 'remainder'
+        ? String(category!.rule.percent)
+        : category!.rule?.type === 'excess' || category!.rule?.type === 'group_child'
+          ? '20'
+          : '',
+    );
+    setEditExcessSource(
+      category!.rule?.type !== 'excess' && category!.rule?.type !== 'group_child' &&
+        (category!.is_group_parent || !!category!.rule?.excess_source),
+    );
+    setEditExcessParentId(
+      category!.rule?.type === 'excess' || category!.rule?.type === 'group_child'
+        ? category!.rule.parent_id
+        : null,
+    );
+    setEditExcessPercent(
+      category!.rule?.type === 'excess' || category!.rule?.type === 'group_child'
+        ? String(category!.rule.percent)
+        : '20',
+    );
     setError(null);
     setEditingCategory(true);
   }
@@ -200,35 +250,50 @@ export default function CategoryDetail() {
     if (!editName.trim()) return setError('Name is required');
     const rule = category!.rule;
     let nextRule = rule;
-    if (rule?.type === 'excess' && editExcessParentId) {
+    const parsedTarget = parseAmount(editTarget);
+    if (editTarget && !(parsedTarget > 0)) {
+      return setError('Enter a valid target amount');
+    }
+    const childGoal = editTarget
+      ? {
+          target_amount: parsedTarget,
+          target_date: editDeadline ? `${editDeadline}-01` : null,
+          one_time: editOneTime,
+        }
+      : undefined;
+    if (editExcessParentId) {
       const parsedPercent = parseAmount(editExcessPercent);
       if (!(parsedPercent > 0 && parsedPercent <= 100)) {
-        return setError('Enter an excess share between 1 and 100');
+        return setError('Enter a group share between 1 and 100');
       }
-      nextRule = { type: 'excess', parent_id: editExcessParentId, percent: parsedPercent };
-    } else if (rule?.type === 'excess') {
+      nextRule = {
+        type: 'group_child',
+        parent_id: editExcessParentId,
+        percent: parsedPercent,
+        ...(childGoal ? { goal: childGoal } : {}),
+      };
+    } else if (isGroupChild) {
       const parsedShare = parseAmount(editShare);
       if (!(parsedShare > 0 && parsedShare <= 100)) {
         return setError('Enter a share between 1 and 100 to unlink this fund');
       }
-      nextRule = { type: 'remainder', percent: parsedShare };
-    } else if (editExcessParentId) {
-      const parsedPercent = parseAmount(editExcessPercent);
-      if (!(parsedPercent > 0 && parsedPercent <= 100)) {
-        return setError('Enter an excess share between 1 and 100');
-      }
-      nextRule = { type: 'excess', parent_id: editExcessParentId, percent: parsedPercent };
-    } else if (rule?.type === 'goal') {
-      const parsedTarget = parseAmount(editTarget);
-      if (!Number.isFinite(parsedTarget) || parsedTarget <= 0) {
-        return setError('Enter a valid target amount');
-      }
+      nextRule = editTarget
+        ? {
+            type: 'goal',
+            target_amount: parsedTarget,
+            target_date: editDeadline ? `${editDeadline}-01` : null,
+            one_time: editOneTime,
+            ...(editExcessSource ? { excess_source: true } : {}),
+          }
+        : { type: 'remainder', percent: parsedShare, ...(editExcessSource ? { excess_source: true } : {}) };
+    } else if (rule?.type === 'goal' || editTarget) {
+      if (!(parsedTarget > 0)) return setError('Enter a valid target amount');
       nextRule = {
-        ...rule,
+        type: 'goal',
         target_amount: parsedTarget,
         target_date: editDeadline ? `${editDeadline}-01` : null,
         one_time: editOneTime,
-        excess_source: editExcessSource || undefined,
+        ...(editExcessSource ? { excess_source: true } : {}),
       };
     } else if (rule?.type === 'remainder') {
       const parsedShare = parseAmount(editShare);
@@ -246,6 +311,9 @@ export default function CategoryDetail() {
         name: editName.trim(),
         color: editColor || null,
         rule: nextRule,
+        ...(editExcessSource || category!.is_group_parent !== undefined
+          ? { is_group_parent: editExcessSource }
+          : {}),
       });
       setEditingCategory(false);
     } catch (e) {
@@ -331,16 +399,17 @@ export default function CategoryDetail() {
               />
               <Text className="font-body text-xs text-ink-muted">Color</Text>
               <ColorPicker value={editColor} onChange={setEditColor} />
-              {category.kind === 'fund' && category.rule?.type !== 'excess' && (
+              {category.rule?.type !== 'excess' && category.rule?.type !== 'group_child' && (
                 <View className="flex-row items-center gap-3">
                   <View className="flex-1">
-                    <Text className="font-body text-base text-ink">Excess group source</Text>
+                    <Text className="font-body text-base text-ink">Group parent</Text>
                     <Text className="font-body text-xs leading-[1.4] text-ink-muted">
-                      Let linked funds receive a percentage of this category&apos;s payday allocation.
+                      Let other categories appear under this one. A bill parent is structural only
+                      and does not provide a savings pool.
                     </Text>
                   </View>
                   <Switch
-                    accessibilityLabel="Excess group source"
+                    accessibilityLabel="Group parent"
                     value={editExcessSource}
                     onValueChange={(value) => {
                       setEditExcessSource(value);
@@ -353,14 +422,14 @@ export default function CategoryDetail() {
               {category.kind === 'fund' && (
                 <View>
                   <Text className="font-body text-xs text-ink-muted">
-                    {category.rule?.type === 'excess' ? 'Excess group' : 'Link to an excess group (optional)'}
+                    {isGroupChild ? 'Parent category' : 'Parent category (optional)'}
                   </Text>
-                  {category.rule?.type === 'excess' && (
+                  {isGroupChild && (
                     <Pressable
                       onPress={() => setEditExcessParentId(null)}
                       className={`mt-2 rounded-md border px-3 py-3 ${!editExcessParentId ? 'border-accent bg-surface' : 'border-border bg-surface-2'}`}
                     >
-                      <Text className="font-body text-sm text-ink">No group · use a normal fund rule</Text>
+                      <Text className="font-body text-sm text-ink">No parent · use a normal fund rule</Text>
                     </Pressable>
                   )}
                   {groupParents.map((parent) => (
@@ -368,16 +437,17 @@ export default function CategoryDetail() {
                       key={parent.id}
                       onPress={() => {
                         setEditExcessParentId(parent.id);
-                        setEditExcessSource(false);
                       }}
                       className={`mt-2 rounded-md border px-3 py-3 ${editExcessParentId === parent.id ? 'border-accent bg-surface' : 'border-border bg-surface-2'}`}
                     >
-                      <Text className="font-body text-sm text-ink">{parent.name}</Text>
+                      <Text className="font-body text-sm text-ink">
+                        {parent.name}{parent.kind === 'bill' ? ' · structural only' : ''}
+                      </Text>
                     </Pressable>
                   ))}
                   {editExcessParentId && (
                     <>
-                      <Text className="mt-3 font-body text-xs text-ink-muted">Share of that group&apos;s payday allocation (%)</Text>
+                      <Text className="mt-3 font-body text-xs text-ink-muted">Share of the parent&apos;s payday allocation (%)</Text>
                       <TextField
                         value={editExcessPercent}
                         onChangeText={setEditExcessPercent}
@@ -385,11 +455,12 @@ export default function CategoryDetail() {
                         className="rounded-md border border-border bg-page px-4 py-4 font-mono text-base text-ink"
                       />
                       <Text className="mt-1 font-body text-xs leading-[1.4] text-ink-muted">
-                        This replaces the fund&apos;s own allocation rule. Linked shares for one group must total 100% or less.
+                        This is the maximum share. If this fund has a target, it counts toward that
+                        target and stops when full. Sibling shares must total 100% or less.
                       </Text>
                     </>
                   )}
-                  {category.rule?.type === 'excess' && !editExcessParentId && (
+                  {isGroupChild && !editExcessParentId && (
                     <>
                       <Text className="mt-3 font-body text-xs text-ink-muted">New share of what&apos;s left (%)</Text>
                       <TextField
@@ -417,7 +488,7 @@ export default function CategoryDetail() {
                   </Text>
                 </>
               )}
-              {goal !== null && (
+              {category.kind === 'fund' && (goal !== null || isGroupChild) && (
                 <>
                   <Text className="font-body text-xs text-ink-muted">Target amount</Text>
                   <TextField
@@ -481,7 +552,7 @@ export default function CategoryDetail() {
           </Text>
           <Text className="mt-1 font-body text-xs text-ink-muted">
             {goal
-              ? `of ${formatPeso(goal)} goal${category.rule?.type === 'goal' && category.rule.target_date ? ` · complete by ${fromDateOnly(category.rule.target_date).toLocaleDateString(undefined, { month: 'long' })}` : ''}`
+              ? `of ${formatPeso(goal)} goal${goalDate ? ` · complete by ${fromDateOnly(goalDate).toLocaleDateString(undefined, { month: 'long' })}` : ''}`
               : category.kind === 'bill'
                 ? 'paid this month'
                 : 'all-time, no cap'}
@@ -496,25 +567,33 @@ export default function CategoryDetail() {
           )}
         </Card>
 
-        {category.kind === 'fund' && category.rule?.type === 'excess' && (
+        {category.kind === 'fund' && isGroupChild && (
           <Card className="gap-1 p-4">
-            <Text className="font-body-semibold text-sm text-ink">Excess group link</Text>
+            <Text className="font-body-semibold text-sm text-ink">Group child</Text>
             <Text className="font-body text-sm text-ink-muted">
-              {linkedParent ? `Receives ${category.rule.percent}% of ${linkedParent.name} on each payday.` : 'The linked group no longer exists.'}
+              {linkedParent
+                ? `Receives up to ${linkedPercent}% of ${linkedParent.name} on each payday${goal !== null ? ', until its goal is full.' : '.'}`
+                : 'The linked parent no longer exists.'}
             </Text>
           </Card>
         )}
-        {category.kind === 'fund' && category.rule?.type !== 'excess' && category.rule?.excess_source && (
+        {category.rule?.type !== 'excess' &&
+          category.rule?.type !== 'group_child' &&
+          (category.is_group_parent || category.rule?.excess_source) && (
           <Card className="gap-2 p-4">
-            <Text className="font-body-semibold text-sm text-ink">Excess group</Text>
+            <Text className="font-body-semibold text-sm text-ink">Category group</Text>
             <Text className="font-body text-sm text-ink-muted">
-              Linked funds receive a share of this category&apos;s payday allocation; the rest stays here.
+              {category.kind === 'fund'
+                ? "Linked funds receive a share of this category's payday allocation; the rest stays here."
+                : 'This is a structural parent only. It does not provide a savings pool.'}
             </Text>
             {linkedChildren.map((child) => (
               <View key={child.id} className="flex-row items-center justify-between gap-3">
                 <Text className="flex-1 font-body text-sm text-ink">{child.name}</Text>
                 <Text className="font-mono text-xs text-ink-muted">
-                  {child.rule?.type === 'excess' ? `${child.rule.percent}%` : ''}
+                  {child.rule?.type === 'excess' || child.rule?.type === 'group_child'
+                    ? `${child.rule.percent}%${child.rule.type === 'group_child' && child.rule.goal ? ` · goal ${formatPeso(child.rule.goal.target_amount)}` : ''}`
+                    : ''}
                 </Text>
               </View>
             ))}

@@ -18,28 +18,36 @@ import {
 import { useTheme } from '@/theme/ThemeProvider';
 
 function describeCategory(
-  c: { id: string; kind: string; rule: any },
+  c: { id: string; kind: string; rule: any; is_group_parent?: boolean },
   billCount: number,
   balance: number,
   shareTotal: number,
-  categories: { id: string; name: string; kind: string; rule: any }[],
+  categories: { id: string; name: string; kind: string; rule: any; is_group_parent?: boolean }[],
 ) {
-  if (c.kind === 'bill') {
-    return `Bill · ${billCount} recurring item${billCount === 1 ? '' : 's'}`;
-  }
-  if (c.rule?.type === 'excess') {
+  const isChild = c.rule?.type === 'excess' || c.rule?.type === 'group_child';
+  if (isChild) {
     const parent = categories.find((candidate) => candidate.id === c.rule.parent_id);
-    return `Excess share · ${c.rule.percent}% of ${parent?.name ?? 'missing group'}`;
+    const goal = c.rule.type === 'group_child' ? c.rule.goal : undefined;
+    return `Group child · up to ${c.rule.percent}% of ${parent?.name ?? 'missing parent'}${
+      goal
+        ? ` · goal ₱${goal.target_amount.toLocaleString()}${goal.target_date ? ` by ${fromDateOnly(goal.target_date).toLocaleDateString(undefined, { month: 'short' })}` : ''}${balance >= goal.target_amount ? ' · complete' : ''}`
+        : ''
+    }`;
   }
   const childCount = categories.filter(
-    (candidate) => candidate.rule?.type === 'excess' && candidate.rule.parent_id === c.id,
+    (candidate) =>
+      (candidate.rule?.type === 'excess' || candidate.rule?.type === 'group_child') &&
+      candidate.rule.parent_id === c.id,
   ).length;
-  const groupSuffix = c.rule?.excess_source
-    ? ` · group for ${childCount} fund${childCount === 1 ? '' : 's'}`
+  const groupSuffix = c.is_group_parent || c.rule?.excess_source
+    ? ` · parent for ${childCount} categor${childCount === 1 ? 'y' : 'ies'}`
     : '';
+  if (c.kind === 'bill') {
+    return `Bill · ${billCount} recurring item${billCount === 1 ? '' : 's'}${groupSuffix}`;
+  }
   if (c.rule?.type === 'goal') {
     const target = c.rule.target_amount;
-    return `${c.rule.one_time ? 'One-time' : 'Goal'} · target ₱${target.toLocaleString()}${c.rule.target_date ? ` by ${fromDateOnly(c.rule.target_date).toLocaleDateString(undefined, { month: 'short' })}` : ''}${groupSuffix}`;
+    return `${c.rule.one_time ? 'One-time' : 'Goal'} · target ₱${target.toLocaleString()}${c.rule.target_date ? ` by ${fromDateOnly(c.rule.target_date).toLocaleDateString(undefined, { month: 'short' })}` : ''}${balance >= target ? ' · complete' : ''}${groupSuffix}`;
   }
   if (c.rule?.type === 'capped_percent') {
     return `${c.rule.percent}% of leftover${c.rule.cap ? ` · capped ₱${c.rule.cap.toLocaleString()}` : ''}${groupSuffix}`;
@@ -126,10 +134,9 @@ export default function CategoryManagement() {
         </Card>
 
         <Text className="font-body text-xs leading-[1.5] text-ink-muted">
-          Every fund category has one optional field: a target amount. Set it and the category stops
-          taking a share once full; leave it blank and it keeps its share of what&apos;s left
-          indefinitely. Shares are weighed against each other, so they don&apos;t need to add up to
-          100.
+          A category can be a structural parent for child categories. Fund children can take a
+          percentage of a fund parent&apos;s payday pool, with an optional goal that caps the share;
+          bill parents are labels only and never provide savings money.
         </Text>
       </ScrollView>
     </SafeAreaView>

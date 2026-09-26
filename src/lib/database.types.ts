@@ -6,15 +6,24 @@
 export type CategoryKind = 'bill' | 'fund';
 export type LedgerStatus = 'pending' | 'checked';
 
+export type GroupChildGoal = {
+  target_amount: number;
+  target_date?: string | null;
+  one_time?: boolean;
+};
+
 export type CategoryRule =
   // one_time: a lump sum (e.g. a trip) taken from the earliest month that can
   // cover it, instead of spread evenly (20260921000050_goal_waterfill.sql).
   | { type: 'goal'; target_amount: number; target_date?: string | null; one_time?: boolean; excess_source?: boolean }
   | { type: 'capped_percent'; percent: number; cap?: number | null; excess_source?: boolean }
   | { type: 'remainder'; percent: number; excess_source?: boolean }
-  // A linked child replaces its normal allocation rule and receives this
-  // percentage of its marked parent's payday allocation.
-  | { type: 'excess'; parent_id: string; percent: number };
+  // Legacy linked child shape. New writes use group_child below; the API
+  // keeps this union member so existing households continue to type-check.
+  | { type: 'excess'; parent_id: string; percent: number }
+  // A linked child replaces its normal allocation rule. Its optional goal is
+  // funded by this percentage stream and caps it when the target is reached.
+  | { type: 'group_child'; parent_id: string; percent: number; goal?: GroupChildGoal };
 
 // These must be `type` aliases, not `interface` declarations -
 // @supabase/postgrest-js's select-query-parser resolves embedded/`*` select
@@ -58,6 +67,7 @@ export type Category = {
   color: string | null;
   sort_order: number;
   rule: CategoryRule | null;
+  is_group_parent?: boolean;
   archived: boolean;
   goal_celebrated_at: string | null;
   created_at: string;
