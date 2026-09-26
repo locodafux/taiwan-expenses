@@ -1,5 +1,4 @@
 import { fireEvent, waitFor } from '@testing-library/react-native';
-import { Alert } from 'react-native';
 
 import { renderWithTheme } from '@/test/renderWithTheme';
 
@@ -61,13 +60,6 @@ beforeEach(() => {
   mockClearMutateAsync.mockResolvedValue(undefined);
 });
 
-// Presses the Alert's destructive button, as a user confirming would.
-function confirmAlerts() {
-  return jest.spyOn(Alert, 'alert').mockImplementation((_title, _message, buttons) => {
-    buttons?.find((b) => b.style === 'destructive')?.onPress?.();
-  });
-}
-
 describe('Chat', () => {
   it("shows the thread with the partner's name on their messages only", async () => {
     const { getByText, queryByText } = await renderWithTheme(<Chat />);
@@ -115,32 +107,31 @@ describe('Chat', () => {
   });
 
   it('deletes your own message on long press after confirming', async () => {
-    const alertSpy = confirmAlerts();
     const { getByText } = await renderWithTheme(<Chat />);
 
     await fireEvent(getByText('On my way'), 'longPress');
 
-    expect(alertSpy).toHaveBeenCalledWith('Delete message?', expect.any(String), expect.any(Array));
+    expect(getByText('Delete message?')).toBeTruthy();
+    await fireEvent.press(getByText('Delete'));
     await waitFor(() => expect(mockDeleteMutateAsync).toHaveBeenCalledWith('msg-2'));
   });
 
   it("offers no delete on the partner's messages", async () => {
-    const alertSpy = confirmAlerts();
-    const { getByText } = await renderWithTheme(<Chat />);
+    const { getByText, queryByText } = await renderWithTheme(<Chat />);
 
     await fireEvent(getByText('Paid the rent'), 'longPress');
 
-    expect(alertSpy).not.toHaveBeenCalled();
+    expect(queryByText('Delete message?')).toBeNull();
     expect(mockDeleteMutateAsync).not.toHaveBeenCalled();
   });
 
   it('clears the history for this member after confirming', async () => {
-    const alertSpy = confirmAlerts();
     const { getByText } = await renderWithTheme(<Chat />);
 
     await fireEvent.press(getByText('Clear history'));
 
-    expect(alertSpy).toHaveBeenCalledWith('Clear chat history?', expect.any(String), expect.any(Array));
+    expect(getByText('Clear chat history?')).toBeTruthy();
+    await fireEvent.press(getByText('Clear'));
     await waitFor(() => expect(mockClearMutateAsync).toHaveBeenCalled());
   });
 

@@ -11,6 +11,7 @@ import { MonthPicker } from '@/components/ui/MonthPicker';
 import { TextField } from '@/components/ui/TextField';
 import { Card, ListRow } from '@/components/ui/Card';
 import { DeleteCategorySheet } from '@/components/ui/DeleteCategorySheet';
+import { ConfirmSheet } from '@/components/ui/ConfirmSheet';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { formatPeso, parseAmount } from '@/lib/format';
 import { fromDateOnly, monthDueDate, nextMonth, paymentsLeft, toDateOnly } from '@/lib/payday';
@@ -92,6 +93,7 @@ export default function CategoryDetail() {
   const [billUntil, setBillUntil] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [confirmingDeleteItem, setConfirmingDeleteItem] = useState<{ id: string; label: string } | null>(null);
   // The bill form doubles as the edit form for an existing line item.
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [editingCategory, setEditingCategory] = useState(false);
@@ -266,25 +268,19 @@ export default function CategoryDetail() {
   function handleDeleteItem() {
     const item = billItems?.find((b) => b.id === editingItemId);
     if (!item) return;
-    Alert.alert(
-      `Delete ${item.label}?`,
-      'It stops appearing on future checklists. Payments already checked off stay in the history.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteBillItem.mutateAsync(item.id);
-              closeBillForm();
-            } catch (e) {
-              setError(e instanceof Error ? e.message : 'Could not delete item');
-            }
-          },
-        },
-      ],
-    );
+    setConfirmingDeleteItem({ id: item.id, label: item.label });
+  }
+
+  async function handleConfirmDeleteItem() {
+    if (!confirmingDeleteItem) return;
+    try {
+      await deleteBillItem.mutateAsync(confirmingDeleteItem.id);
+      setConfirmingDeleteItem(null);
+      closeBillForm();
+    } catch (e) {
+      setConfirmingDeleteItem(null);
+      setError(e instanceof Error ? e.message : 'Could not delete item');
+    }
   }
 
   async function handleConfirmDelete() {
@@ -768,6 +764,15 @@ export default function CategoryDetail() {
         deleting={deleteCategory.isPending}
         onCancel={() => setConfirmingDelete(false)}
         onConfirm={handleConfirmDelete}
+      />
+      <ConfirmSheet
+        visible={confirmingDeleteItem !== null}
+        title={confirmingDeleteItem ? `Delete ${confirmingDeleteItem.label}?` : ''}
+        message="It stops appearing on future checklists. Payments already checked off stay in the history."
+        confirmLabel="Delete"
+        loading={deleteBillItem.isPending}
+        onCancel={() => setConfirmingDeleteItem(null)}
+        onConfirm={handleConfirmDeleteItem}
       />
     </SafeAreaView>
   );

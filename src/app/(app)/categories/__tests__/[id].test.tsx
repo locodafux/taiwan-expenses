@@ -1,5 +1,4 @@
-import { act, fireEvent, waitFor } from '@testing-library/react-native';
-import { Alert } from 'react-native';
+import { fireEvent, waitFor } from '@testing-library/react-native';
 
 import { renderWithTheme } from '@/test/renderWithTheme';
 
@@ -529,17 +528,14 @@ describe('CategoryDetail', () => {
     mockUseBillItems.mockReturnValue({
       data: [{ id: 'bi-1', label: 'Base rent', amount: 1500, recurring_day: 5, end_date: null }],
     });
-    const alertSpy = jest.spyOn(Alert, 'alert');
     const { getByText } = await renderWithTheme(<CategoryDetail />);
 
     await fireEvent.press(await waitFor(() => getByText('Base rent')));
     await fireEvent.press(getByText('Delete item'));
-    const buttons = alertSpy.mock.calls[0][2]!;
-    await act(async () => {
-      await buttons.find((b) => b.text === 'Delete')!.onPress!();
-    });
+    expect(getByText('Delete Base rent?')).toBeTruthy();
+    await fireEvent.press(getByText('Delete'));
 
-    expect(mockDeleteBillItemMutateAsync).toHaveBeenCalledWith('bi-1');
+    await waitFor(() => expect(mockDeleteBillItemMutateAsync).toHaveBeenCalledWith('bi-1'));
   });
 
   it('hides line items that have already retired', async () => {

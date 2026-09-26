@@ -12,6 +12,7 @@ import { ErrorState } from '@/components/ui/ErrorState';
 import { KeyboardScroll } from '@/components/ui/KeyboardScroll';
 import { TextField } from '@/components/ui/TextField';
 import { ThemeSwitcher } from '@/components/ui/ThemeSwitcher';
+import { ConfirmSheet } from '@/components/ui/ConfirmSheet';
 import { WhatsNewSheet } from '@/components/WhatsNew';
 import { useAuth } from '@/lib/auth';
 import { CHANGELOG } from '@/lib/changelog';
@@ -65,33 +66,23 @@ export default function Settings() {
   const [passwordResult, setPasswordResult] = useState<{ ok: boolean; message: string } | null>(null);
   const [copied, setCopied] = useState(false);
   const [showDangerZone, setShowDangerZone] = useState(false);
+  const [confirmingDeleteAccount, setConfirmingDeleteAccount] = useState(false);
   const [showWhatsNew, setShowWhatsNew] = useState(false);
   const hasPartner = (members?.length ?? 0) > 1;
 
   function confirmDeleteAccount() {
-    Alert.alert(
-      'Delete your account?',
-      (hasPartner
-        ? 'Your account and your own data (membership, income entries) will be permanently deleted. Shared categories, bills and ledger history stay in the household for your partner.'
-        : 'Your account and all of your household data - categories, bills, incomes and ledger history - will be permanently deleted.') +
-        ' This cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete account',
-          style: 'destructive',
-          onPress: async () => {
-            setIsDeleting(true);
-            try {
-              await deleteAccount();
-            } catch (e) {
-              setIsDeleting(false);
-              Alert.alert('Could not delete account', e instanceof Error ? e.message : 'Try again.');
-            }
-          },
-        },
-      ],
-    );
+    setConfirmingDeleteAccount(true);
+  }
+
+  async function handleConfirmDeleteAccount() {
+    setIsDeleting(true);
+    try {
+      await deleteAccount();
+    } catch (e) {
+      setIsDeleting(false);
+      setConfirmingDeleteAccount(false);
+      Alert.alert('Could not delete account', e instanceof Error ? e.message : 'Try again.');
+    }
   }
 
   async function saveProfileName() {
@@ -388,6 +379,20 @@ export default function Settings() {
           )}
         </View>
       </KeyboardScroll>
+      <ConfirmSheet
+        visible={confirmingDeleteAccount}
+        title="Delete your account?"
+        message={
+          (hasPartner
+            ? 'Your account and your own data (membership, income entries) will be permanently deleted. Shared categories, bills and ledger history stay in the household for your partner.'
+            : 'Your account and all of your household data - categories, bills, incomes and ledger history - will be permanently deleted.') +
+          ' This cannot be undone.'
+        }
+        confirmLabel="Delete account"
+        loading={isDeleting}
+        onCancel={() => setConfirmingDeleteAccount(false)}
+        onConfirm={handleConfirmDeleteAccount}
+      />
       <WhatsNewSheet entries={CHANGELOG} visible={showWhatsNew} onClose={() => setShowWhatsNew(false)} />
     </SafeAreaView>
   );
