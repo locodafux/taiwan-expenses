@@ -11,6 +11,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-09-26',
+    date: 'Sep 26, 2026',
+    items: [
+      'The Categories list now shows the current amount in each fund, so you can see your balances at a glance.',
+      'You can group funds so linked funds receive a share of a parent fund’s payday allocation, while the rest stays in the parent fund.',
+    ],
+  },
+  {
     id: '2026-09-24',
     date: 'Sep 24, 2026',
     items: [
