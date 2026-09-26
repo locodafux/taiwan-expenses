@@ -1,4 +1,15 @@
-import { clampDayToMonth, daysUntil, fromDateOnly, leftoverByPaydayInMonth, nextPayday, monthDueDate, paymentsLeft, toDateOnly } from '../payday';
+import {
+  clampDayToMonth,
+  daysUntil,
+  fromDateOnly,
+  incomeAmountForPayday,
+  leftoverByPaydayInMonth,
+  nextPayday,
+  paydayAtOffset,
+  monthDueDate,
+  paymentsLeft,
+  toDateOnly,
+} from '../payday';
 
 describe('fromDateOnly', () => {
   it('round-trips with toDateOnly regardless of local timezone', () => {
@@ -41,6 +52,26 @@ describe('nextPayday', () => {
     const from = new Date(2026, 9, 20);
     const result = nextPayday([5, 20], from);
     expect(toDateOnly(result)).toBe('2026-10-20');
+  });
+
+  it('steps backward and forward from the next payday', () => {
+    const from = new Date(2026, 9, 3); // Oct 3, paydays on 5/20
+
+    expect(toDateOnly(paydayAtOffset([5, 20], -1, from))).toBe('2026-09-20');
+    expect(toDateOnly(paydayAtOffset([5, 20], 0, from))).toBe('2026-10-05');
+    expect(toDateOnly(paydayAtOffset([5, 20], 1, from))).toBe('2026-10-20');
+  });
+
+  it('projects all incomes clamped into a short month payday', () => {
+    const payday = new Date(2026, 1, 28); // February 28, including a recurring 31st income
+
+    expect(
+      incomeAmountForPayday([
+        { amount: 20000, recurring_day: 28, active: true },
+        { amount: 15000, recurring_day: 31, active: true },
+        { amount: 9000, recurring_day: 28, active: false },
+      ], payday),
+    ).toBe(35000);
   });
 
   it('throws when there are no active incomes', () => {

@@ -13,6 +13,7 @@ const mockUseCategories = jest.fn();
 const mockUseCategoryBalances = jest.fn();
 const mockUseCategoryBalancesThisMonth = jest.fn();
 const mockUseIncomes = jest.fn();
+const mockUsePaydayAmounts = jest.fn();
 const mockUseSavedThisQuarter = jest.fn();
 const mockUsePaydayStreak = jest.fn();
 
@@ -24,6 +25,7 @@ jest.mock('@/lib/queries', () => ({
   useCategoryBalances: (...args: unknown[]) => mockUseCategoryBalances(...args),
   useCategoryBalancesThisMonth: (...args: unknown[]) => mockUseCategoryBalancesThisMonth(...args),
   useIncomes: (...args: unknown[]) => mockUseIncomes(...args),
+  usePaydayAmounts: (...args: unknown[]) => mockUsePaydayAmounts(...args),
   useSavedThisQuarter: (...args: unknown[]) => mockUseSavedThisQuarter(...args),
   usePaydayStreak: (...args: unknown[]) => mockUsePaydayStreak(...args),
 }));
@@ -53,6 +55,7 @@ beforeEach(() => {
   mockUseCategoryBalances.mockReturnValue(okQuery({ 'cat-fund': 12000, 'cat-bill': 0 }));
   mockUseCategoryBalancesThisMonth.mockReturnValue(okQuery({ 'cat-bill': 3500 }));
   mockUseIncomes.mockReturnValue(okQuery(incomes));
+  mockUsePaydayAmounts.mockReturnValue(okQuery({}));
   mockUseSavedThisQuarter.mockReturnValue(okQuery(18500));
   mockUsePaydayStreak.mockReturnValue(okQuery(3));
 });
@@ -107,6 +110,23 @@ describe('Dashboard', () => {
     const { getByText } = await renderWithTheme(<Dashboard />);
     await fireEvent.press(await waitFor(() => getByText('Review')));
     expect(mockPush).toHaveBeenCalledWith('/(app)/checklist');
+  });
+
+  it('steps through previous and further upcoming paydays', async () => {
+    mockUseIncomes.mockReturnValue(
+      okQuery([
+        { id: 'inc-1', active: true, recurring_day: 5, amount: 30000 },
+        { id: 'inc-2', active: true, recurring_day: 20, amount: 25000 },
+      ]),
+    );
+    const { getByLabelText, getByText } = await renderWithTheme(<Dashboard />);
+
+    expect(getByText(/^Next payday/)).toBeTruthy();
+    await fireEvent.press(getByLabelText('Previous payday'));
+    expect(getByText(/^Previous payday/)).toBeTruthy();
+    await fireEvent.press(getByLabelText('Next payday'));
+    await fireEvent.press(getByLabelText('Next payday'));
+    expect(getByText(/^Upcoming payday/)).toBeTruthy();
   });
 
   it('renders the momentum row (saved-this-quarter stat + streak chip) when data is present', async () => {
