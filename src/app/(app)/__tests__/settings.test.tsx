@@ -1,5 +1,4 @@
 import { fireEvent, waitFor } from '@testing-library/react-native';
-import { Alert } from 'react-native';
 
 import { CHANGELOG } from '@/lib/changelog';
 import { renderWithTheme } from '@/test/renderWithTheme';
@@ -173,52 +172,33 @@ describe('Settings', () => {
   });
 
   it('deletes the account after confirming, warning that it cannot be undone', async () => {
-    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation((_title, _message, buttons) => {
-      const confirm = buttons?.find((b) => b.text === 'Delete account');
-      confirm?.onPress?.();
-    });
-
-    const { getByText } = await renderWithTheme(<Settings />);
+    const { getByText, getAllByText } = await renderWithTheme(<Settings />);
     await fireEvent.press(await waitFor(() => getByText('Danger zone')));
-    await fireEvent.press(getByText('Delete account'));
+    await fireEvent.press(getAllByText('Delete account')[0]);
 
-    expect(alertSpy).toHaveBeenCalledWith(
-      'Delete your account?',
-      expect.stringContaining('cannot be undone'),
-      expect.any(Array),
-    );
+    expect(getByText('Delete your account?')).toBeTruthy();
+    expect(getByText(/cannot be undone/)).toBeTruthy();
+    await fireEvent.press(getAllByText('Delete account')[1]);
     await waitFor(() => expect(mockDeleteAccount).toHaveBeenCalled());
-
-    alertSpy.mockRestore();
   });
 
   it('warns a partner in the household that shared data will stay behind', async () => {
-    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
-
     const { getByText } = await renderWithTheme(<Settings />);
     await fireEvent.press(await waitFor(() => getByText('Danger zone')));
     await fireEvent.press(getByText('Delete account'));
 
-    expect(alertSpy).toHaveBeenCalledWith(
-      'Delete your account?',
-      expect.stringContaining('Shared categories, bills and ledger history stay'),
-      expect.any(Array),
-    );
-
-    alertSpy.mockRestore();
+    expect(getByText('Delete your account?')).toBeTruthy();
+    expect(getByText(/Shared categories, bills and ledger history stay/)).toBeTruthy();
   });
 
   it('does not delete the account when the confirmation is cancelled', async () => {
-    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
-
-    const { getByText } = await renderWithTheme(<Settings />);
+    const { getByText, queryByText } = await renderWithTheme(<Settings />);
     await fireEvent.press(await waitFor(() => getByText('Danger zone')));
     await fireEvent.press(getByText('Delete account'));
 
-    expect(alertSpy).toHaveBeenCalled();
+    await fireEvent.press(getByText('Cancel'));
     expect(mockDeleteAccount).not.toHaveBeenCalled();
-
-    alertSpy.mockRestore();
+    expect(queryByText('Delete your account?')).toBeNull();
   });
 
   it('copies a generated invite code to the clipboard', async () => {

@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
+import { ConfirmSheet } from '@/components/ui/ConfirmSheet';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { TextField } from '@/components/ui/TextField';
 import { useAuth } from '@/lib/auth';
@@ -26,6 +27,8 @@ function formatSentAt(iso: string) {
   if (sent.toDateString() === new Date().toDateString()) return time;
   return `${sent.toLocaleDateString([], { month: 'short', day: 'numeric' })}, ${time}`;
 }
+
+type ChatConfirmation = { kind: 'message'; id: string } | { kind: 'clear' } | null;
 
 function MessageRow({
   message,
@@ -71,6 +74,7 @@ export default function Chat() {
   const { isError, refetch } = combineQueryState(membershipQuery, messagesQuery, membersQuery);
   const [draft, setDraft] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [confirmation, setConfirmation] = useState<ChatConfirmation>(null);
 
   const messages = messagesQuery.data ?? [];
   const newestId = messages[0]?.id;
@@ -99,35 +103,29 @@ export default function Chat() {
 
   // Only your own messages get this (RLS enforces the same).
   function confirmDelete(id: string) {
-    Alert.alert('Delete message?', 'It will be removed for everyone in the household.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: () =>
-          deleteMessage.mutateAsync(id).catch((e) =>
-            Alert.alert('Could not delete message', e instanceof Error ? e.message : 'Try again.'),
-          ),
-      },
-    ]);
+    setConfirmation({ kind: 'message', id });
   }
 
   function confirmClear() {
-    Alert.alert(
-      'Clear chat history?',
-      "Messages so far will be hidden for you only - your partner's chat stays as it is. New messages will still show up.",
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Clear',
-          style: 'destructive',
-          onPress: () =>
-            clearHistory.mutateAsync().catch((e) =>
-              Alert.alert('Could not clear chat', e instanceof Error ? e.message : 'Try again.'),
-            ),
-        },
-      ],
-    );
+    setConfirmation({ kind: 'clear' });
+  }
+
+  async function handleConfirm() {
+    if (!confirmation) return;
+    try {
+      if (confirmation.kind === 'message') {
+        await deleteMessage.mutateAsync(confirmation.id);
+      } else {
+        await clearHistory.mutateAsync();
+      }
+      setConfirmation(null);
+    } catch (e) {
+      setConfirmation(null);
+      Alert.alert(
+        confirmation.kind === 'message' ? 'Could not delete message' : 'Could not clear chat',
+        e instanceof Error ? e.message : 'Try again.',
+      );
+    }
   }
 
   if (isError) {
@@ -195,6 +193,19 @@ export default function Chat() {
           </Button>
         </View>
       </KeyboardAvoidingView>
+      <ConfirmSheet
+        visible={confirmation !== null}
+        title={confirmation?.kind === 'clear' ? 'Clear chat history?' : 'Delete message?'}
+        message={
+          confirmation?.kind === 'clear'
+            ? "Messages so far will be hidden for you only - your partner's chat stays as it is. New messages will still show up."
+            : 'It will be removed for everyone in the household.'
+        }
+        confirmLabel={confirmation?.kind === 'clear' ? 'Clear' : 'Delete'}
+        loading={confirmation?.kind === 'clear' ? clearHistory.isPending : deleteMessage.isPending}
+        onCancel={() => setConfirmation(null)}
+        onConfirm={handleConfirm}
+      />
     </SafeAreaView>
   );
 }
