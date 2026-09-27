@@ -259,6 +259,10 @@ export interface Database {
         Args: { p_household_id: string; p_date: string };
         Returns: { from_payday: string | null; to_payday: string; amount: number }[];
       };
+      fund_totals_forecast: {
+        Args: { p_household_id: string; p_from_month: string; p_months?: number };
+        Returns: { category_id: string; month_index: number; amount: number }[];
+      };
       create_household_invite: {
         Args: { p_ttl?: string };
         Returns: HouseholdInvite;
