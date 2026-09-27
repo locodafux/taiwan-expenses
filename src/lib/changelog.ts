@@ -11,11 +11,20 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
-    id: '2026-09-27',
+    id: '2026-09-27-2',
     date: 'Sep 27, 2026',
     items: [
       'New Settings → Breakdown screen: a month-by-month table of every category, with real history behind today and a projection ahead of it.',
       'Capped funds now project correctly further into the future, instead of always checking their cap against today’s balance.',
+    ],
+  },
+  {
+    id: '2026-09-27',
+    date: 'Sep 27, 2026',
+    items: [
+      'Groups of funds can now have their own savings goal, not just a fixed share — the app fits each fund’s goal into its slice of the group and keeps the rest in the parent fund.',
+      'You can also group bills together just to keep them organized, with no money moving between them.',
+      'Confirmation pop-ups, like deleting a bill or your account, now match the rest of the app instead of your phone’s plain system alert.',
     ],
   },
   {
