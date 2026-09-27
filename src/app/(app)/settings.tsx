@@ -348,6 +348,14 @@ export default function Settings() {
             </View>
             <Icon name="chevronRight" size={16} color={vars['--ink-muted']} />
           </ListRow>
+          <ListRow onPress={() => router.push('/(app)/summary')}>
+            <Icon name="tabs" size={20} color={vars['--ink-2']} />
+            <View className="flex-1">
+              <Text className="font-body text-base text-ink">Summary of all</Text>
+              <Text className="font-body text-xs text-ink-muted">Every category, including archived, with where it&apos;s projected to land.</Text>
+            </View>
+            <Icon name="chevronRight" size={16} color={vars['--ink-muted']} />
+          </ListRow>
           <ListRow onPress={() => router.push('/(app)/feedback')}>
             <Icon name="chat" size={20} color={vars['--ink-2']} />
             <View className="flex-1">

@@ -164,6 +164,14 @@ export function addMonths(month: string, n: number): string {
   return toDateOnly(new Date(y, m - 1 + n, 1)).slice(0, 7);
 }
 
+// Calendar months from `from` to `to` ('YYYY-MM' each) - the summary
+// screen's "how many months of forecast do I need" sizing.
+export function monthsBetween(from: string, to: string): number {
+  const [fy, fm] = from.split('-').map(Number);
+  const [ty, tm] = to.split('-').map(Number);
+  return (ty - fy) * 12 + (tm - fm);
+}
+
 // A schedule's (income or bill_items) total across every active payday in
 // monthStart's month - the breakdown table's per-category Income/bill
 // columns, always schedule-based (there's no "income received" ledger to

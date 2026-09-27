@@ -87,6 +87,11 @@ export default function AppLayout() {
           options={{ title: 'Breakdown', href: null }}
         />
         <Tabs.Screen
+          name="summary"
+          // Reached from Settings -> Summary of all.
+          options={{ title: 'Summary of all', href: null }}
+        />
+        <Tabs.Screen
           name="settings"
           options={{ title: 'Settings', tabBarIcon: tabIcon('sliders') }}
         />
