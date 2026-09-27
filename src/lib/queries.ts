@@ -778,6 +778,59 @@ export function useAddManualContribution(householdId: string | undefined) {
   });
 }
 
+// --- Month-by-month breakdown table ---------------------------------------
+
+// Every fund category's projected contribution for `months` calendar months
+// starting at `fromMonth` ('YYYY-MM'), via public.fund_totals_forecast
+// (20260927000001_fund_totals_projection.sql) - a capped_percent fund's cap
+// is checked against a running PROJECTED balance across the window, not
+// today's real balance repeated for every month.
+export function useFundTotalsForecast(
+  householdId: string | undefined,
+  fromMonth: string | undefined,
+  months: number,
+) {
+  return useQuery({
+    queryKey: ['fund-totals-forecast', householdId, fromMonth, months],
+    enabled: !!householdId && !!fromMonth && months > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('fund_totals_forecast', {
+        p_household_id: householdId as string,
+        p_from_month: `${fromMonth}-01`,
+        p_months: months,
+      });
+      if (error) throw error;
+      return data as { category_id: string; month_index: number; amount: number }[];
+    },
+  });
+}
+
+// Real checked ledger totals grouped by category and calendar month, from
+// `sinceMonth` ('YYYY-MM') onward - the breakdown table's historical
+// columns (the forecast RPC only ever projects forward from today).
+export function useMonthlyLedgerTotals(householdId: string | undefined, sinceMonth: string | undefined) {
+  return useQuery({
+    queryKey: ['monthly-ledger-totals', householdId, sinceMonth],
+    enabled: !!householdId && !!sinceMonth,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('ledger_entries')
+        .select('category_id, payday_date, amount')
+        .eq('household_id', householdId as string)
+        .eq('status', 'checked')
+        .gte('payday_date', `${sinceMonth}-01`);
+      if (error) throw error;
+      const totals: Record<string, Record<string, number>> = {};
+      for (const row of data) {
+        const month = row.payday_date.slice(0, 7);
+        totals[month] ??= {};
+        totals[month][row.category_id] = (totals[month][row.category_id] ?? 0) + row.amount;
+      }
+      return totals;
+    },
+  });
+}
+
 // --- Feedback (bug reports + feature requests; table is still bug_reports) --
 
 // The whole household's feedback, newest first. Status is maintained outside

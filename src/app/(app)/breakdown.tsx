@@ -1,0 +1,229 @@
+import { useRouter } from 'expo-router';
+import { useMemo, useState } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+import { ErrorState } from '@/components/ui/ErrorState';
+import { Icon } from '@/components/ui/Icon';
+import { formatPeso } from '@/lib/format';
+import { addMonths, fromDateOnly, scheduledMonthTotal, toDateOnly } from '@/lib/payday';
+import {
+  combineQueryState,
+  useCategories,
+  useFundTotalsForecast,
+  useHouseholdBillItems,
+  useHouseholdMembership,
+  useIncomes,
+  useMonthlyLedgerTotals,
+} from '@/lib/queries';
+import type { Category } from '@/lib/database.types';
+import { useTheme } from '@/theme/ThemeProvider';
+
+// Mirrors taiwan-fund-planner.html's "Full numbers" table: one row per
+// month, one column per category, real history behind today and a forward
+// projection ahead of it (private.fund_totals_plan,
+// 20260927000001_fund_totals_projection.sql). ponytail: no sticky header/
+// first column (plain horizontal ScrollView) and a fixed 12-month page
+// rather than an infinite one - add either if a household finds this window
+// too small to be useful.
+const PAST_MONTHS = 3;
+const WINDOW_SIZE = 12;
+const CELL_W = 108;
+const MONTH_W = 84;
+
+function monthLabel(month: string) {
+  return fromDateOnly(`${month}-01`).toLocaleDateString(undefined, { month: 'short', year: '2-digit' });
+}
+
+export default function Breakdown() {
+  const { vars } = useTheme();
+  const router = useRouter();
+  const membershipQuery = useHouseholdMembership();
+  const householdId = membershipQuery.data?.household_id;
+
+  const currentMonth = toDateOnly(new Date()).slice(0, 7);
+  const [windowStart, setWindowStart] = useState(() => addMonths(currentMonth, -PAST_MONTHS));
+  const months = useMemo(
+    () => Array.from({ length: WINDOW_SIZE }, (_, i) => addMonths(windowStart, i)),
+    [windowStart],
+  );
+  const forecastMonths = months.filter((m) => m >= currentMonth);
+
+  const categoriesQuery = useCategories(householdId);
+  const billItemsQuery = useHouseholdBillItems(householdId);
+  const incomesQuery = useIncomes(householdId);
+  const ledgerQuery = useMonthlyLedgerTotals(householdId, windowStart);
+  const forecastQuery = useFundTotalsForecast(householdId, forecastMonths[0], forecastMonths.length);
+
+  const { isError, refetch } = combineQueryState(
+    membershipQuery,
+    categoriesQuery,
+    billItemsQuery,
+    incomesQuery,
+    ledgerQuery,
+    forecastQuery,
+  );
+  const isLoading =
+    membershipQuery.isLoading ||
+    categoriesQuery.isLoading ||
+    billItemsQuery.isLoading ||
+    incomesQuery.isLoading ||
+    ledgerQuery.isLoading ||
+    (forecastMonths.length > 0 && forecastQuery.isLoading);
+
+  const categories = categoriesQuery.data ?? [];
+  const billItemsByCategory = useMemo(() => {
+    const map: Record<string, { amount: number; recurring_day: number; end_date: string | null }[]> = {};
+    for (const item of billItemsQuery.data ?? []) {
+      (map[item.category_id] ??= []).push(item);
+    }
+    return map;
+  }, [billItemsQuery.data]);
+
+  const forecastByMonth = useMemo(() => {
+    const map: Record<string, Record<string, number>> = {};
+    for (const row of forecastQuery.data ?? []) {
+      const month = forecastMonths[row.month_index - 1];
+      if (!month) continue;
+      (map[month] ??= {})[row.category_id] = row.amount;
+    }
+    return map;
+  }, [forecastQuery.data, forecastMonths]);
+
+  const ledgerTotals = ledgerQuery.data ?? {};
+
+  // A category's value for one month, or null when it's a linked group/excess
+  // child in a future month - those are only ever allocated per-payday from
+  // their parent's share (private.excess_group_allocations), which this
+  // task's projection deliberately does not cover.
+  function cellValue(category: Category, month: string): number | null {
+    const monthStart = fromDateOnly(`${month}-01`);
+    if (category.kind === 'bill') {
+      return scheduledMonthTotal(billItemsByCategory[category.id] ?? [], monthStart);
+    }
+    const historical = ledgerTotals[month]?.[category.id];
+    if (historical !== undefined) return historical;
+    if (month < currentMonth) return 0;
+    const ruleType = category.rule?.type;
+    if (ruleType === 'excess' || ruleType === 'group_child') return null;
+    return forecastByMonth[month]?.[category.id] ?? 0;
+  }
+
+  if (isError) {
+    return (
+      <SafeAreaView className="flex-1 bg-page">
+        <ErrorState onRetry={refetch} />
+      </SafeAreaView>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <SafeAreaView className="flex-1 items-center justify-center bg-page">
+        <ActivityIndicator color={vars['--accent']} />
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView className="flex-1 bg-page" edges={['top']}>
+      <View className="gap-3 px-6 pt-3">
+        <Pressable
+          onPress={() => router.navigate('/(app)/settings')}
+          hitSlop={13}
+          accessibilityRole="button"
+          className="self-start py-3"
+        >
+          <Text className="font-body text-sm text-ink-2">‹ Settings</Text>
+        </Pressable>
+        <View className="flex-row items-center justify-between gap-3">
+          <Text className="flex-1 font-display-semibold text-lg text-ink">Breakdown</Text>
+          <View className="flex-row items-center gap-1">
+            <Pressable
+              onPress={() => setWindowStart((s) => addMonths(s, -WINDOW_SIZE))}
+              hitSlop={10}
+              accessibilityRole="button"
+              className="p-2"
+            >
+              <Icon name="chevronLeft" size={18} color={vars['--ink-2']} />
+            </Pressable>
+            <Text className="font-body text-sm text-ink-muted">
+              {monthLabel(months[0])} – {monthLabel(months[months.length - 1])}
+            </Text>
+            <Pressable
+              onPress={() => setWindowStart((s) => addMonths(s, WINDOW_SIZE))}
+              hitSlop={10}
+              accessibilityRole="button"
+              className="p-2"
+            >
+              <Icon name="chevronRight" size={18} color={vars['--ink-2']} />
+            </Pressable>
+          </View>
+        </View>
+      </View>
+
+      <ScrollView horizontal contentContainerClassName="px-6 py-4">
+        <View>
+          <View className="flex-row border-b border-gridline pb-2">
+            <View style={{ width: MONTH_W }} />
+            <View style={{ width: CELL_W }}>
+              <Text className="text-right font-body-semibold text-xs text-ink">Income</Text>
+            </View>
+            {categories.map((c) => (
+              <View key={c.id} style={{ width: CELL_W }}>
+                <Text numberOfLines={1} style={{ color: c.color ?? vars['--ink'] }} className="text-right font-body-semibold text-xs">
+                  {c.name}
+                </Text>
+              </View>
+            ))}
+            <View style={{ width: CELL_W }}>
+              <Text className="text-right font-body-semibold text-xs text-ink">Total</Text>
+            </View>
+          </View>
+
+          {months.map((month) => {
+            const monthStart = fromDateOnly(`${month}-01`);
+            const income = scheduledMonthTotal(incomesQuery.data ?? [], monthStart);
+            const values = categories.map((c) => cellValue(c, month));
+            const total = categories.reduce((sum, c, i) => {
+              if (c.kind !== 'fund') return sum;
+              const v = values[i];
+              return v === null ? sum : sum + v;
+            }, 0);
+            return (
+              <View
+                key={month}
+                className={`flex-row items-center py-2 ${month === currentMonth ? 'bg-surface' : ''}`}
+              >
+                <View style={{ width: MONTH_W }}>
+                  <Text className="font-body-semibold text-xs text-ink">{monthLabel(month)}</Text>
+                </View>
+                <View style={{ width: CELL_W }}>
+                  <Text className="text-right font-body text-xs text-ink-2">{formatPeso(income)}</Text>
+                </View>
+                {categories.map((c, i) => {
+                  const v = values[i];
+                  return (
+                    <View key={c.id} style={{ width: CELL_W }}>
+                      <Text className="text-right font-body text-xs text-ink-2">
+                        {v === null ? '–' : formatPeso(v)}
+                      </Text>
+                    </View>
+                  );
+                })}
+                <View style={{ width: CELL_W }}>
+                  <Text className="text-right font-body-semibold text-xs text-ink">{formatPeso(total)}</Text>
+                </View>
+              </View>
+            );
+          })}
+        </View>
+      </ScrollView>
+      <Text className="px-6 pb-4 font-body text-xs leading-[1.5] text-ink-muted">
+        Months before today are your real checked history; {monthLabel(currentMonth)} onward is projected from your
+        current rules. Linked/excess fund columns show “–” for projected months - their share only shows up once a
+        payday is actually checked off.
+      </Text>
+    </SafeAreaView>
+  );
+}

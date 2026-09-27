@@ -156,3 +156,31 @@ export function paymentsLeft(recurringDay: number, endDate: string, from: Date =
   while (next() <= end) n++;
   return n;
 }
+
+// 'YYYY-MM' shifted by n calendar months (negative goes back) - the
+// breakdown table's window paging.
+export function addMonths(month: string, n: number): string {
+  const [y, m] = month.split('-').map(Number);
+  return toDateOnly(new Date(y, m - 1 + n, 1)).slice(0, 7);
+}
+
+// A schedule's (income or bill_items) total across every active payday in
+// monthStart's month - the breakdown table's per-category Income/bill
+// columns, always schedule-based (there's no "income received" ledger to
+// read back for past months, and a scheduled bill is due whether checked off
+// yet or not).
+export function scheduledMonthTotal(
+  items: { amount: number; recurring_day: number; active?: boolean; end_date?: string | null }[],
+  monthStart: Date,
+): number {
+  const activeItems = items.filter((i) => i.active !== false);
+  const days = Array.from(new Set(activeItems.map((i) => clampDayToMonth(i.recurring_day, monthStart).getDate())));
+  return days.reduce((sum, day) => {
+    const dayDate = clampDayToMonth(day, monthStart);
+    const dueThatDay = activeItems.filter((i) => {
+      if (clampDayToMonth(i.recurring_day, monthStart).getDate() !== day) return false;
+      return !i.end_date || fromDateOnly(i.end_date) >= dayDate;
+    });
+    return sum + dueThatDay.reduce((s, i) => s + i.amount, 0);
+  }, 0);
+}
