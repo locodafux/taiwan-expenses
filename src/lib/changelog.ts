@@ -11,6 +11,13 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-09-27-3',
+    date: 'Sep 27, 2026',
+    items: [
+      'New Settings → Summary of all: see where each fund is headed, not just where it is now — its projected total once its savings goal (or the household’s furthest one) is reached.',
+    ],
+  },
+  {
     id: '2026-09-27-2',
     date: 'Sep 27, 2026',
     items: [
