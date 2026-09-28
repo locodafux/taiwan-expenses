@@ -11,6 +11,13 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-09-28',
+    date: 'Sep 28, 2026',
+    items: [
+      'Touched up the color palette across all three looks — text and category colors are richer and easier to read against their backgrounds.',
+    ],
+  },
+  {
     id: '2026-09-27-3',
     date: 'Sep 27, 2026',
     items: [
