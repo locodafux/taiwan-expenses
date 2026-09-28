@@ -96,4 +96,16 @@ describe('Breakdown', () => {
 
     await waitFor(() => expect(getByText(/Couldn't load/)).toBeTruthy());
   });
+
+  // Regression: on the live project, PR #81's migration adding
+  // public.fund_totals_forecast was never pushed (supabase migration list
+  // --linked shows it unapplied), so the RPC 404s (PGRST202, function not
+  // found) and every household hits this unconditionally - unlike Summary of
+  // all, which only calls the same RPC when a goal-dated fund exists.
+  it('shows an error state when the fund-totals-forecast RPC call fails', async () => {
+    mockUseFundTotalsForecast.mockReturnValue({ ...ok, isError: true });
+    const { getByText } = await renderWithTheme(<Breakdown />);
+
+    await waitFor(() => expect(getByText(/Couldn't load/)).toBeTruthy());
+  });
 });
