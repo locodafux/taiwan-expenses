@@ -362,6 +362,25 @@ export function usePaydayCarries(householdId: string | undefined, paydayDate: st
   });
 }
 
+// Read-only version of what materialize_payday would write for a payday
+// further out than the next one (reviewing an upcoming payday from the
+// dashboard stepper) - never writes ledger_entries, so nothing can be ticked
+// off early.
+export function usePaydayPreview(householdId: string | undefined, paydayDate: string | undefined) {
+  return useQuery({
+    queryKey: ['payday-preview', householdId, paydayDate],
+    enabled: !!householdId && !!paydayDate,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('preview_payday', {
+        p_household_id: householdId as string,
+        p_payday_date: paydayDate as string,
+      });
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
 export function useCreateBillItem(categoryId: string | undefined) {
   const queryClient = useQueryClient();
   return useMutation({

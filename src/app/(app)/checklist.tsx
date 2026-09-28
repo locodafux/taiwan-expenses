@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { KeyboardScroll } from '@/components/ui/KeyboardScroll';
 import { TextField } from '@/components/ui/TextField';
 import { Callout } from '@/components/ui/Callout';
-import { Card } from '@/components/ui/Card';
+import { Card, CategoryMark, ListRow } from '@/components/ui/Card';
 import { ChecklistGroup, ChecklistRow } from '@/components/ui/Checklist';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Icon } from '@/components/ui/Icon';
@@ -28,6 +28,7 @@ import {
   useMaterializePayday,
   usePaydayCarries,
   usePaydayCompletionHistory,
+  usePaydayPreview,
   useUpdateLedgerAmount,
 } from '@/lib/queries';
 import { formatFolioDate, formatPeso } from '@/lib/format';
@@ -43,6 +44,7 @@ import { useTheme } from '@/theme/ThemeProvider';
 export default function PaydayChecklist() {
   const { vars } = useTheme();
   const router = useRouter();
+  const { date: dateParam } = useLocalSearchParams<{ date?: string }>();
   const membershipQuery = useHouseholdMembership();
   const member = membershipQuery.data;
   const householdId = member?.household_id;
@@ -52,16 +54,48 @@ export default function PaydayChecklist() {
   const bills = billsQuery.data;
   const categoriesQuery = useCategories(householdId);
 
-  const paydayDate = useMemo(() => {
+  // The true next payday - the only one materialize_payday ever writes real
+  // rows for. A date param further out (dashboard stepper's Review button)
+  // asks to look ahead; a date param before it asks to look back at history.
+  const nextPaydayDate = useMemo(() => {
     const activeDays = (incomes ?? []).filter((i) => i.active).map((i) => i.recurring_day);
     if (activeDays.length === 0) return undefined;
     return toDateOnly(nextPayday(activeDays));
   }, [incomes]);
+  const paydayDate = dateParam ?? nextPaydayDate;
+  const isCurrent = !!paydayDate && paydayDate === nextPaydayDate;
+  const isFuture = !!paydayDate && !!nextPaydayDate && paydayDate > nextPaydayDate;
 
   const materialize = useMaterializePayday(householdId);
-  const entriesQuery = useLedgerEntriesForPayday(householdId, paydayDate);
-  const entries = entriesQuery.data;
-  const isLoading = entriesQuery.isLoading || incomesQuery.isLoading || membershipQuery.isLoading;
+  const entriesQuery = useLedgerEntriesForPayday(householdId, isFuture ? undefined : paydayDate);
+  // A future payday has no ledger_entries yet - preview_payday computes what
+  // materialize_payday would write without writing it, so nothing here can be
+  // ticked off before that payday is real.
+  const previewQuery = usePaydayPreview(householdId, isFuture ? paydayDate : undefined);
+  const previewEntries = useMemo(() => {
+    if (!isFuture || !previewQuery.data || !categoriesQuery.data) return undefined;
+    const catById = new Map(categoriesQuery.data.map((c) => [c.id, c]));
+    const billById = new Map((bills ?? []).map((b) => [b.id, b]));
+    return previewQuery.data.map((row) => {
+      const cat = catById.get(row.category_id);
+      const bill = row.bill_item_id ? billById.get(row.bill_item_id) : undefined;
+      return {
+        id: `${row.category_id}:${row.bill_item_id ?? 'fund'}`,
+        category_id: row.category_id,
+        bill_item_id: row.bill_item_id,
+        amount: row.amount,
+        status: 'pending' as const,
+        manual: false,
+        categories: cat ? { name: cat.name, color: cat.color, kind: cat.kind } : null,
+        bill_items: bill ? { label: bill.label } : null,
+      };
+    });
+  }, [isFuture, previewQuery.data, categoriesQuery.data, bills]);
+  const entries = isFuture ? previewEntries : entriesQuery.data;
+  const isLoading =
+    incomesQuery.isLoading ||
+    membershipQuery.isLoading ||
+    (isFuture ? previewQuery.isLoading : entriesQuery.isLoading);
   const checkEntry = useCheckLedgerEntry(householdId, paydayDate);
   const updateAmount = useUpdateLedgerAmount(householdId, paydayDate);
   const completionHistoryQuery = usePaydayCompletionHistory(householdId);
@@ -73,7 +107,7 @@ export default function PaydayChecklist() {
     incomesQuery,
     billsQuery,
     categoriesQuery,
-    entriesQuery,
+    isFuture ? previewQuery : entriesQuery,
   );
 
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -88,10 +122,12 @@ export default function PaydayChecklist() {
     categoriesQuery.data && bills ? JSON.stringify([categoriesQuery.data, bills]) : undefined;
 
   useEffect(() => {
-    if (householdId && paydayDate && planInputs) materialize.mutate(paydayDate);
+    // Only the current payday ever gets real rows - a future one is preview-only,
+    // and a past one keeps whatever it was materialized with at the time.
+    if (householdId && isCurrent && paydayDate && planInputs) materialize.mutate(paydayDate);
     // Only re-materialize when the payday or its inputs change, not on every render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [householdId, paydayDate, planInputs]);
+  }, [householdId, isCurrent, paydayDate, planInputs]);
 
   const cutAdvice = useMemo(() => {
     if (!incomes || !bills) return null;
@@ -188,11 +224,18 @@ export default function PaydayChecklist() {
       <KeyboardScroll contentContainerClassName="gap-4 px-6 py-5">
         <ScreenHeader
           kicker={formatFolioDate(fromDateOnly(paydayDate))}
-          title={`${paydayDay}th payday checklist`}
+          title={isFuture ? `${paydayDay}th payday preview` : `${paydayDay}th payday checklist`}
           subtitle={`${formatPeso(takeHome)} take-home`}
         />
 
-        {total > 0 && (
+        {isFuture && (
+          <Callout>
+            This is a preview of what this payday will look like — the amounts can still change, and there&apos;s
+            nothing to check off until it&apos;s actually paid.
+          </Callout>
+        )}
+
+        {!isFuture && total > 0 && (
           <ProgressBar
             label={`${checked} / ${total} items checked`}
             amountLabel={`${formatPeso(checkedAmount)} of ${formatPeso(totalAmount)} accounted for`}
@@ -200,7 +243,7 @@ export default function PaydayChecklist() {
           />
         )}
 
-        {allChecked && <PaydayCelebration streak={streak} />}
+        {!isFuture && allChecked && <PaydayCelebration streak={streak} />}
 
         {visible.length === 0 && <EmptyState>Nothing to check off for this payday yet.</EmptyState>}
 
@@ -209,43 +252,61 @@ export default function PaydayChecklist() {
 
             {outgoing.length > 0 && (
               <ChecklistGroup heading="Money leaving" note="Bills and debt payments due this payday.">
-                {outgoing.map((entry) => (
-                  <ChecklistRow
-                    key={entry.id}
-                    label={entry.bill_items?.label ?? entry.categories?.name ?? 'Item'}
-                    amount={formatPeso(entry.amount)}
-                    color={entry.categories?.color ?? '#999'}
-                    checked={entry.status === 'checked'}
-                    onToggle={() => checkEntry.mutate({ id: entry.id, checked: entry.status !== 'checked' })}
-                    onAmountPress={() => {
-                      setEditingId(entry.id);
-                      setEditAmount(String(entry.amount));
-                      setEditError(null);
-                    }}
-                    onLabelPress={() => router.push(`/(app)/categories/${entry.category_id}`)}
-                  />
-                ))}
+                {outgoing.map((entry) =>
+                  isFuture ? (
+                    <PreviewRow
+                      key={entry.id}
+                      label={entry.bill_items?.label ?? entry.categories?.name ?? 'Item'}
+                      amount={formatPeso(entry.amount)}
+                      color={entry.categories?.color}
+                    />
+                  ) : (
+                    <ChecklistRow
+                      key={entry.id}
+                      label={entry.bill_items?.label ?? entry.categories?.name ?? 'Item'}
+                      amount={formatPeso(entry.amount)}
+                      color={entry.categories?.color ?? '#999'}
+                      checked={entry.status === 'checked'}
+                      onToggle={() => checkEntry.mutate({ id: entry.id, checked: entry.status !== 'checked' })}
+                      onAmountPress={() => {
+                        setEditingId(entry.id);
+                        setEditAmount(String(entry.amount));
+                        setEditError(null);
+                      }}
+                      onLabelPress={() => router.push(`/(app)/categories/${entry.category_id}`)}
+                    />
+                  ),
+                )}
               </ChecklistGroup>
             )}
 
             {staying.length > 0 && (
               <ChecklistGroup heading="Money staying" note="Fund contributions kept in the household.">
-                {staying.map((entry) => (
-                  <ChecklistRow
-                    key={entry.id}
-                    label={`${entry.categories?.name ?? 'Item'}${entry.manual ? ' · extra' : ''}`}
-                    amount={formatPeso(entry.amount)}
-                    color={entry.categories?.color ?? '#999'}
-                    checked={entry.status === 'checked'}
-                    onToggle={() => checkEntry.mutate({ id: entry.id, checked: entry.status !== 'checked' })}
-                    onAmountPress={() => {
-                      setEditingId(entry.id);
-                      setEditAmount(String(entry.amount));
-                      setEditError(null);
-                    }}
-                    onLabelPress={() => router.push(`/(app)/categories/${entry.category_id}`)}
-                  />
-                ))}
+                {staying.map((entry) =>
+                  isFuture ? (
+                    <PreviewRow
+                      key={entry.id}
+                      label={`${entry.categories?.name ?? 'Item'}${entry.manual ? ' · extra' : ''}`}
+                      amount={formatPeso(entry.amount)}
+                      color={entry.categories?.color}
+                    />
+                  ) : (
+                    <ChecklistRow
+                      key={entry.id}
+                      label={`${entry.categories?.name ?? 'Item'}${entry.manual ? ' · extra' : ''}`}
+                      amount={formatPeso(entry.amount)}
+                      color={entry.categories?.color ?? '#999'}
+                      checked={entry.status === 'checked'}
+                      onToggle={() => checkEntry.mutate({ id: entry.id, checked: entry.status !== 'checked' })}
+                      onAmountPress={() => {
+                        setEditingId(entry.id);
+                        setEditAmount(String(entry.amount));
+                        setEditError(null);
+                      }}
+                      onLabelPress={() => router.push(`/(app)/categories/${entry.category_id}`)}
+                    />
+                  ),
+                )}
               </ChecklistGroup>
             )}
 
@@ -300,5 +361,18 @@ export default function PaydayChecklist() {
         {cutAdvice && <Callout>{cutAdvice}</Callout>}
       </KeyboardScroll>
     </SafeAreaView>
+  );
+}
+
+// A preview row for a future payday: same label/amount/colour as a
+// ChecklistRow, but no checkbox and nothing pressable - there's nothing to
+// toggle or edit until that payday is materialized for real.
+function PreviewRow({ label, amount, color }: { label: string; amount: string; color: string | null | undefined }) {
+  return (
+    <ListRow>
+      <CategoryMark color={color} size={8} />
+      <Text className="flex-1 font-body text-base text-ink">{label}</Text>
+      <Text className="font-mono text-sm text-ink-muted">{amount}</Text>
+    </ListRow>
   );
 }

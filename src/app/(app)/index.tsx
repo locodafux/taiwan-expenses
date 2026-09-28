@@ -244,7 +244,12 @@ export default function Dashboard() {
             >
               <Icon name="chevronRight" size={18} color={vars['--accent']} />
             </Pressable>
-            <Button size="sm" onPress={() => router.push('/(app)/checklist')}>
+            <Button
+              size="sm"
+              onPress={() =>
+                router.push({ pathname: '/(app)/checklist', params: { date: toDateOnly(payday.date) } })
+              }
+            >
               Review
             </Button>
           </View>

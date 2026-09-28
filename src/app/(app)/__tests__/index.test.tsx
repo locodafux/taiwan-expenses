@@ -1,5 +1,6 @@
 import { fireEvent, waitFor } from '@testing-library/react-native';
 
+import { nextPayday, paydayAtOffset, toDateOnly } from '@/lib/payday';
 import { renderWithTheme } from '@/test/renderWithTheme';
 
 const mockPush = jest.fn();
@@ -106,10 +107,26 @@ describe('Dashboard', () => {
     expect(mockPush).toHaveBeenCalledWith('/(app)/categories/cat-fund');
   });
 
-  it('navigates to the checklist from the next-payday card', async () => {
+  it('navigates to the checklist for the selected payday from the next-payday card', async () => {
     const { getByText } = await renderWithTheme(<Dashboard />);
     await fireEvent.press(await waitFor(() => getByText('Review')));
-    expect(mockPush).toHaveBeenCalledWith('/(app)/checklist');
+    expect(mockPush).toHaveBeenCalledWith({
+      pathname: '/(app)/checklist',
+      params: { date: toDateOnly(nextPayday([5])) },
+    });
+  });
+
+  it('reviews the currently-stepped-to payday, not always the next one', async () => {
+    const { getByLabelText, getByText } = await renderWithTheme(<Dashboard />);
+    await waitFor(() => expect(getByText(/^Next payday/)).toBeTruthy());
+
+    await fireEvent.press(getByLabelText('Next payday'));
+    await fireEvent.press(await waitFor(() => getByText('Review')));
+
+    expect(mockPush).toHaveBeenCalledWith({
+      pathname: '/(app)/checklist',
+      params: { date: toDateOnly(paydayAtOffset([5], 1)) },
+    });
   });
 
   it('steps through previous and further upcoming paydays', async () => {
