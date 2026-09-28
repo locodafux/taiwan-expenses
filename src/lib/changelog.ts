@@ -15,6 +15,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: 'Sep 28, 2026',
     items: [
       'Touched up the color palette across all three looks — text and category colors are richer and easier to read against their backgrounds.',
+      'Reviewing an upcoming payday from the dashboard now shows that payday’s own checklist — what it’ll actually pay for — instead of always jumping to the next one. It’s a preview, so nothing on it can be checked off until that payday actually arrives.',
     ],
   },
   {

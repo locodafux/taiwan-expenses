@@ -1,12 +1,14 @@
 import { fireEvent, waitFor } from '@testing-library/react-native';
 
-import { nextPayday, toDateOnly } from '@/lib/payday';
+import { nextPayday, paydayAtOffset, toDateOnly } from '@/lib/payday';
 import { renderWithTheme } from '@/test/renderWithTheme';
 import { ThemeProvider } from '@/theme/ThemeProvider';
 
 const mockPush = jest.fn();
+const mockUseLocalSearchParams = jest.fn(() => ({}));
 jest.mock('expo-router', () => ({
   useRouter: () => ({ push: mockPush }),
+  useLocalSearchParams: () => mockUseLocalSearchParams(),
 }));
 
 const mockUseHouseholdMembership = jest.fn();
@@ -20,6 +22,7 @@ const mockUseUpdateLedgerAmount = jest.fn();
 const mockUsePaydayCompletionHistory = jest.fn();
 const mockUseGoalShortfalls = jest.fn();
 const mockUsePaydayCarries = jest.fn();
+const mockUsePaydayPreview = jest.fn();
 
 jest.mock('@/lib/queries', () => ({
   ...jest.requireActual('@/lib/queries'),
@@ -34,6 +37,7 @@ jest.mock('@/lib/queries', () => ({
   usePaydayCompletionHistory: (...args: unknown[]) => mockUsePaydayCompletionHistory(...args),
   useGoalShortfalls: (...args: unknown[]) => mockUseGoalShortfalls(...args),
   usePaydayCarries: (...args: unknown[]) => mockUsePaydayCarries(...args),
+  usePaydayPreview: (...args: unknown[]) => mockUsePaydayPreview(...args),
 }));
 
 import PaydayChecklist from '../checklist';
@@ -70,6 +74,7 @@ const mockUpdateAmountMutateAsync = jest.fn();
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockUseLocalSearchParams.mockReturnValue({});
   mockUseHouseholdMembership.mockReturnValue(okQuery(member));
   mockUseIncomes.mockReturnValue(okQuery(incomes));
   mockUseHouseholdBillItems.mockReturnValue(okQuery([]));
@@ -84,6 +89,7 @@ beforeEach(() => {
   mockUsePaydayCompletionHistory.mockReturnValue(okQuery([]));
   mockUseGoalShortfalls.mockReturnValue(okQuery([]));
   mockUsePaydayCarries.mockReturnValue(okQuery([]));
+  mockUsePaydayPreview.mockReturnValue(okQuery(undefined));
 });
 
 describe('PaydayChecklist', () => {
@@ -299,5 +305,42 @@ describe('PaydayChecklist', () => {
     await waitFor(() => expect(getByText('Taiwan fund')).toBeTruthy());
     expect(queryByText('Skip')).toBeNull();
     expect(getByText('Fund contributions kept in the household.')).toBeTruthy();
+  });
+
+  // Reviewing an upcoming payday from the dashboard stepper (feedback 2026-09-28):
+  // a future payday previews what materialize_payday would write, without writing it.
+  describe('reviewing a payday from the stepper', () => {
+    const futurePayday = toDateOnly(paydayAtOffset([5], 2));
+    const pastPayday = toDateOnly(paydayAtOffset([5], -1));
+
+    it('shows a read-only preview for a future payday and never materializes it', async () => {
+      mockUseLocalSearchParams.mockReturnValue({ date: futurePayday });
+      mockUsePaydayPreview.mockReturnValue(
+        okQuery([{ category_id: 'cat-bill', bill_item_id: null, amount: 1500 }]),
+      );
+      mockUseCategories.mockReturnValue(
+        okQuery([{ id: 'cat-bill', name: 'Rent', color: '#c1552f', kind: 'bill' }]),
+      );
+
+      const { getByText, queryByText } = await renderWithTheme(<PaydayChecklist />);
+
+      await waitFor(() => expect(getByText('Rent')).toBeTruthy());
+      expect(getByText(/preview of what this payday will look like/)).toBeTruthy();
+      expect(queryByText(/items checked/)).toBeNull();
+      expect(mockMaterializeMutate).not.toHaveBeenCalled();
+
+      await fireEvent.press(getByText('Rent'));
+      expect(mockCheckMutate).not.toHaveBeenCalled();
+    });
+
+    it('does not re-materialize a past payday, only reads its existing entries', async () => {
+      mockUseLocalSearchParams.mockReturnValue({ date: pastPayday });
+      mockUseLedgerEntriesForPayday.mockReturnValue(okQuery(entries));
+
+      const { getByText } = await renderWithTheme(<PaydayChecklist />);
+
+      await waitFor(() => expect(getByText('Rent')).toBeTruthy());
+      expect(mockMaterializeMutate).not.toHaveBeenCalled();
+    });
   });
 });

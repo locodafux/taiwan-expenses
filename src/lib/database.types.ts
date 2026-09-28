@@ -263,6 +263,10 @@ export interface Database {
         Args: { p_household_id: string; p_from_month: string; p_months?: number };
         Returns: { category_id: string; month_index: number; amount: number }[];
       };
+      preview_payday: {
+        Args: { p_household_id: string; p_payday_date: string };
+        Returns: { category_id: string; bill_item_id: string | null; amount: number }[];
+      };
       create_household_invite: {
         Args: { p_ttl?: string };
         Returns: HouseholdInvite;
