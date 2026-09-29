@@ -108,7 +108,9 @@ function MonthTable({ toggle }: { toggle: React.ReactNode }) {
   const categoriesQuery = useCategories(householdId);
   const billItemsQuery = useHouseholdBillItems(householdId);
   const incomesQuery = useIncomes(householdId);
-  const ledgerQuery = useMonthlyLedgerTotals(householdId, windowStart);
+  // All history since the app's start, not just this window: a linked child's
+  // goal room below is target minus everything already checked.
+  const ledgerQuery = useMonthlyLedgerTotals(householdId, APP_START_MONTH);
   const forecastQuery = useFundTotalsForecast(householdId, forecastMonths[0], forecastMonths.length);
 
   const { isError, refetch } = combineQueryState(
@@ -148,11 +150,50 @@ function MonthTable({ toggle }: { toggle: React.ReactNode }) {
 
   const ledgerTotals = ledgerQuery.data ?? {};
 
-  // A category's value for one month, or null when it's a linked group/excess
-  // child in a future month - those are only ever allocated per-payday from
-  // their parent's share (private.excess_group_allocations), which this
-  // task's projection deliberately does not cover.
-  function cellValue(category: Category, month: string): number | null {
+  // Each group parent's projected pool, split the way private.
+  // excess_group_allocations splits a payday: children take their percentages
+  // (capped by their goal's remaining room, carried month to month) and the
+  // parent keeps the rest. Done on the monthly pool, so it can differ by a peso
+  // from summing per-payday rounding. Only projected months are filled in.
+  const groupProjection = (() => {
+    const out: Record<string, Record<string, number>> = {};
+    const parentIds = new Set<string>();
+    for (const c of categories) {
+      if (c.rule?.type === 'excess' || c.rule?.type === 'group_child') parentIds.add(c.rule.parent_id);
+    }
+    for (const parentId of parentIds) {
+      const kids = categories.flatMap((c) =>
+        (c.rule?.type === 'excess' || c.rule?.type === 'group_child') && c.rule.parent_id === parentId
+          ? [{ id: c.id, percent: c.rule.percent, goal: c.rule.type === 'group_child' ? c.rule.goal : undefined }]
+          : [],
+      );
+      const rooms = kids.map((k) => {
+        if (!k.goal) return Infinity;
+        const checked = Object.values(ledgerTotals).reduce((sum, byCat) => sum + (byCat[k.id] ?? 0), 0);
+        return Math.max(0, k.goal.target_amount - checked);
+      });
+      const weightSum = kids.reduce((sum, k) => sum + k.percent, 0);
+      for (const month of forecastMonths) {
+        const pool = forecastByMonth[month]?.[parentId] ?? 0;
+        const total = pool > 0 ? (pool * weightSum) / 100 : 0;
+        const shares = kids.map((k) => Math.round((total * k.percent) / weightSum));
+        // Rounding residue goes to the heaviest child (first on a tie), like allocate_proportional.
+        const heaviest = kids.reduce((best, k, i) => (k.percent > kids[best].percent ? i : best), 0);
+        shares[heaviest] += Math.round(total) - shares.reduce((a, b) => a + b, 0);
+        let given = 0;
+        kids.forEach((k, i) => {
+          const share = Math.min(shares[i], rooms[i]);
+          rooms[i] -= share;
+          given += share;
+          (out[month] ??= {})[k.id] = share;
+        });
+        (out[month] ??= {})[parentId] = pool - given;
+      }
+    }
+    return out;
+  })();
+
+  function cellValue(category: Category, month: string): number {
     const monthStart = fromDateOnly(`${month}-01`);
     if (category.kind === 'bill') {
       return scheduledMonthTotal(billItemsByCategory[category.id] ?? [], monthStart);
@@ -160,9 +201,7 @@ function MonthTable({ toggle }: { toggle: React.ReactNode }) {
     const historical = ledgerTotals[month]?.[category.id];
     if (historical !== undefined) return historical;
     if (month < currentMonth) return 0;
-    const ruleType = category.rule?.type;
-    if (ruleType === 'excess' || ruleType === 'group_child') return null;
-    return forecastByMonth[month]?.[category.id] ?? 0;
+    return groupProjection[month]?.[category.id] ?? forecastByMonth[month]?.[category.id] ?? 0;
   }
 
   if (isError) {
@@ -246,11 +285,7 @@ function MonthTable({ toggle }: { toggle: React.ReactNode }) {
             const monthStart = fromDateOnly(`${month}-01`);
             const income = scheduledMonthTotal(incomesQuery.data ?? [], monthStart);
             const values = categories.map((c) => cellValue(c, month));
-            const total = categories.reduce((sum, c, i) => {
-              if (c.kind !== 'fund') return sum;
-              const v = values[i];
-              return v === null ? sum : sum + v;
-            }, 0);
+            const total = categories.reduce((sum, c, i) => (c.kind === 'fund' ? sum + values[i] : sum), 0);
             return (
               <View
                 key={month}
@@ -262,16 +297,11 @@ function MonthTable({ toggle }: { toggle: React.ReactNode }) {
                 <View style={{ width: CELL_W }}>
                   <Text className="text-right font-body text-xs text-ink-2">{formatPeso(income)}</Text>
                 </View>
-                {categories.map((c, i) => {
-                  const v = values[i];
-                  return (
-                    <View key={c.id} style={{ width: CELL_W }}>
-                      <Text className="text-right font-body text-xs text-ink-2">
-                        {v === null ? '–' : formatPeso(v)}
-                      </Text>
-                    </View>
-                  );
-                })}
+                {categories.map((c, i) => (
+                  <View key={c.id} style={{ width: CELL_W }}>
+                    <Text className="text-right font-body text-xs text-ink-2">{formatPeso(values[i])}</Text>
+                  </View>
+                ))}
                 <View style={{ width: CELL_W }}>
                   <Text className="text-right font-body-semibold text-xs text-ink">{formatPeso(total)}</Text>
                 </View>
@@ -282,8 +312,7 @@ function MonthTable({ toggle }: { toggle: React.ReactNode }) {
       </ScrollView>
       <Text className="px-6 pb-4 font-body text-xs leading-[1.5] text-ink-muted">
         Months before today are your real checked history; {monthLabel(currentMonth)} onward is projected from your
-        current rules. Linked/excess fund columns show “–” for projected months - their share only shows up once a
-        payday is actually checked off.
+        current rules. A linked fund shows its share of its parent fund’s projected month; the parent shows the rest.
       </Text>
     </SafeAreaView>
   );

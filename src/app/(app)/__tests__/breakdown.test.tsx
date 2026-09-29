@@ -128,10 +128,37 @@ describe('Breakdown', () => {
     expect(getAllByText('₱ 4,000').length).toBeGreaterThan(0);
   });
 
-  it('shows a dash for a linked group/excess child in a future month', async () => {
+  it('shows a linked child its share of the parent\'s projected month and the parent what is left', async () => {
+    const { getAllByText, queryByText } = await openTable(renderWithTheme(<Breakdown />));
+
+    // Oct 2026: SAVINGS pool 4,000 -> child 50% = 2,000, parent keeps 2,000,
+    // and the row Total is still the whole 4,000.
+    await waitFor(() => expect(getAllByText('₱ 2,000')).toHaveLength(2));
+    expect(getAllByText('₱ 4,000')).toHaveLength(1);
+    expect(queryByText('–')).toBeNull();
+  });
+
+  it('caps a linked child at its goal and hands the rest back to the parent', async () => {
+    mockUseCategories.mockReturnValue({
+      ...ok,
+      data: categories.map((c) =>
+        c.id === 'cat-excess-kid'
+          ? { ...c, rule: { type: 'group_child', parent_id: 'cat-savings', percent: 50, goal: { target_amount: 2500 } } }
+          : c,
+      ),
+    });
+    mockUseFundTotalsForecast.mockReturnValue({
+      ...ok,
+      data: [
+        { category_id: 'cat-savings', month_index: 1, amount: 4000 },
+        { category_id: 'cat-savings', month_index: 2, amount: 4000 },
+      ],
+    });
     const { getAllByText } = await openTable(renderWithTheme(<Breakdown />));
 
-    await waitFor(() => expect(getAllByText('–').length).toBeGreaterThan(0));
+    // Oct: child 2,000 (room 2,500 -> 500 left). Nov: child capped at 500, parent 3,500.
+    await waitFor(() => expect(getAllByText('₱ 500').length).toBeGreaterThan(0));
+    expect(getAllByText('₱ 3,500').length).toBeGreaterThan(0);
   });
 
   it('shows an error state that can be retried', async () => {

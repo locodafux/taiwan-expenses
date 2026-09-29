@@ -11,6 +11,13 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-09-29-4',
+    date: 'Sep 29, 2026',
+    items: [
+      'The Breakdown month table now shows each linked fund’s share (Taiwan, Emergency, Savings…) for every month instead of a dash, and the parent fund shows what is left after those shares.',
+    ],
+  },
+  {
     id: '2026-09-29-3',
     date: 'Sep 29, 2026',
     items: [
