@@ -179,7 +179,7 @@ describe('Dashboard', () => {
     expect(queryByText(/streak/i)).toBeNull();
   });
 
-  it('charts the household’s Taiwan, Emergency and Savings funds with progress toward a goal', async () => {
+  it('charts the household’s Taiwan, Emergency and Savings funds with progress toward a goal or the plan', async () => {
     mockUseCategories.mockReturnValue(
       okQuery([
         { id: 'tw', name: 'Taiwan fund', kind: 'fund', color: null, rule: { type: 'group_child', parent_id: 'x', percent: 50, goal: { target_amount: 80000 } } },
@@ -197,8 +197,10 @@ describe('Dashboard', () => {
     expect(getAllByText('Emergency Fund')).toHaveLength(2);
     expect(getAllByText('Savings')).toHaveLength(2);
     expect(getByText(/25% of ₱\s?80,000/)).toBeTruthy();
-    // Only the Taiwan fund has a goal.
-    expect(getAllByText(/% of /)).toHaveLength(1);
+    // Emergency and Savings have no stored goal, so they show the plan-by-March total.
+    expect(getByText(/21% of ₱\s?23,750 \(plan by March\)/)).toBeTruthy();
+    expect(getByText(/0% of ₱\s?23,750 \(plan by March\)/)).toBeTruthy();
+    expect(getAllByText(/% of /)).toHaveLength(3);
     expect(getAllByText(/₱\s?5,000/)).toHaveLength(2);
     // One line per fund, none for anything else.
     expect(getByTestId('fund-line-tw')).toBeTruthy();

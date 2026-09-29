@@ -15,6 +15,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: 'Sep 29, 2026',
     items: [
       'The Dashboard’s Fund summary is now a line chart: one line each for Taiwan Fund, Emergency Fund and Savings showing what you’ve saved month by month, with Taiwan’s progress toward ₱80,000.',
+      'Emergency Fund and Savings now show a progress bar and percent too, measured against what the payday plan puts in by March 2027 (marked “plan by March”).',
       'Removed “Saved this quarter” from the top of the Dashboard.',
     ],
   },

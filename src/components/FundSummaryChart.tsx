@@ -8,6 +8,7 @@ import { Meter } from '@/components/ui/ProgressBar';
 import type { Category } from '@/lib/database.types';
 import { formatPeso } from '@/lib/format';
 import { addMonths, APP_START_MONTH, appToday, fromDateOnly, toDateOnly } from '@/lib/payday';
+import { buildPlan, total } from '@/lib/paydayPlan';
 import { PAYDAY_PINK } from '@/theme/tokens';
 
 // Soft-pink scope, same as the payday calendar (see PAYDAY_PINK).
@@ -19,12 +20,13 @@ const MIN_MONTHS = 3;
 
 // The household's own fund categories are matched by name - the app has no
 // fixed "Taiwan / Emergency / Savings" ids. A fund the household doesn't have
-// just isn't drawn. `fallback` colors a fund whose category has none set.
+// just isn't drawn. `fallback` colors a fund whose category has none set;
+// `planKey` is the fund's column in the Breakdown payday plan.
 const FUNDS = [
-  { label: 'Taiwan Fund', match: /taiwan/i, fallback: PAYDAY_PINK['--pink'] },
-  { label: 'Emergency Fund', match: /emergency/i, fallback: PAYDAY_PINK['--accent'] },
-  { label: 'Savings', match: /^savings?$/i, fallback: PAYDAY_PINK['--ink-2'] },
-];
+  { label: 'Taiwan Fund', match: /taiwan/i, fallback: PAYDAY_PINK['--pink'], planKey: 'taiwan' },
+  { label: 'Emergency Fund', match: /emergency/i, fallback: PAYDAY_PINK['--accent'], planKey: 'emergency' },
+  { label: 'Savings', match: /^savings?$/i, fallback: PAYDAY_PINK['--ink-2'], planKey: 'savings' },
+] as const;
 
 function goalOf(c: Category): number | null {
   const r = c.rule;
@@ -52,11 +54,15 @@ export function FundSummaryChart({
 }) {
   const [width, setWidth] = useState(300);
 
-  const funds = FUNDS.flatMap(({ label, match, fallback }) => {
+  const funds = FUNDS.flatMap(({ label, match, fallback, planKey }) => {
     const c = categories.find((x) => x.kind === 'fund' && match.test(x.name));
     if (!c) return [];
-    const goal = goalOf(c);
-    return [{ id: c.id, label, color: c.color ?? fallback, amount: balances?.[c.id] ?? 0, goal: goal && goal > 0 ? goal : null }];
+    const stored = goalOf(c);
+    // No stored goal: fall back to the fund's planned total by the last plan
+    // payday (March 2027), the same figure the Breakdown calendar shows.
+    const fromPlan = !(stored && stored > 0);
+    const goal = fromPlan ? total(buildPlan().paydays, planKey) : (stored as number);
+    return [{ id: c.id, label, color: c.color ?? fallback, amount: balances?.[c.id] ?? 0, goal: goal > 0 ? goal : null, fromPlan }];
   });
   if (funds.length === 0) return null;
 
@@ -139,6 +145,7 @@ export function FundSummaryChart({
                   <Meter thin percent={(f.amount / f.goal) * 100} color={PAYDAY_PINK['--accent']} />
                   <Text className="font-body text-[11px] text-ink-muted">
                     {Math.min(100, Math.floor((f.amount / f.goal) * 100))}% of {formatPeso(f.goal)}
+                    {f.fromPlan ? ' (plan by March)' : ''}
                   </Text>
                 </View>
               )}
