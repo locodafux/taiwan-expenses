@@ -11,6 +11,13 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-09-29-3',
+    date: 'Sep 29, 2026',
+    items: [
+      'The Payday calendar’s monthly summary now shows one Taiwan Fund total for the month, like Emergency and Savings, instead of two repeated numbers.',
+    ],
+  },
+  {
     id: '2026-09-29-2',
     date: 'Sep 29, 2026',
     items: [
