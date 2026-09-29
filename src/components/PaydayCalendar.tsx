@@ -115,7 +115,6 @@ export function PaydayCalendar() {
   const monthPaydays = plan.paydays.filter((p) => p.month === selectedId.slice(0, 7));
   const summaryMonth = selectedId.slice(0, 7);
   const monthIssues = issues.filter((i) => i.scope === summaryMonth || i.scope.startsWith(`${summaryMonth}-`));
-  const lastOfMonth = monthPaydays[monthPaydays.length - 1];
 
   const color = {
     income: vars['--status-good'],
@@ -274,8 +273,7 @@ export function PaydayCalendar() {
           <AmountRow label="Total" amount={total(monthPaydays, 'debtTotal')} />
         </Section>
         <Section title="Taiwan Fund" color={color.taiwan} titleColor={color.pinkText}>
-          <AmountRow label="This month" amount={total(monthPaydays, 'taiwan')} />
-          <AmountRow label="Saved by end of month" amount={lastOfMonth.taiwanCumulative} />
+          <AmountRow label="Total" amount={total(monthPaydays, 'taiwan')} />
         </Section>
         <Section title="Emergency Fund" color={color.emergency} titleColor={color.pinkText}>
           <AmountRow label="Total" amount={total(monthPaydays, 'emergency')} />
