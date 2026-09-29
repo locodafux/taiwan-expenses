@@ -91,3 +91,27 @@ export const THEMES: Record<ThemeName, ThemeVars> = {
   },
 };
 
+
+// Soft-pink override for the Breakdown payday calendar only (captain's spec,
+// 2026-09-29). Layered over the active theme with nativewind's vars() on the
+// calendar's root View, so every className/`useTheme().vars` read inside it
+// picks these up while the rest of the app keeps its theme. The app has no dark
+// mode (all three themes are light), so there is no dark variant.
+// #E8A0BF is a fill/border tone only (2.1:1 on white); text uses Deep Rose
+// #9B4D70, which is 4.82:1 on Soft Blush #FBE7F0 and 5.69:1 on white.
+export const PAYDAY_PINK: ThemeVars = {
+  '--page': '#FFF7FA',
+  '--surface': '#ffffff',
+  '--surface-2': '#FBE7F0',
+  '--surface-3': '#FBE7F0',
+  '--gridline': '#F3D6E4',
+  '--ink': '#3B2A33',
+  '--ink-2': '#6B4A5C',
+  '--ink-muted': '#7A5568',
+  '--accent': '#9B4D70',
+  '--accent-soft': '#FBE7F0',
+  '--pink': '#E8A0BF',
+  '--cat-taiwan': '#E8A0BF',
+  '--cat-emergency': '#E8A0BF',
+  '--cat-savings': '#E8A0BF',
+};
