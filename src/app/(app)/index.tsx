@@ -7,6 +7,7 @@ import Svg, { Circle } from 'react-native-svg';
 
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
+import { FundSummaryChart } from '@/components/FundSummaryChart';
 import { Card, CategoryMark, ListRow } from '@/components/ui/Card';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
@@ -22,7 +23,6 @@ import {
   useHouseholdMembership,
   useIncomes,
   usePaydayAmounts,
-  usePaydayStreak,
   useSavedThisQuarter,
 } from '@/lib/queries';
 import { formatPeso } from '@/lib/format';
@@ -92,8 +92,6 @@ export default function Dashboard() {
   const paydayAmountsQuery = usePaydayAmounts(householdId);
   const savedThisQuarterQuery = useSavedThisQuarter(householdId);
   const savedThisQuarter = savedThisQuarterQuery.data;
-  const streakQuery = usePaydayStreak(householdId);
-  const streak = streakQuery.data;
 
   const { isError, refetch } = combineQueryState(
     membershipQuery,
@@ -104,7 +102,6 @@ export default function Dashboard() {
     incomesQuery,
     paydayAmountsQuery,
     savedThisQuarterQuery,
-    streakQuery,
   );
 
   const activeDays = useMemo(() => (incomes ?? []).filter((i) => i.active).map((i) => i.recurring_day), [incomes]);
@@ -143,7 +140,7 @@ export default function Dashboard() {
     { label: 'Invite your partner', done: (members ?? []).length > 1, href: '/(app)/settings' as const },
   ];
   const setupComplete = setupSteps.every((s) => s.done);
-  const showMomentum = savedThisQuarter !== undefined && streak !== undefined;
+  const showMomentum = savedThisQuarter !== undefined;
 
   return (
     <SafeAreaView className="flex-1 bg-page" edges={['top']}>
@@ -203,15 +200,7 @@ export default function Dashboard() {
         {/* Two "leaf" blocks (one corner cut small) instead of a generic card. */}
         {showMomentum && (
           <View className="gap-1 rounded-lg rounded-bl-sm bg-sage-soft px-5 py-4">
-            <View className="flex-row items-center justify-between gap-3">
-              <Text className="font-body-semibold text-sm text-accent-2">Saved this quarter</Text>
-              <View className="flex-row items-center gap-1 rounded-pill bg-surface px-3 py-1">
-                {streak > 0 && <Icon name="flame" size={14} color={vars['--accent']} />}
-                <Text className="font-body-bold text-xs text-accent">
-                  {streak > 0 ? `${streak}-payday streak` : 'Start your streak'}
-                </Text>
-              </View>
-            </View>
+            <Text className="font-body-semibold text-sm text-accent-2">Saved this quarter</Text>
             <Text className="font-mono text-2xl text-ink">{formatPeso(savedThisQuarter)}</Text>
           </View>
         )}
@@ -257,6 +246,8 @@ export default function Dashboard() {
             </Button>
           </View>
         )}
+
+        <FundSummaryChart categories={categories ?? []} balances={balances} />
 
         <View>
           <SectionLabel>Category balances</SectionLabel>

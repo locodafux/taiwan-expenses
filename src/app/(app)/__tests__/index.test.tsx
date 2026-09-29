@@ -16,7 +16,6 @@ const mockUseCategoryBalancesThisMonth = jest.fn();
 const mockUseIncomes = jest.fn();
 const mockUsePaydayAmounts = jest.fn();
 const mockUseSavedThisQuarter = jest.fn();
-const mockUsePaydayStreak = jest.fn();
 
 jest.mock('@/lib/queries', () => ({
   ...jest.requireActual('@/lib/queries'),
@@ -28,7 +27,6 @@ jest.mock('@/lib/queries', () => ({
   useIncomes: (...args: unknown[]) => mockUseIncomes(...args),
   usePaydayAmounts: (...args: unknown[]) => mockUsePaydayAmounts(...args),
   useSavedThisQuarter: (...args: unknown[]) => mockUseSavedThisQuarter(...args),
-  usePaydayStreak: (...args: unknown[]) => mockUsePaydayStreak(...args),
 }));
 
 import Dashboard from '../index';
@@ -60,17 +58,17 @@ beforeEach(() => {
   mockUseIncomes.mockReturnValue(okQuery(incomes));
   mockUsePaydayAmounts.mockReturnValue(okQuery({}));
   mockUseSavedThisQuarter.mockReturnValue(okQuery(18500));
-  mockUsePaydayStreak.mockReturnValue(okQuery(3));
 });
 
 describe('Dashboard', () => {
   it('renders household members, categories and the next payday with realistic data', async () => {
-    const { getByText } = await renderWithTheme(<Dashboard />);
+    const { getByText, getAllByText } = await renderWithTheme(<Dashboard />);
 
     await waitFor(() => expect(getByText('Taiwan fund')).toBeTruthy());
     expect(getByText('Rent')).toBeTruthy();
     expect(getByText(/Leo & Alex/)).toBeTruthy();
-    expect(getByText(/₱\s?12,000/)).toBeTruthy();
+    // Once in the fund summary, once in the category list.
+    expect(getAllByText(/₱\s?12,000/)).toHaveLength(2);
     expect(getByText(/₱\s?3,500 this month/)).toBeTruthy();
     expect(getByText(/^Next payday/)).toBeTruthy();
   });
@@ -173,19 +171,55 @@ describe('Dashboard', () => {
     });
   });
 
-  it('renders the momentum row (saved-this-quarter stat + streak chip) when data is present', async () => {
-    const { getByText } = await renderWithTheme(<Dashboard />);
+  it('shows the saved-this-quarter stat without any streak', async () => {
+    const { getByText, queryByText } = await renderWithTheme(<Dashboard />);
 
     expect(await waitFor(() => getByText('Saved this quarter'))).toBeTruthy();
     expect(getByText(/₱\s?18,500/)).toBeTruthy();
-    expect(getByText('3-payday streak')).toBeTruthy();
+    expect(queryByText(/streak/i)).toBeNull();
   });
 
-  it('shows a start-streak chip instead of a count when there is no streak yet', async () => {
-    mockUsePaydayStreak.mockReturnValue(okQuery(0));
+  it('charts the household’s Taiwan, Emergency and Savings funds with progress toward a goal', async () => {
+    mockUseCategories.mockReturnValue(
+      okQuery([
+        { id: 'tw', name: 'Taiwan fund', kind: 'fund', color: null, rule: { type: 'group_child', parent_id: 'x', percent: 50, goal: { target_amount: 80000 } } },
+        { id: 'em', name: 'Emergency Fund', kind: 'fund', color: null, rule: { type: 'group_child', parent_id: 'x', percent: 15 } },
+        { id: 'sv', name: 'Savings', kind: 'fund', color: null, rule: { type: 'group_child', parent_id: 'x', percent: 25 } },
+      ]),
+    );
+    mockUseCategoryBalances.mockReturnValue(okQuery({ tw: 20000, em: 5000, sv: 0 }));
+    const { getByText, getAllByText } = await renderWithTheme(<Dashboard />);
+
+    expect(await waitFor(() => getByText('Fund summary'))).toBeTruthy();
+    // Bar labels are fixed names; the category list below shows the household's own.
+    expect(getByText('Taiwan Fund')).toBeTruthy();
+    expect(getAllByText('Emergency Fund')).toHaveLength(2);
+    expect(getAllByText('Savings')).toHaveLength(2);
+    expect(getByText(/25% of ₱\s?80,000/)).toBeTruthy();
+    // Only the Taiwan fund has a goal.
+    expect(getAllByText(/% of /)).toHaveLength(1);
+    expect(getAllByText(/₱\s?5,000/)).toHaveLength(2);
+  });
+
+  it('frames the fund summary as an intentional empty state when nothing is saved', async () => {
+    mockUseCategories.mockReturnValue(
+      okQuery([{ id: 'tw', name: 'Taiwan fund', kind: 'fund', color: null, rule: { type: 'goal', target_amount: 80000 } }]),
+    );
+    mockUseCategoryBalances.mockReturnValue(okQuery({}));
     const { getByText } = await renderWithTheme(<Dashboard />);
 
-    expect(await waitFor(() => getByText('Start your streak'))).toBeTruthy();
+    expect(await waitFor(() => getByText(/Nothing saved yet/))).toBeTruthy();
+    expect(getByText(/0% of ₱\s?80,000/)).toBeTruthy();
+  });
+
+  it('leaves out the fund summary when the household has none of those funds', async () => {
+    mockUseCategories.mockReturnValue(
+      okQuery([{ id: 'bill', name: 'Rent', kind: 'bill', color: null, rule: null }]),
+    );
+    const { queryByText, getByText } = await renderWithTheme(<Dashboard />);
+
+    await waitFor(() => expect(getByText('Rent')).toBeTruthy());
+    expect(queryByText('Fund summary')).toBeNull();
   });
 
   it('omits the momentum row while its data is still loading', async () => {
