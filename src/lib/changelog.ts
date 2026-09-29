@@ -11,6 +11,13 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-09-29-2',
+    date: 'Sep 29, 2026',
+    items: [
+      'The app now starts in October 2026 everywhere — the dashboard’s next payday, the Breakdown months, history and month pickers never show anything earlier, even before October begins.',
+    ],
+  },
+  {
     id: '2026-09-29',
     date: 'Sep 29, 2026',
     items: [

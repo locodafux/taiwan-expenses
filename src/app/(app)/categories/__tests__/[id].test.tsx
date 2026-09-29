@@ -56,8 +56,8 @@ const billCategory = {
   rule: null,
 };
 const history = [
-  { id: 'h1', amount: 5000, payday_date: '2026-09-05', checked_by: 'user-1' },
-  { id: 'h2', amount: 3000, payday_date: '2026-08-05', checked_by: null },
+  { id: 'h1', amount: 5000, payday_date: '2026-11-05', checked_by: 'user-1' },
+  { id: 'h2', amount: 3000, payday_date: '2026-10-05', checked_by: null },
 ];
 const members = [{ id: 'member-1', user_id: 'user-1', display_name: 'Leo' }];
 
@@ -159,22 +159,22 @@ describe('CategoryDetail', () => {
   });
 
   it('records a loan term as an end date and shows the payments left', async () => {
-    jest.useFakeTimers().setSystemTime(new Date(2026, 8, 21));
+    jest.useFakeTimers().setSystemTime(new Date(2026, 10, 21));
     mockParams.id = 'cat-bill';
     mockUseBillItems.mockReturnValue({
-      data: [{ id: 'bi-1', label: 'Car loan', amount: 8000, recurring_day: 5, end_date: '2026-12-05' }],
+      data: [{ id: 'bi-1', label: 'Car loan', amount: 8000, recurring_day: 5, end_date: '2027-02-05' }],
     });
 
     const { getByText, getByPlaceholderText, getByLabelText } = await renderWithTheme(<CategoryDetail />);
 
-    // Oct, Nov, Dec still to pay.
-    await waitFor(() => expect(getByText(/3 payments left · until Dec 2026/)).toBeTruthy());
+    // Dec, Jan, Feb still to pay.
+    await waitFor(() => expect(getByText(/3 payments left · until Feb 2027/)).toBeTruthy());
 
     await fireEvent.press(getByText('+ Add item'));
     await fireEvent.changeText(getByPlaceholderText('e.g. Internet'), 'Phone');
     await fireEvent.changeText(getByPlaceholderText('₱0'), '1200');
     await fireEvent.press(getByText('Never ends · set a last month'));
-    expect(getByText('Sep 2026')).toBeTruthy();
+    expect(getByText('Nov 2026')).toBeTruthy();
     await fireEvent.press(getByLabelText('Next month'));
     await fireEvent.press(getByLabelText('Next month'));
     await fireEvent.press(getByText('Save'));
@@ -184,14 +184,14 @@ describe('CategoryDetail', () => {
         label: 'Phone',
         amount: 1200,
         recurring_day: 5,
-        end_date: '2026-11-05',
+        end_date: '2027-01-05',
       }),
     );
     jest.useRealTimers();
   });
 
   it("rejects an end month whose payment date has already passed", async () => {
-    jest.useFakeTimers().setSystemTime(new Date(2026, 8, 21));
+    jest.useFakeTimers().setSystemTime(new Date(2026, 10, 21));
     mockParams.id = 'cat-bill';
     mockUseBillItems.mockReturnValue({ data: [] });
 
@@ -209,16 +209,16 @@ describe('CategoryDetail', () => {
   });
 
   it('pre-selects the end month when editing and can clear it', async () => {
-    jest.useFakeTimers().setSystemTime(new Date(2026, 8, 21));
+    jest.useFakeTimers().setSystemTime(new Date(2026, 10, 21));
     mockParams.id = 'cat-bill';
     mockUseBillItems.mockReturnValue({
-      data: [{ id: 'bi-1', label: 'Car loan', amount: 8000, recurring_day: 5, end_date: '2026-12-05' }],
+      data: [{ id: 'bi-1', label: 'Car loan', amount: 8000, recurring_day: 5, end_date: '2027-02-05' }],
     });
 
     const { getByText } = await renderWithTheme(<CategoryDetail />);
 
     await fireEvent.press(await waitFor(() => getByText('Car loan')));
-    expect(getByText('Dec 2026')).toBeTruthy();
+    expect(getByText('Feb 2027')).toBeTruthy();
     await fireEvent.press(getByText('Clear'));
     await fireEvent.press(getByText('Save'));
 
@@ -231,18 +231,18 @@ describe('CategoryDetail', () => {
   });
 
   it('scopes a bill category\'s headline total to the current month, not all-time', async () => {
-    jest.useFakeTimers().setSystemTime(new Date(2026, 8, 14));
+    jest.useFakeTimers().setSystemTime(new Date(2026, 10, 14));
     mockParams.id = 'cat-bill';
     mockUseCategoryHistory.mockReturnValue({
       data: [
-        { id: 'h1', amount: 5000, payday_date: '2026-09-05', checked_by: 'user-1' },
-        { id: 'h2', amount: 3000, payday_date: '2026-08-05', checked_by: null },
+        { id: 'h1', amount: 5000, payday_date: '2026-11-05', checked_by: 'user-1' },
+        { id: 'h2', amount: 3000, payday_date: '2026-10-05', checked_by: null },
       ],
     });
 
     const { getByText, getAllByText } = await renderWithTheme(<CategoryDetail />);
 
-    // Headline total plus the September history row both read ₱ 5,000.
+    // Headline total plus the November history row both read ₱ 5,000.
     await waitFor(() => expect(getAllByText('₱ 5,000').length).toBe(2));
     expect(getByText('paid this month')).toBeTruthy();
     jest.useRealTimers();
@@ -302,30 +302,31 @@ describe('CategoryDetail', () => {
   });
 
   it('groups history by month, naming the specific bill item paid, by whom and when', async () => {
+    jest.useFakeTimers().setSystemTime(new Date(2026, 10, 21));
     mockParams.id = 'cat-bill';
     mockUseCategoryHistory.mockReturnValue({
       data: [
         {
           id: 'h1',
           amount: 1500,
-          payday_date: '2026-09-05',
-          checked_at: '2026-09-05T02:00:00.000Z',
+          payday_date: '2026-11-05',
+          checked_at: '2026-11-05T02:00:00.000Z',
           checked_by: 'user-1',
           bill_items: { label: 'Base rent' },
         },
         {
           id: 'h2',
           amount: 900,
-          payday_date: '2026-09-15',
-          checked_at: '2026-09-15T02:00:00.000Z',
+          payday_date: '2026-11-15',
+          checked_at: '2026-11-15T02:00:00.000Z',
           checked_by: 'user-1',
           bill_items: { label: 'Internet' },
         },
         {
           id: 'h3',
           amount: 1500,
-          payday_date: '2026-08-05',
-          checked_at: '2026-08-05T02:00:00.000Z',
+          payday_date: '2026-10-05',
+          checked_at: '2026-10-05T02:00:00.000Z',
           checked_by: null,
           bill_items: { label: 'Base rent' },
         },
@@ -334,22 +335,44 @@ describe('CategoryDetail', () => {
 
     const { getByText, getAllByText } = await renderWithTheme(<CategoryDetail />);
 
-    await waitFor(() => expect(getByText('September 2026')).toBeTruthy());
-    expect(getByText('August 2026')).toBeTruthy();
-    // September's subtotal (1500 + 900), not the all-time 3,900 - and it also
+    await waitFor(() => expect(getByText('November 2026')).toBeTruthy());
+    expect(getByText('October 2026')).toBeTruthy();
+    // November's subtotal (1500 + 900), not the all-time 3,900 - and it also
     // matches the "paid this month" headline, hence two matches.
     expect(getAllByText('₱ 2,400').length).toBe(2);
     expect(getByText('Internet')).toBeTruthy();
     expect(getAllByText('Base rent').length).toBe(2);
-    expect(getByText(/^Leo · Sep 5/)).toBeTruthy();
-    expect(getByText(/^Manual entry · Aug 5/)).toBeTruthy();
+    expect(getByText(/^Leo · Nov 5/)).toBeTruthy();
+    expect(getByText(/^Manual entry · Oct 5/)).toBeTruthy();
+    jest.useRealTimers();
+  });
+
+  it('never lists history dated before October 2026', async () => {
+    jest.useFakeTimers({ now: new Date(2026, 8, 29), advanceTimers: true });
+    mockParams.id = 'cat-bill';
+    mockUseCategoryHistory.mockReturnValue({
+      data: [
+        { id: 'old', amount: 700, payday_date: '2026-09-05', checked_at: '2026-09-05T02:00:00.000Z', checked_by: null, bill_items: null },
+        { id: 'new', amount: 900, payday_date: '2026-10-05', checked_at: '2026-09-29T02:00:00.000Z', checked_by: null, bill_items: null },
+      ],
+    });
+
+    const { getByText, queryByText } = await renderWithTheme(<CategoryDetail />);
+
+    await waitFor(() => expect(getByText('October 2026')).toBeTruthy());
+    expect(queryByText('September 2026')).toBeNull();
+    // A tick recorded on Sep 29 for the Oct 5 payday shows its payday, not September.
+    expect(getByText(/Oct 5/)).toBeTruthy();
+    expect(queryByText(/Sep/)).toBeNull();
+    jest.useRealTimers();
   });
 
   it('keeps only the last 12 months of history', async () => {
     mockUseCategoryHistory.mockReturnValue({
       data: Array.from({ length: 18 }, (_, i) => {
-        const month = 12 - (i % 12);
-        const year = 2026 - Math.floor(i / 12);
+        // Oct 2026 forward: the app's history never starts earlier.
+        const month = ((9 + i) % 12) + 1;
+        const year = 2026 + Math.floor((9 + i) / 12);
         const date = `${year}-${String(month).padStart(2, '0')}-05`;
         return {
           id: `h${i}`,
@@ -364,10 +387,10 @@ describe('CategoryDetail', () => {
 
     const { getByText, queryByText } = await renderWithTheme(<CategoryDetail />);
 
-    await waitFor(() => expect(getByText('December 2026')).toBeTruthy());
-    expect(getByText('January 2026')).toBeTruthy();
+    await waitFor(() => expect(getByText('March 2028')).toBeTruthy());
+    expect(getByText('April 2027')).toBeTruthy();
     // 13th month back and older are dropped.
-    expect(queryByText('December 2025')).toBeNull();
+    expect(queryByText('March 2027')).toBeNull();
     // The headline balance still sums every entry, not just the shown 12.
     expect(getByText('₱ 18,000')).toBeTruthy();
   });
@@ -425,27 +448,27 @@ describe('CategoryDetail', () => {
   });
 
   it('sets a goal deadline month from the edit form', async () => {
-    jest.useFakeTimers().setSystemTime(new Date(2026, 8, 21));
+    jest.useFakeTimers().setSystemTime(new Date(2026, 10, 21));
     const { getByText, getByLabelText } = await renderWithTheme(<CategoryDetail />);
 
     await fireEvent.press(await waitFor(() => getByText('Edit')));
     await fireEvent.press(getByText('No deadline · set a month'));
-    expect(getByText('Oct 2026')).toBeTruthy();
+    expect(getByText('Dec 2026')).toBeTruthy();
     // Past months aren't offered.
     await fireEvent.press(getByLabelText('Previous month'));
-    expect(getByText('Oct 2026')).toBeTruthy();
+    expect(getByText('Dec 2026')).toBeTruthy();
     await fireEvent.press(getByText('Save'));
 
     await waitFor(() =>
       expect(mockUpdateCategoryMutateAsync).toHaveBeenCalledWith(
-        expect.objectContaining({ rule: { type: 'goal', target_amount: 50000, target_date: '2026-10-01', one_time: false } }),
+        expect.objectContaining({ rule: { type: 'goal', target_amount: 50000, target_date: '2026-12-01', one_time: false } }),
       ),
     );
     jest.useRealTimers();
   });
 
   it('changes and clears an existing goal deadline', async () => {
-    jest.useFakeTimers().setSystemTime(new Date(2026, 8, 21));
+    jest.useFakeTimers().setSystemTime(new Date(2026, 10, 21));
     mockUseCategories.mockReturnValue({
       data: [{ ...fundCategory, rule: { type: 'goal', target_amount: 80000, target_date: '2027-03-01' } }],
     });
@@ -498,16 +521,16 @@ describe('CategoryDetail', () => {
   });
 
   it('sets a payment term on an existing loan from the edit form', async () => {
-    jest.useFakeTimers().setSystemTime(new Date(2026, 8, 21));
+    jest.useFakeTimers().setSystemTime(new Date(2026, 10, 21));
     mockParams.id = 'cat-bill';
     mockUseBillItems.mockReturnValue({
-      data: [{ id: 'bi-1', label: 'Car loan', amount: 8000, recurring_day: 5, end_date: '2026-12-05' }],
+      data: [{ id: 'bi-1', label: 'Car loan', amount: 8000, recurring_day: 5, end_date: '2027-02-05' }],
     });
     const { getByText, getByLabelText } = await renderWithTheme(<CategoryDetail />);
 
     await fireEvent.press(await waitFor(() => getByText('Car loan')));
     for (let i = 0; i < 3; i++) await fireEvent.press(getByLabelText('Next month'));
-    expect(getByText('Mar 2027')).toBeTruthy();
+    expect(getByText('May 2027')).toBeTruthy();
     await fireEvent.press(getByText('Save'));
 
     await waitFor(() =>
@@ -517,7 +540,7 @@ describe('CategoryDetail', () => {
         label: 'Car loan',
         amount: 8000,
         recurring_day: 5,
-        end_date: '2027-03-05',
+        end_date: '2027-05-05',
       }),
     );
     jest.useRealTimers();

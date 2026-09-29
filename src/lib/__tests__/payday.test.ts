@@ -1,4 +1,5 @@
 import {
+  appToday,
   clampDayToMonth,
   daysUntil,
   fromDateOnly,
@@ -7,6 +8,7 @@ import {
   nextPayday,
   paydayAtOffset,
   monthDueDate,
+  nextMonth,
   paymentsLeft,
   toDateOnly,
 } from '../payday';
@@ -131,5 +133,30 @@ describe('payment terms', () => {
 
   it('is 0 once the term is over', () => {
     expect(paymentsLeft(5, '2026-09-05', sep21)).toBe(0);
+  });
+});
+
+// The app starts in October 2026 (captain's call): no default "today" may
+// resolve earlier, even while the real date is still in September.
+describe('October 2026 floor', () => {
+  afterEach(() => jest.useRealTimers());
+
+  it('appToday floors any earlier date to Oct 1 2026 and leaves later ones alone', () => {
+    expect(toDateOnly(appToday(new Date(2026, 8, 29)))).toBe('2026-10-01');
+    expect(toDateOnly(appToday(new Date(2025, 0, 1)))).toBe('2026-10-01');
+    expect(toDateOnly(appToday(new Date(2026, 10, 10)))).toBe('2026-11-10');
+  });
+
+  it("on the real Sep 29 2026 the next payday is Oct 5, never Ann's Sep 30, and nothing steps back before Oct", () => {
+    jest.useFakeTimers({ now: new Date(2026, 8, 29) });
+    expect(toDateOnly(nextPayday([5, 30]))).toBe('2026-10-05');
+    expect(toDateOnly(paydayAtOffset([5, 30], 0))).toBe('2026-10-05');
+    // One step back would be Sep 30 - callers must treat it as out of range.
+    expect(toDateOnly(paydayAtOffset([5, 30], -1)) < '2026-10-01').toBe(true);
+  });
+
+  it('nextMonth (earliest goal deadline) is November on Sep 29 2026, since October is the first month saved', () => {
+    jest.useFakeTimers({ now: new Date(2026, 8, 29) });
+    expect(nextMonth()).toBe('2026-11');
   });
 });

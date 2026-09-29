@@ -189,7 +189,7 @@ describe('AddCategorySheet', () => {
   });
 
   it('sets a deadline month on a goal fund, starting from next month', async () => {
-    jest.useFakeTimers().setSystemTime(new Date(2026, 8, 21));
+    jest.useFakeTimers().setSystemTime(new Date(2026, 10, 21));
     const { getByText, getByPlaceholderText, getByLabelText, queryByText } = await renderWithTheme(
       <AddCategorySheet />,
     );
@@ -199,14 +199,14 @@ describe('AddCategorySheet', () => {
     await fireEvent.changeText(getByPlaceholderText('e.g. New laptop fund'), 'Taiwan fund');
     await fireEvent.changeText(getByPlaceholderText('Leave blank for no limit'), '80000');
     await fireEvent.press(getByText('No deadline · set a month'));
-    expect(getByText('Oct 2026')).toBeTruthy();
+    expect(getByText('Dec 2026')).toBeTruthy();
     await fireEvent.press(getByLabelText('Next month'));
     await fireEvent.press(getByText('Add category'));
 
     await waitFor(() =>
       expect(mockCreateCategoryMutateAsync).toHaveBeenCalledWith(
         expect.objectContaining({
-          rule: expect.objectContaining({ type: 'goal', target_amount: 80000, target_date: '2026-11-01' }),
+          rule: expect.objectContaining({ type: 'goal', target_amount: 80000, target_date: '2027-01-01' }),
         }),
       ),
     );

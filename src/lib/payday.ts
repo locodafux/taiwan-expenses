@@ -2,6 +2,17 @@
 // clamp_day_to_month / next_payday - the client needs the same "what's the
 // next payday" answer to know which date to materialize/display without a
 // round trip for every render.
+// The app starts in October 2026 (captain's call): nothing before it is ever
+// shown or selectable, even while the real date is still in September. Every
+// "today" that feeds a displayed window goes through appToday() so it can
+// never resolve to an earlier date.
+export const APP_START_DATE = '2026-10-01';
+export const APP_START_MONTH = APP_START_DATE.slice(0, 7);
+export function appToday(now: Date = new Date()): Date {
+  const start = new Date(2026, 9, 1);
+  return now < start ? start : now;
+}
+
 export function clampDayToMonth(day: number, monthStart: Date): Date {
   const year = monthStart.getFullYear();
   const month = monthStart.getMonth();
@@ -26,14 +37,14 @@ export function fromDateOnly(dateOnly: string): Date {
   return new Date(y, m - 1, d);
 }
 
-export function nextPayday(recurringDays: number[], from: Date = new Date()): Date {
+export function nextPayday(recurringDays: number[], from: Date = appToday()): Date {
   return paydayAtOffset(recurringDays, 0, from);
 }
 
 // Finds a payday relative to the next one (0 = next, -1 = previous, 1 = the
 // one after next). Dates are generated from calendar months so recurring days
 // that fall on a short month stay clamped in the same way as nextPayday.
-export function paydayAtOffset(recurringDays: number[], offset: number, from: Date = new Date()): Date {
+export function paydayAtOffset(recurringDays: number[], offset: number, from: Date = appToday()): Date {
   const uniqueDays = Array.from(new Set(recurringDays));
   if (uniqueDays.length === 0) throw new Error('No active incomes to compute a payday from');
 
@@ -144,12 +155,12 @@ export function monthDueDate(recurringDay: number, month: string): string {
 
 // Next calendar month as 'YYYY-MM' - the earliest goal deadline worth
 // offering, since the engine saves through the month before the deadline.
-export function nextMonth(from: Date = new Date()): string {
+export function nextMonth(from: Date = appToday()): string {
   return toDateOnly(new Date(from.getFullYear(), from.getMonth() + 1, 1)).slice(0, 7);
 }
 
 // Due dates still ahead (today included) up to and including end_date.
-export function paymentsLeft(recurringDay: number, endDate: string, from: Date = new Date()): number {
+export function paymentsLeft(recurringDay: number, endDate: string, from: Date = appToday()): number {
   const end = fromDateOnly(endDate);
   const next = dueDates(recurringDay, from);
   let n = 0;

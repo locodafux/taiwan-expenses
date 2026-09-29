@@ -1,7 +1,6 @@
 import { fireEvent, waitFor } from '@testing-library/react-native';
 
 import { renderWithTheme } from '@/test/renderWithTheme';
-import { addMonths, toDateOnly } from '@/lib/payday';
 
 jest.mock('expo-router', () => ({ useRouter: () => ({ navigate: jest.fn() }) }));
 
@@ -25,8 +24,8 @@ jest.mock('@/lib/queries', () => ({
 import Breakdown from '../breakdown';
 
 const member = { id: 'member-1', household_id: 'household-1', user_id: 'user-1' };
-const currentMonth = toDateOnly(new Date()).slice(0, 7);
-const pastMonth = addMonths(currentMonth, -1);
+// Tests that need a real past month move "today" to Dec 15 2026.
+const pastMonth = '2026-11';
 
 const categories = [
   { id: 'cat-rent', kind: 'bill', name: 'RENT', color: '#c0392b', rule: null, sort_order: 0 },
@@ -47,6 +46,8 @@ const incomes = [{ amount: 20000, recurring_day: 5, active: true }];
 const ok = { isLoading: false, isError: false, refetch: jest.fn() };
 
 beforeEach(() => {
+  // Default "today" is the real Sep 29 2026, before the app's October start.
+  jest.useFakeTimers({ now: new Date(2026, 8, 29), advanceTimers: true });
   jest.clearAllMocks();
   mockUseHouseholdMembership.mockReturnValue({ ...ok, data: member });
   mockUseCategories.mockReturnValue({ ...ok, data: categories });
@@ -119,6 +120,7 @@ describe('Breakdown', () => {
   });
 
   it('shows real ledger history for a past month and the forecast for the current month', async () => {
+    jest.setSystemTime(new Date(2026, 11, 15));
     const { getAllByText } = await openTable(renderWithTheme(<Breakdown />));
 
     // SAVINGS column + Total column both show the same amount that month.
@@ -149,5 +151,18 @@ describe('Breakdown', () => {
     const { getByText } = await openTable(renderWithTheme(<Breakdown />));
 
     await waitFor(() => expect(getByText(/Couldn't load/)).toBeTruthy());
+  });
+
+  // The app starts in October 2026 (captain's call): even on the real
+  // Sep 29 2026, the table opens on October and cannot page earlier.
+  it('never lists or pages to a month before October 2026, even when today is in September', async () => {
+    jest.setSystemTime(new Date(2026, 8, 29));
+    const { getByText, queryByText, getByLabelText } = await openTable(renderWithTheme(<Breakdown />));
+
+    await waitFor(() => expect(getByText('Oct 26 – Sep 27')).toBeTruthy());
+    expect(mockUseMonthlyLedgerTotals).toHaveBeenLastCalledWith('household-1', '2026-10');
+    await fireEvent.press(getByLabelText('Earlier months'));
+    expect(getByText('Oct 26 – Sep 27')).toBeTruthy();
+    expect(queryByText(/Sep 26/)).toBeNull();
   });
 });

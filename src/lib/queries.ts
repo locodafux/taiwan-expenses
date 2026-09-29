@@ -5,7 +5,7 @@ import { Platform } from 'react-native';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useAuth } from './auth';
-import { toDateOnly } from './payday';
+import { APP_START_DATE, APP_START_MONTH, appToday, toDateOnly } from './payday';
 import { supabase } from './supabase';
 import type { Category, CategoryRule, Income } from './database.types';
 
@@ -579,7 +579,8 @@ export function usePaydayCompletionHistory(householdId: string | undefined) {
         .from('ledger_entries')
         .select('payday_date, status')
         .neq('amount', 0)
-        .eq('household_id', householdId as string);
+        .eq('household_id', householdId as string)
+        .gte('payday_date', APP_START_DATE);
       if (error) throw error;
       return data;
     },
@@ -600,6 +601,7 @@ export function usePaydayAmounts(householdId: string | undefined) {
         .select('payday_date, amount')
         .eq('household_id', householdId as string)
         .eq('manual', false)
+        .gte('payday_date', APP_START_DATE)
         .lt('payday_date', today);
       if (error) throw error;
       const amounts: Record<string, number> = {};
@@ -644,7 +646,8 @@ export function useCategoryBalances(householdId: string | undefined) {
         .from('ledger_entries')
         .select('category_id, amount')
         .eq('household_id', householdId as string)
-        .eq('status', 'checked');
+        .eq('status', 'checked')
+        .gte('payday_date', APP_START_DATE);
       if (error) throw error;
       const balances: Record<string, number> = {};
       for (const row of data) {
@@ -663,7 +666,7 @@ export function useCategoryBalancesThisMonth(householdId: string | undefined) {
     queryKey: ['category-balances-this-month', householdId],
     enabled: !!householdId,
     queryFn: async () => {
-      const now = new Date();
+      const now = appToday();
       const monthStart = toDateOnly(new Date(now.getFullYear(), now.getMonth(), 1));
       const nextMonthStart = toDateOnly(new Date(now.getFullYear(), now.getMonth() + 1, 1));
       const { data, error } = await supabase
@@ -699,7 +702,7 @@ export function useSavedThisQuarter(householdId: string | undefined) {
         .select('amount')
         .eq('household_id', householdId as string)
         .eq('status', 'checked')
-        .gte('payday_date', since);
+        .gte('payday_date', since < APP_START_DATE ? APP_START_DATE : since);
       if (error) throw error;
       return data.reduce((sum, row) => sum + row.amount, 0);
     },
@@ -721,6 +724,7 @@ export function usePaydayStreak(householdId: string | undefined) {
         .from('ledger_entries')
         .select('payday_date, status')
         .eq('household_id', householdId as string)
+        .gte('payday_date', APP_START_DATE)
         .order('payday_date', { ascending: false });
       if (error) throw error;
       const allCheckedByPayday = new Map<string, boolean>();
@@ -757,6 +761,7 @@ export function useCategoryHistory(categoryId: string | undefined) {
         .select('*, bill_items(label)')
         .eq('category_id', categoryId as string)
         .eq('status', 'checked')
+        .gte('payday_date', APP_START_DATE)
         .order('payday_date', { ascending: false })
         .order('checked_at', { ascending: false });
       if (error) throw error;
@@ -778,7 +783,7 @@ export function useAddManualContribution(householdId: string | undefined) {
           household_id: householdId as string,
           category_id: categoryId,
           bill_item_id: null,
-          payday_date: toDateOnly(new Date()),
+          payday_date: toDateOnly(appToday()),
           amount,
           status: 'checked',
           manual: true,
@@ -837,7 +842,7 @@ export function useMonthlyLedgerTotals(householdId: string | undefined, sinceMon
         .select('category_id, payday_date, amount')
         .eq('household_id', householdId as string)
         .eq('status', 'checked')
-        .gte('payday_date', `${sinceMonth}-01`);
+        .gte('payday_date', `${(sinceMonth as string) < APP_START_MONTH ? APP_START_MONTH : sinceMonth}-01`);
       if (error) throw error;
       const totals: Record<string, Record<string, number>> = {};
       for (const row of data) {

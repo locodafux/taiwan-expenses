@@ -14,7 +14,16 @@ import { DeleteCategorySheet } from '@/components/ui/DeleteCategorySheet';
 import { ConfirmSheet } from '@/components/ui/ConfirmSheet';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { formatPeso, parseAmount } from '@/lib/format';
-import { fromDateOnly, monthDueDate, nextMonth, paymentsLeft, toDateOnly } from '@/lib/payday';
+import {
+  APP_START_DATE,
+  APP_START_MONTH,
+  appToday,
+  fromDateOnly,
+  monthDueDate,
+  nextMonth,
+  paymentsLeft,
+  toDateOnly,
+} from '@/lib/payday';
 import {
   combineQueryState,
   useAddManualContribution,
@@ -113,7 +122,7 @@ export default function CategoryDetail() {
     [history],
   );
   const paidThisMonth = useMemo(() => {
-    const now = new Date();
+    const now = appToday();
     return (history ?? [])
       .filter((h) => {
         const d = fromDateOnly(h.payday_date);
@@ -122,7 +131,7 @@ export default function CategoryDetail() {
       .reduce((s, h) => s + h.amount, 0);
   }, [history]);
 
-  const today = toDateOnly(new Date());
+  const today = toDateOnly(appToday());
   const activeBillItems = (billItems ?? []).filter((b) => !b.end_date || b.end_date >= today);
 
   function closeBillForm() {
@@ -147,6 +156,7 @@ export default function CategoryDetail() {
     const byMonth = new Map<string, typeof history>();
     for (const h of history ?? []) {
       const key = h.payday_date.slice(0, 7);
+      if (key < APP_START_MONTH) continue;
       byMonth.set(key, [...(byMonth.get(key) ?? []), h]);
     }
     return Array.from(byMonth.entries())
@@ -796,7 +806,9 @@ export default function CategoryDetail() {
                       </Text>
                       <Text className="mt-[2px] font-body text-xs text-ink-muted">
                         {memberName(h.checked_by)} ·{' '}
-                        {new Date(h.checked_at ?? `${h.payday_date}T00:00:00`).toLocaleDateString(
+                        {new Date(
+                          h.checked_at && h.checked_at >= APP_START_DATE ? h.checked_at : `${h.payday_date}T00:00:00`,
+                        ).toLocaleDateString(
                           undefined,
                           { month: 'short', day: 'numeric' },
                         )}

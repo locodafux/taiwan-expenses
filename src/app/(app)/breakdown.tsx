@@ -8,7 +8,7 @@ import { PaydayCalendar } from '@/components/PaydayCalendar';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { Icon } from '@/components/ui/Icon';
 import { formatPeso } from '@/lib/format';
-import { addMonths, fromDateOnly, scheduledMonthTotal, toDateOnly } from '@/lib/payday';
+import { addMonths, APP_START_MONTH, appToday, fromDateOnly, scheduledMonthTotal, toDateOnly } from '@/lib/payday';
 import {
   combineQueryState,
   useCategories,
@@ -95,8 +95,10 @@ function MonthTable({ toggle }: { toggle: React.ReactNode }) {
   const membershipQuery = useHouseholdMembership();
   const householdId = membershipQuery.data?.household_id;
 
-  const currentMonth = toDateOnly(new Date()).slice(0, 7);
-  const [windowStart, setWindowStart] = useState(() => addMonths(currentMonth, -PAST_MONTHS));
+  const currentMonth = toDateOnly(appToday()).slice(0, 7);
+  // Nothing before October 2026 is ever listed, so the window never pages earlier.
+  const clampStart = (m: string) => (m < APP_START_MONTH ? APP_START_MONTH : m);
+  const [windowStart, setWindowStart] = useState(() => clampStart(addMonths(currentMonth, -PAST_MONTHS)));
   const months = useMemo(
     () => Array.from({ length: WINDOW_SIZE }, (_, i) => addMonths(windowStart, i)),
     [windowStart],
@@ -195,10 +197,12 @@ function MonthTable({ toggle }: { toggle: React.ReactNode }) {
           <Text className="flex-1 font-display-semibold text-lg text-ink">Breakdown</Text>
           <View className="flex-row items-center gap-1">
             <Pressable
-              onPress={() => setWindowStart((s) => addMonths(s, -WINDOW_SIZE))}
+              onPress={() => setWindowStart((s) => clampStart(addMonths(s, -WINDOW_SIZE)))}
+              disabled={windowStart <= APP_START_MONTH}
+              accessibilityLabel="Earlier months"
               hitSlop={10}
               accessibilityRole="button"
-              className="p-2"
+              className={`p-2 ${windowStart <= APP_START_MONTH ? 'opacity-40' : ''}`}
             >
               <Icon name="chevronLeft" size={18} color={vars['--ink-2']} />
             </Pressable>
@@ -207,6 +211,7 @@ function MonthTable({ toggle }: { toggle: React.ReactNode }) {
             </Text>
             <Pressable
               onPress={() => setWindowStart((s) => addMonths(s, WINDOW_SIZE))}
+              accessibilityLabel="Later months"
               hitSlop={10}
               accessibilityRole="button"
               className="p-2"
