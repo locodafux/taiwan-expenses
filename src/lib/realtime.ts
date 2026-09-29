@@ -60,6 +60,7 @@ export function useRealtimeSync(householdId: string | undefined) {
         () => {
           queryClient.invalidateQueries({ queryKey: ['ledger-entries', householdId] });
           queryClient.invalidateQueries({ queryKey: ['category-balances', householdId] });
+          queryClient.invalidateQueries({ queryKey: ['monthly-ledger-totals', householdId] });
           queryClient.invalidateQueries({ queryKey: ['category-history'] });
         },
       )

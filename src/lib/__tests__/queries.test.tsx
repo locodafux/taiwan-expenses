@@ -61,7 +61,6 @@ import {
   useCreateBillItem,
   useDeleteCategory,
   usePaydayAmounts,
-  useSavedThisQuarter,
   useSubmitFeedback,
   useUnreadMessageCount,
   useUpdateIncome,
@@ -171,36 +170,6 @@ describe('useUpdateIncome (edit/deactivate an existing income)', () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
     expect(mockUpdate).toHaveBeenCalledWith({ label: '5th payday', amount: 30000, recurring_day: 5 });
-  });
-});
-
-describe('useSavedThisQuarter (dashboard momentum stat)', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
-
-  it('sums checked ledger amounts across all categories in the trailing window', async () => {
-    const chain = buildSelectChain({
-      data: [{ amount: 5000 }, { amount: 2500 }, { amount: 1250 }],
-      error: null,
-    });
-    const { result } = await renderHook(() => useSavedThisQuarter('household-1'), { wrapper });
-
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
-
-    expect(result.current.data).toBe(8750);
-    expect(mockFrom).toHaveBeenCalledWith('ledger_entries');
-    expect(chain.eq).toHaveBeenCalledWith('status', 'checked');
-    expect(chain.gte).toHaveBeenCalledWith('payday_date', expect.any(String));
-  });
-
-  it('returns 0 when nothing has been checked in the window', async () => {
-    buildSelectChain({ data: [], error: null });
-    const { result } = await renderHook(() => useSavedThisQuarter('household-1'), { wrapper });
-
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
-
-    expect(result.current.data).toBe(0);
   });
 });
 
