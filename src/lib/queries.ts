@@ -709,42 +709,6 @@ export function useSavedThisQuarter(householdId: string | undefined) {
   });
 }
 
-// Consecutive fully-checked paydays, most recent first - counts backwards
-// from the latest payday that's actually due (skipping ones still in the
-// future) and stops at the first payday with any unchecked/pending entry.
-// ponytail: minimal version for the dashboard momentum chip; if the
-// checklist-celebration task's own streak calc lands separately, unify with
-// that rather than keeping two implementations.
-export function usePaydayStreak(householdId: string | undefined) {
-  return useQuery({
-    queryKey: ['payday-streak', householdId],
-    enabled: !!householdId,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('ledger_entries')
-        .select('payday_date, status')
-        .eq('household_id', householdId as string)
-        .gte('payday_date', APP_START_DATE)
-        .order('payday_date', { ascending: false });
-      if (error) throw error;
-      const allCheckedByPayday = new Map<string, boolean>();
-      for (const row of data) {
-        const soFar = allCheckedByPayday.get(row.payday_date) ?? true;
-        allCheckedByPayday.set(row.payday_date, soFar && row.status === 'checked');
-      }
-      const paydaysDesc = Array.from(allCheckedByPayday.keys()).sort((a, b) => (a < b ? 1 : -1));
-      const today = toDateOnly(new Date());
-      let streak = 0;
-      for (const payday of paydaysDesc) {
-        if (payday > today) continue;
-        if (!allCheckedByPayday.get(payday)) break;
-        streak++;
-      }
-      return streak;
-    },
-  });
-}
-
 // --- Category detail / history ----------------------------------------------
 
 export function useCategoryHistory(categoryId: string | undefined) {

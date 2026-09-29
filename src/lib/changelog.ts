@@ -14,6 +14,8 @@ export const CHANGELOG: ChangelogEntry[] = [
     id: '2026-09-29-5',
     date: 'Sep 29, 2026',
     items: [
+      'The Dashboard now has a Fund summary: a bar for Taiwan Fund, Emergency Fund and Savings showing what you’ve saved so far, with Taiwan’s progress toward ₱80,000.',
+      'Removed the payday streak from the top of the Dashboard.',
       'Breakdown’s month table is now a chart: one bar per month, coloured by fund and category. Tap a month to see its amounts. The Total column is gone.',
     ],
   },

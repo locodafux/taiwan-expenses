@@ -61,7 +61,6 @@ import {
   useCreateBillItem,
   useDeleteCategory,
   usePaydayAmounts,
-  usePaydayStreak,
   useSavedThisQuarter,
   useSubmitFeedback,
   useUnreadMessageCount,
@@ -202,60 +201,6 @@ describe('useSavedThisQuarter (dashboard momentum stat)', () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
     expect(result.current.data).toBe(0);
-  });
-});
-
-describe('usePaydayStreak (dashboard momentum chip)', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
-
-  it('counts consecutive fully-checked past paydays, most recent first', async () => {
-    buildSelectChain({
-      data: [
-        { payday_date: '2026-09-05', status: 'checked' },
-        { payday_date: '2026-08-20', status: 'checked' },
-        { payday_date: '2026-08-20', status: 'checked' },
-        { payday_date: '2026-08-05', status: 'checked' },
-      ],
-      error: null,
-    });
-    const { result } = await renderHook(() => usePaydayStreak('household-1'), { wrapper });
-
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
-
-    expect(result.current.data).toBe(3);
-  });
-
-  it('stops at the first payday with any unchecked entry', async () => {
-    buildSelectChain({
-      data: [
-        { payday_date: '2026-09-05', status: 'checked' },
-        { payday_date: '2026-08-20', status: 'pending' },
-        { payday_date: '2026-08-05', status: 'checked' },
-      ],
-      error: null,
-    });
-    const { result } = await renderHook(() => usePaydayStreak('household-1'), { wrapper });
-
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
-
-    expect(result.current.data).toBe(1);
-  });
-
-  it('ignores a materialized-but-not-yet-due future payday', async () => {
-    buildSelectChain({
-      data: [
-        { payday_date: '2099-01-05', status: 'pending' },
-        { payday_date: '2026-08-20', status: 'checked' },
-      ],
-      error: null,
-    });
-    const { result } = await renderHook(() => usePaydayStreak('household-1'), { wrapper });
-
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
-
-    expect(result.current.data).toBe(1);
   });
 });
 
