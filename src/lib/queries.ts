@@ -686,29 +686,6 @@ export function useCategoryBalancesThisMonth(householdId: string | undefined) {
   });
 }
 
-// Total across all categories (bill + fund) over a trailing 90-day window -
-// a rolling window is a single >= filter vs. calendar-quarter boundary math,
-// and close enough to the design brief's "this quarter" framing to keep this
-// simple and correct. Powers the dashboard's momentum stat (docs/plan.md's
-// "financial companion, not a financial mirror" framing).
-export function useSavedThisQuarter(householdId: string | undefined) {
-  return useQuery({
-    queryKey: ['saved-this-quarter', householdId],
-    enabled: !!householdId,
-    queryFn: async () => {
-      const since = toDateOnly(new Date(Date.now() - 90 * 86_400_000));
-      const { data, error } = await supabase
-        .from('ledger_entries')
-        .select('amount')
-        .eq('household_id', householdId as string)
-        .eq('status', 'checked')
-        .gte('payday_date', since < APP_START_DATE ? APP_START_DATE : since);
-      if (error) throw error;
-      return data.reduce((sum, row) => sum + row.amount, 0);
-    },
-  });
-}
-
 // --- Category detail / history ----------------------------------------------
 
 export function useCategoryHistory(categoryId: string | undefined) {

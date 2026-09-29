@@ -22,11 +22,11 @@ import {
   useHouseholdMembers,
   useHouseholdMembership,
   useIncomes,
+  useMonthlyLedgerTotals,
   usePaydayAmounts,
-  useSavedThisQuarter,
 } from '@/lib/queries';
 import { formatPeso } from '@/lib/format';
-import { APP_START_DATE, daysUntil, incomeAmountForPayday, paydayAtOffset, toDateOnly } from '@/lib/payday';
+import { APP_START_DATE, APP_START_MONTH, daysUntil, incomeAmountForPayday, paydayAtOffset, toDateOnly } from '@/lib/payday';
 import { useTheme } from '@/theme/ThemeProvider';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
@@ -90,8 +90,7 @@ export default function Dashboard() {
   const incomesQuery = useIncomes(householdId);
   const incomes = incomesQuery.data;
   const paydayAmountsQuery = usePaydayAmounts(householdId);
-  const savedThisQuarterQuery = useSavedThisQuarter(householdId);
-  const savedThisQuarter = savedThisQuarterQuery.data;
+  const monthlyTotalsQuery = useMonthlyLedgerTotals(householdId, APP_START_MONTH);
 
   const { isError, refetch } = combineQueryState(
     membershipQuery,
@@ -101,7 +100,7 @@ export default function Dashboard() {
     balancesThisMonthQuery,
     incomesQuery,
     paydayAmountsQuery,
-    savedThisQuarterQuery,
+    monthlyTotalsQuery,
   );
 
   const activeDays = useMemo(() => (incomes ?? []).filter((i) => i.active).map((i) => i.recurring_day), [incomes]);
@@ -140,7 +139,6 @@ export default function Dashboard() {
     { label: 'Invite your partner', done: (members ?? []).length > 1, href: '/(app)/settings' as const },
   ];
   const setupComplete = setupSteps.every((s) => s.done);
-  const showMomentum = savedThisQuarter !== undefined;
 
   return (
     <SafeAreaView className="flex-1 bg-page" edges={['top']}>
@@ -197,14 +195,7 @@ export default function Dashboard() {
           </Card>
         )}
 
-        {/* Two "leaf" blocks (one corner cut small) instead of a generic card. */}
-        {showMomentum && (
-          <View className="gap-1 rounded-lg rounded-bl-sm bg-sage-soft px-5 py-4">
-            <Text className="font-body-semibold text-sm text-accent-2">Saved this quarter</Text>
-            <Text className="font-mono text-2xl text-ink">{formatPeso(savedThisQuarter)}</Text>
-          </View>
-        )}
-
+        {/* One "leaf" block (a corner cut small) instead of a generic card. */}
         {payday && (
           <View className="flex-row items-center gap-3 rounded-lg rounded-tl-sm bg-accent-soft px-5 py-4">
             <Pressable
@@ -247,7 +238,7 @@ export default function Dashboard() {
           </View>
         )}
 
-        <FundSummaryChart categories={categories ?? []} balances={balances} />
+        <FundSummaryChart categories={categories ?? []} balances={balances} monthly={monthlyTotalsQuery.data} />
 
         <View>
           <SectionLabel>Category balances</SectionLabel>

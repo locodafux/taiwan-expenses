@@ -11,6 +11,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-09-29-6',
+    date: 'Sep 29, 2026',
+    items: [
+      'The Dashboard’s Fund summary is now a line chart: one line each for Taiwan Fund, Emergency Fund and Savings showing what you’ve saved month by month, with Taiwan’s progress toward ₱80,000.',
+      'Removed “Saved this quarter” from the top of the Dashboard.',
+    ],
+  },
+  {
     id: '2026-09-29-5',
     date: 'Sep 29, 2026',
     items: [

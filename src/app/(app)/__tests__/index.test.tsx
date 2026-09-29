@@ -15,7 +15,7 @@ const mockUseCategoryBalances = jest.fn();
 const mockUseCategoryBalancesThisMonth = jest.fn();
 const mockUseIncomes = jest.fn();
 const mockUsePaydayAmounts = jest.fn();
-const mockUseSavedThisQuarter = jest.fn();
+const mockUseMonthlyLedgerTotals = jest.fn();
 
 jest.mock('@/lib/queries', () => ({
   ...jest.requireActual('@/lib/queries'),
@@ -26,7 +26,7 @@ jest.mock('@/lib/queries', () => ({
   useCategoryBalancesThisMonth: (...args: unknown[]) => mockUseCategoryBalancesThisMonth(...args),
   useIncomes: (...args: unknown[]) => mockUseIncomes(...args),
   usePaydayAmounts: (...args: unknown[]) => mockUsePaydayAmounts(...args),
-  useSavedThisQuarter: (...args: unknown[]) => mockUseSavedThisQuarter(...args),
+  useMonthlyLedgerTotals: (...args: unknown[]) => mockUseMonthlyLedgerTotals(...args),
 }));
 
 import Dashboard from '../index';
@@ -57,7 +57,7 @@ beforeEach(() => {
   mockUseCategoryBalancesThisMonth.mockReturnValue(okQuery({ 'cat-bill': 3500 }));
   mockUseIncomes.mockReturnValue(okQuery(incomes));
   mockUsePaydayAmounts.mockReturnValue(okQuery({}));
-  mockUseSavedThisQuarter.mockReturnValue(okQuery(18500));
+  mockUseMonthlyLedgerTotals.mockReturnValue(okQuery({ '2026-10': { 'cat-fund': 12000 } }));
 });
 
 describe('Dashboard', () => {
@@ -67,8 +67,8 @@ describe('Dashboard', () => {
     await waitFor(() => expect(getByText('Taiwan fund')).toBeTruthy());
     expect(getByText('Rent')).toBeTruthy();
     expect(getByText(/Leo & Alex/)).toBeTruthy();
-    // Once in the fund summary, once in the category list.
-    expect(getAllByText(/₱\s?12,000/)).toHaveLength(2);
+    // The chart's top-of-scale label, the fund's legend amount, and the category list.
+    expect(getAllByText(/₱\s?12,000/)).toHaveLength(3);
     expect(getByText(/₱\s?3,500 this month/)).toBeTruthy();
     expect(getByText(/^Next payday/)).toBeTruthy();
   });
@@ -171,11 +171,11 @@ describe('Dashboard', () => {
     });
   });
 
-  it('shows the saved-this-quarter stat without any streak', async () => {
-    const { getByText, queryByText } = await renderWithTheme(<Dashboard />);
+  it('has no saved-this-quarter card or streak', async () => {
+    const { queryByText } = await renderWithTheme(<Dashboard />);
 
-    expect(await waitFor(() => getByText('Saved this quarter'))).toBeTruthy();
-    expect(getByText(/₱\s?18,500/)).toBeTruthy();
+    await waitFor(() => expect(queryByText('Taiwan fund')).toBeTruthy());
+    expect(queryByText('Saved this quarter')).toBeNull();
     expect(queryByText(/streak/i)).toBeNull();
   });
 
@@ -188,10 +188,11 @@ describe('Dashboard', () => {
       ]),
     );
     mockUseCategoryBalances.mockReturnValue(okQuery({ tw: 20000, em: 5000, sv: 0 }));
-    const { getByText, getAllByText } = await renderWithTheme(<Dashboard />);
+    mockUseMonthlyLedgerTotals.mockReturnValue(okQuery({ '2026-10': { tw: 20000, em: 5000 } }));
+    const { getByText, getAllByText, getByTestId } = await renderWithTheme(<Dashboard />);
 
     expect(await waitFor(() => getByText('Fund summary'))).toBeTruthy();
-    // Bar labels are fixed names; the category list below shows the household's own.
+    // Legend labels are fixed names; the category list below shows the household's own.
     expect(getByText('Taiwan Fund')).toBeTruthy();
     expect(getAllByText('Emergency Fund')).toHaveLength(2);
     expect(getAllByText('Savings')).toHaveLength(2);
@@ -199,6 +200,10 @@ describe('Dashboard', () => {
     // Only the Taiwan fund has a goal.
     expect(getAllByText(/% of /)).toHaveLength(1);
     expect(getAllByText(/₱\s?5,000/)).toHaveLength(2);
+    // One line per fund, none for anything else.
+    expect(getByTestId('fund-line-tw')).toBeTruthy();
+    expect(getByTestId('fund-line-em')).toBeTruthy();
+    expect(getByTestId('fund-line-sv')).toBeTruthy();
   });
 
   it('frames the fund summary as an intentional empty state when nothing is saved', async () => {
@@ -220,13 +225,5 @@ describe('Dashboard', () => {
 
     await waitFor(() => expect(getByText('Rent')).toBeTruthy());
     expect(queryByText('Fund summary')).toBeNull();
-  });
-
-  it('omits the momentum row while its data is still loading', async () => {
-    mockUseSavedThisQuarter.mockReturnValue({ data: undefined, isLoading: true, isError: false, refetch: jest.fn() });
-    const { queryByText } = await renderWithTheme(<Dashboard />);
-
-    await waitFor(() => expect(queryByText('Taiwan fund')).toBeTruthy());
-    expect(queryByText('Saved this quarter')).toBeNull();
   });
 });
