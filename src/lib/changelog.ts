@@ -11,6 +11,13 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-09-29-5',
+    date: 'Sep 29, 2026',
+    items: [
+      'Breakdown’s month table is now a chart: one bar per month, coloured by fund and category. Tap a month to see its amounts. The Total column is gone.',
+    ],
+  },
+  {
     id: '2026-09-29-4',
     date: 'Sep 29, 2026',
     items: [
