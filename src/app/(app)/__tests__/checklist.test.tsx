@@ -1,6 +1,6 @@
 import { fireEvent, waitFor } from '@testing-library/react-native';
 
-import { nextPayday, paydayAtOffset, toDateOnly } from '@/lib/payday';
+import { nextPayday, toDateOnly } from '@/lib/payday';
 import { renderWithTheme } from '@/test/renderWithTheme';
 import { ThemeProvider } from '@/theme/ThemeProvider';
 
@@ -310,8 +310,25 @@ describe('PaydayChecklist', () => {
   // Reviewing an upcoming payday from the dashboard stepper (feedback 2026-09-28):
   // a future payday previews what materialize_payday would write, without writing it.
   describe('reviewing a payday from the stepper', () => {
-    const futurePayday = toDateOnly(paydayAtOffset([5], 2));
-    const pastPayday = toDateOnly(paydayAtOffset([5], -1));
+    // "Today" is Nov 10 2026: next payday Dec 5, so Nov 5 is past and Jan 5 is future.
+    const futurePayday = '2027-01-05';
+    const pastPayday = '2026-11-05';
+
+    beforeEach(() => {
+      jest.useFakeTimers({ now: new Date(2026, 10, 10), advanceTimers: true });
+    });
+    afterEach(() => jest.useRealTimers());
+
+    it('ignores a date before October 2026 and falls back to the next payday', async () => {
+      jest.setSystemTime(new Date(2026, 8, 29));
+      mockUseLocalSearchParams.mockReturnValue({ date: '2026-09-20' });
+      mockUseLedgerEntriesForPayday.mockReturnValue(okQuery(entries));
+
+      await renderWithTheme(<PaydayChecklist />);
+
+      await waitFor(() => expect(mockMaterializeMutate).toHaveBeenCalledWith('2026-10-05'));
+      expect(mockUseLedgerEntriesForPayday).not.toHaveBeenCalledWith(expect.anything(), '2026-09-20');
+    });
 
     it('shows a read-only preview for a future payday and never materializes it', async () => {
       mockUseLocalSearchParams.mockReturnValue({ date: futurePayday });

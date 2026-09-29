@@ -33,6 +33,8 @@ import {
 } from '@/lib/queries';
 import { formatFolioDate, formatPeso } from '@/lib/format';
 import {
+  APP_START_DATE,
+  appToday,
   completedPaydayStreak,
   fromDateOnly,
   leftoverByPaydayInMonth,
@@ -62,7 +64,8 @@ export default function PaydayChecklist() {
     if (activeDays.length === 0) return undefined;
     return toDateOnly(nextPayday(activeDays));
   }, [incomes]);
-  const paydayDate = dateParam ?? nextPaydayDate;
+  // A date param before October 2026 (a stale link) falls back to the next payday.
+  const paydayDate = dateParam && dateParam >= APP_START_DATE ? dateParam : nextPaydayDate;
   const isCurrent = !!paydayDate && paydayDate === nextPaydayDate;
   const isFuture = !!paydayDate && !!nextPaydayDate && paydayDate > nextPaydayDate;
 
@@ -131,7 +134,7 @@ export default function PaydayChecklist() {
 
   const cutAdvice = useMemo(() => {
     if (!incomes || !bills) return null;
-    const rows = leftoverByPaydayInMonth(incomes, bills, new Date());
+    const rows = leftoverByPaydayInMonth(incomes, bills, appToday());
     if (rows.length < 2) return null;
     const worst = rows.reduce((a, b) => (b.leftover < a.leftover ? b : a));
     return `If cash gets tight this month, trim the ${worst.day}th payday first — it carries the least cushion.`;

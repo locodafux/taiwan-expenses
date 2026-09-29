@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card, CategoryMark, ListRow } from '@/components/ui/Card';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { formatPeso } from '@/lib/format';
-import { fromDateOnly, monthsBetween, toDateOnly } from '@/lib/payday';
+import { appToday, fromDateOnly, monthsBetween, toDateOnly } from '@/lib/payday';
 import {
   combineQueryState,
   useCategories,
@@ -66,7 +66,7 @@ export default function SummaryOfAll() {
   const membershipQuery = useHouseholdMembership();
   const householdId = membershipQuery.data?.household_id;
 
-  const currentMonth = toDateOnly(new Date()).slice(0, 7);
+  const currentMonth = toDateOnly(appToday()).slice(0, 7);
   const categoriesQuery = useCategories(householdId, { includeArchived: true });
   const balancesQuery = useCategoryBalances(householdId);
 

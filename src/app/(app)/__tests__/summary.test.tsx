@@ -1,7 +1,7 @@
 import { waitFor } from '@testing-library/react-native';
 
 import { renderWithTheme } from '@/test/renderWithTheme';
-import { addMonths, fromDateOnly, toDateOnly } from '@/lib/payday';
+import { addMonths, appToday, fromDateOnly, toDateOnly } from '@/lib/payday';
 
 jest.mock('expo-router', () => ({ useRouter: () => ({ navigate: jest.fn(), push: jest.fn() }) }));
 
@@ -21,7 +21,7 @@ jest.mock('@/lib/queries', () => ({
 import SummaryOfAll from '../summary';
 
 const member = { id: 'member-1', household_id: 'household-1', user_id: 'user-1' };
-const currentMonth = toDateOnly(new Date()).slice(0, 7);
+const currentMonth = toDateOnly(appToday()).slice(0, 7);
 const goalMonth = addMonths(currentMonth, 2);
 const goalMonthLabel = fromDateOnly(`${goalMonth}-01`).toLocaleDateString(undefined, {
   month: 'long',

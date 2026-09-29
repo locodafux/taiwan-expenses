@@ -1,12 +1,13 @@
 import { Pressable, Text, View } from 'react-native';
 
 import { Button } from '@/components/ui/Button';
+import { APP_START_MONTH } from '@/lib/payday';
 
 // value is 'YYYY-MM' or null (never ends). Steps a month at a time, never
 // before `min`.
 export function MonthPicker({
   value,
-  min,
+  min: minProp,
   onChange,
   emptyLabel = 'Never ends · set a last month',
 }: {
@@ -15,6 +16,7 @@ export function MonthPicker({
   onChange: (month: string | null) => void;
   emptyLabel?: string;
 }) {
+  const min = minProp < APP_START_MONTH ? APP_START_MONTH : minProp;
   if (!value) {
     return (
       <Button variant="secondary" onPress={() => onChange(min)}>

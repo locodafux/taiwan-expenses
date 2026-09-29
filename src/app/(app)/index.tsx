@@ -26,7 +26,7 @@ import {
   useSavedThisQuarter,
 } from '@/lib/queries';
 import { formatPeso } from '@/lib/format';
-import { daysUntil, incomeAmountForPayday, paydayAtOffset, toDateOnly } from '@/lib/payday';
+import { APP_START_DATE, daysUntil, incomeAmountForPayday, paydayAtOffset, toDateOnly } from '@/lib/payday';
 import { useTheme } from '@/theme/ThemeProvider';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
@@ -116,7 +116,9 @@ export default function Dashboard() {
     const dateOnly = toDateOnly(date);
     const actualAmount = dateOnly < toDateOnly(new Date()) ? paydayAmountsQuery.data?.[dateOnly] : undefined;
     const amount = actualAmount ?? incomeAmountForPayday(incomes ?? [], date);
-    return { date, amount, daysAway: daysUntil(date) };
+    // Nothing before October 2026 is ever shown, so stepping back stops there.
+    const canGoBack = toDateOnly(paydayAtOffset(activeDays, paydayOffset - 1)) >= APP_START_DATE;
+    return { date, amount, daysAway: daysUntil(date), canGoBack };
   }, [activeDays, incomes, paydayAmountsQuery.data, paydayOffset]);
 
   if (isError) {
@@ -220,8 +222,9 @@ export default function Dashboard() {
               accessibilityLabel="Previous payday"
               accessibilityRole="button"
               hitSlop={8}
+              disabled={!payday.canGoBack}
               onPress={() => setPaydayOffset((offset) => offset - 1)}
-              className="h-9 w-9 items-center justify-center rounded-full bg-surface active:opacity-70"
+              className={`h-9 w-9 items-center justify-center rounded-full bg-surface active:opacity-70 ${payday.canGoBack ? '' : 'opacity-40'}`}
             >
               <Icon name="chevronLeft" size={18} color={vars['--accent']} />
             </Pressable>

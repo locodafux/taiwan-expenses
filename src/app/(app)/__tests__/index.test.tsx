@@ -48,6 +48,8 @@ function okQuery<T>(data: T) {
   return { data, isLoading: false, isError: false, refetch: jest.fn() };
 }
 
+afterEach(() => jest.useRealTimers());
+
 beforeEach(() => {
   jest.clearAllMocks();
   mockUseHouseholdMembership.mockReturnValue(okQuery(member));
@@ -136,6 +138,7 @@ describe('Dashboard', () => {
         { id: 'inc-2', active: true, recurring_day: 20, amount: 25000 },
       ]),
     );
+    jest.useFakeTimers({ now: new Date(2026, 10, 10), advanceTimers: true });
     const { getByLabelText, getByText } = await renderWithTheme(<Dashboard />);
 
     expect(getByText(/^Next payday/)).toBeTruthy();
@@ -144,6 +147,30 @@ describe('Dashboard', () => {
     await fireEvent.press(getByLabelText('Next payday'));
     await fireEvent.press(getByLabelText('Next payday'));
     expect(getByText(/^Upcoming payday/)).toBeTruthy();
+  });
+
+  // The app starts in October 2026: on the real Sep 29 it shows Oct 5 (not
+  // Sep 30) as the next payday and cannot step back into September.
+  it('never shows or steps to a payday before October 2026, even when today is in September', async () => {
+    jest.useFakeTimers({ now: new Date(2026, 8, 29), advanceTimers: true });
+    mockUseIncomes.mockReturnValue(
+      okQuery([
+        { id: 'inc-1', active: true, recurring_day: 5, amount: 30000 },
+        { id: 'inc-2', active: true, recurring_day: 30, amount: 25000 },
+      ]),
+    );
+    const { getByLabelText, getByText, queryByText } = await renderWithTheme(<Dashboard />);
+
+    expect(getByText(/^Next payday · 5th/)).toBeTruthy();
+    await fireEvent.press(getByLabelText('Previous payday'));
+    expect(getByText(/^Next payday · 5th/)).toBeTruthy();
+    expect(queryByText(/^Previous payday/)).toBeNull();
+    // Reviewing it opens the checklist on that October payday.
+    await fireEvent.press(getByText('Review'));
+    expect(mockPush).toHaveBeenLastCalledWith({
+      pathname: '/(app)/checklist',
+      params: { date: '2026-10-05' },
+    });
   });
 
   it('renders the momentum row (saved-this-quarter stat + streak chip) when data is present', async () => {
