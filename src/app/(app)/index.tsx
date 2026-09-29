@@ -22,11 +22,10 @@ import {
   useHouseholdMembers,
   useHouseholdMembership,
   useIncomes,
-  useMonthlyLedgerTotals,
   usePaydayAmounts,
 } from '@/lib/queries';
 import { formatPeso } from '@/lib/format';
-import { APP_START_DATE, APP_START_MONTH, daysUntil, incomeAmountForPayday, paydayAtOffset, toDateOnly } from '@/lib/payday';
+import { APP_START_DATE, daysUntil, incomeAmountForPayday, paydayAtOffset, toDateOnly } from '@/lib/payday';
 import { useTheme } from '@/theme/ThemeProvider';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
@@ -90,7 +89,6 @@ export default function Dashboard() {
   const incomesQuery = useIncomes(householdId);
   const incomes = incomesQuery.data;
   const paydayAmountsQuery = usePaydayAmounts(householdId);
-  const monthlyTotalsQuery = useMonthlyLedgerTotals(householdId, APP_START_MONTH);
 
   const { isError, refetch } = combineQueryState(
     membershipQuery,
@@ -100,7 +98,6 @@ export default function Dashboard() {
     balancesThisMonthQuery,
     incomesQuery,
     paydayAmountsQuery,
-    monthlyTotalsQuery,
   );
 
   const activeDays = useMemo(() => (incomes ?? []).filter((i) => i.active).map((i) => i.recurring_day), [incomes]);
@@ -238,7 +235,7 @@ export default function Dashboard() {
           </View>
         )}
 
-        <FundSummaryChart categories={categories ?? []} balances={balances} monthly={monthlyTotalsQuery.data} />
+        <FundSummaryChart categories={categories ?? []} balances={balances} />
 
         <View>
           <SectionLabel>Category balances</SectionLabel>

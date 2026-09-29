@@ -15,7 +15,6 @@ const mockUseCategoryBalances = jest.fn();
 const mockUseCategoryBalancesThisMonth = jest.fn();
 const mockUseIncomes = jest.fn();
 const mockUsePaydayAmounts = jest.fn();
-const mockUseMonthlyLedgerTotals = jest.fn();
 
 jest.mock('@/lib/queries', () => ({
   ...jest.requireActual('@/lib/queries'),
@@ -26,7 +25,6 @@ jest.mock('@/lib/queries', () => ({
   useCategoryBalancesThisMonth: (...args: unknown[]) => mockUseCategoryBalancesThisMonth(...args),
   useIncomes: (...args: unknown[]) => mockUseIncomes(...args),
   usePaydayAmounts: (...args: unknown[]) => mockUsePaydayAmounts(...args),
-  useMonthlyLedgerTotals: (...args: unknown[]) => mockUseMonthlyLedgerTotals(...args),
 }));
 
 import Dashboard from '../index';
@@ -57,7 +55,6 @@ beforeEach(() => {
   mockUseCategoryBalancesThisMonth.mockReturnValue(okQuery({ 'cat-bill': 3500 }));
   mockUseIncomes.mockReturnValue(okQuery(incomes));
   mockUsePaydayAmounts.mockReturnValue(okQuery({}));
-  mockUseMonthlyLedgerTotals.mockReturnValue(okQuery({ '2026-10': { 'cat-fund': 12000 } }));
 });
 
 describe('Dashboard', () => {
@@ -67,8 +64,8 @@ describe('Dashboard', () => {
     await waitFor(() => expect(getByText('Taiwan fund')).toBeTruthy());
     expect(getByText('Rent')).toBeTruthy();
     expect(getByText(/Leo & Alex/)).toBeTruthy();
-    // The chart's top-of-scale label, the fund's legend amount, and the category list.
-    expect(getAllByText(/₱\s?12,000/)).toHaveLength(3);
+    // The fund summary's amount and the category list.
+    expect(getAllByText(/₱\s?12,000/)).toHaveLength(2);
     expect(getByText(/₱\s?3,500 this month/)).toBeTruthy();
     expect(getByText(/^Next payday/)).toBeTruthy();
   });
@@ -188,8 +185,7 @@ describe('Dashboard', () => {
       ]),
     );
     mockUseCategoryBalances.mockReturnValue(okQuery({ tw: 20000, em: 5000, sv: 0 }));
-    mockUseMonthlyLedgerTotals.mockReturnValue(okQuery({ '2026-10': { tw: 20000, em: 5000 } }));
-    const { getByText, getAllByText, getByTestId } = await renderWithTheme(<Dashboard />);
+    const { getByText, getAllByText, queryByTestId } = await renderWithTheme(<Dashboard />);
 
     expect(await waitFor(() => getByText('Fund summary'))).toBeTruthy();
     // Legend labels are fixed names; the category list below shows the household's own.
@@ -202,10 +198,8 @@ describe('Dashboard', () => {
     expect(getByText(/0% of ₱\s?23,750 \(plan by March\)/)).toBeTruthy();
     expect(getAllByText(/% of /)).toHaveLength(3);
     expect(getAllByText(/₱\s?5,000/)).toHaveLength(2);
-    // One line per fund, none for anything else.
-    expect(getByTestId('fund-line-tw')).toBeTruthy();
-    expect(getByTestId('fund-line-em')).toBeTruthy();
-    expect(getByTestId('fund-line-sv')).toBeTruthy();
+    // No line chart any more.
+    expect(queryByTestId('fund-line-tw')).toBeNull();
   });
 
   it('frames the fund summary as an intentional empty state when nothing is saved', async () => {
