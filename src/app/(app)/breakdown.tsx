@@ -5,6 +5,7 @@ import { vars as nativeWindVars } from 'nativewind';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PaydayCalendar } from '@/components/PaydayCalendar';
+import { Card } from '@/components/ui/Card';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { Icon } from '@/components/ui/Icon';
 import { formatPeso } from '@/lib/format';
@@ -15,24 +16,24 @@ import {
   useFundTotalsForecast,
   useHouseholdBillItems,
   useHouseholdMembership,
-  useIncomes,
   useMonthlyLedgerTotals,
 } from '@/lib/queries';
 import type { Category } from '@/lib/database.types';
 import { useTheme } from '@/theme/ThemeProvider';
 import { PAYDAY_PINK } from '@/theme/tokens';
 
-// Mirrors taiwan-fund-planner.html's "Full numbers" table: one row per
-// month, one column per category, real history behind today and a forward
-// projection ahead of it (private.fund_totals_plan,
-// 20260927000001_fund_totals_projection.sql). ponytail: no sticky header/
-// first column (plain horizontal ScrollView) and a fixed 12-month page
-// rather than an infinite one - add either if a household finds this window
-// too small to be useful.
+// Mirrors taiwan-fund-planner.html's "Full numbers" table as a chart: one
+// stacked bar per month, one segment per category, real history behind today
+// and a forward projection ahead of it (private.fund_totals_plan,
+// 20260927000001_fund_totals_projection.sql). ponytail: a fixed 12-month page
+// rather than an infinite one - add more paging if a household finds this
+// window too small to be useful.
 const PAST_MONTHS = 3;
 const WINDOW_SIZE = 12;
-const CELL_W = 108;
-const MONTH_W = 84;
+
+function monthTitle(month: string) {
+  return fromDateOnly(`${month}-01`).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+}
 
 function monthLabel(month: string) {
   return fromDateOnly(`${month}-01`).toLocaleDateString(undefined, { month: 'short', year: '2-digit' });
@@ -41,14 +42,14 @@ function monthLabel(month: string) {
 // Soft-pink theme scope for the payday calendar view (see PAYDAY_PINK).
 const PINK_SCOPE = nativeWindVars(PAYDAY_PINK);
 
-type BreakdownView = 'calendar' | 'table';
+type BreakdownView = 'calendar' | 'chart';
 
-// Payday calendar (fixed plan, no queries) or the month-by-month table of the
+// Payday calendar (fixed plan, no queries) or the month-by-month chart of the
 // household's real data; the calendar is the main view.
 function ViewToggle({ value, onChange }: { value: BreakdownView; onChange: (v: BreakdownView) => void }) {
   return (
     <View className="flex-row gap-1 self-start rounded-pill bg-surface-2 p-1">
-      {(['calendar', 'table'] as const).map((v) => (
+      {(['calendar', 'chart'] as const).map((v) => (
         <Pressable
           key={v}
           onPress={() => onChange(v)}
@@ -57,7 +58,7 @@ function ViewToggle({ value, onChange }: { value: BreakdownView; onChange: (v: B
           className={`rounded-pill px-4 py-2 ${value === v ? 'bg-surface' : ''}`}
         >
           <Text className={`font-body-semibold text-sm ${value === v ? 'text-ink' : 'text-ink-muted'}`}>
-            {v === 'calendar' ? 'Payday calendar' : 'Month table'}
+            {v === 'calendar' ? 'Payday calendar' : 'Month chart'}
           </Text>
         </Pressable>
       ))}
@@ -69,7 +70,7 @@ export default function Breakdown() {
   const [view, setView] = useState<BreakdownView>('calendar');
   const router = useRouter();
   const toggle = <ViewToggle value={view} onChange={setView} />;
-  if (view === 'table') return <MonthTable toggle={toggle} />;
+  if (view === 'chart') return <MonthChart toggle={toggle} />;
   return (
     <SafeAreaView style={PINK_SCOPE} className="flex-1 bg-page" edges={['top']}>
       <View className="gap-3 px-6 pb-2 pt-3">
@@ -89,8 +90,9 @@ export default function Breakdown() {
   );
 }
 
-function MonthTable({ toggle }: { toggle: React.ReactNode }) {
-  const { vars } = useTheme();
+function MonthChart({ toggle }: { toggle: React.ReactNode }) {
+  const { vars: themeVars } = useTheme();
+  const vars = { ...themeVars, ...PAYDAY_PINK };
   const router = useRouter();
   const membershipQuery = useHouseholdMembership();
   const householdId = membershipQuery.data?.household_id;
@@ -107,7 +109,6 @@ function MonthTable({ toggle }: { toggle: React.ReactNode }) {
 
   const categoriesQuery = useCategories(householdId);
   const billItemsQuery = useHouseholdBillItems(householdId);
-  const incomesQuery = useIncomes(householdId);
   // All history since the app's start, not just this window: a linked child's
   // goal room below is target minus everything already checked.
   const ledgerQuery = useMonthlyLedgerTotals(householdId, APP_START_MONTH);
@@ -117,7 +118,6 @@ function MonthTable({ toggle }: { toggle: React.ReactNode }) {
     membershipQuery,
     categoriesQuery,
     billItemsQuery,
-    incomesQuery,
     ledgerQuery,
     forecastQuery,
   );
@@ -125,7 +125,6 @@ function MonthTable({ toggle }: { toggle: React.ReactNode }) {
     membershipQuery.isLoading ||
     categoriesQuery.isLoading ||
     billItemsQuery.isLoading ||
-    incomesQuery.isLoading ||
     ledgerQuery.isLoading ||
     (forecastMonths.length > 0 && forecastQuery.isLoading);
 
@@ -204,9 +203,16 @@ function MonthTable({ toggle }: { toggle: React.ReactNode }) {
     return groupProjection[month]?.[category.id] ?? forecastByMonth[month]?.[category.id] ?? 0;
   }
 
+  const [selectedMonth, setSelectedMonth] = useState(currentMonth);
+  const selected = months.includes(selectedMonth) ? selectedMonth : months[0];
+  const categoryColor = (c: Category) => c.color ?? vars['--ink-muted'];
+  // Only for scaling bar lengths against each other; never shown.
+  const barSum = (month: string) => categories.reduce((sum, c) => sum + cellValue(c, month), 0);
+  const maxSum = Math.max(1, ...months.map(barSum));
+
   if (isError) {
     return (
-      <SafeAreaView className="flex-1 bg-page">
+      <SafeAreaView style={PINK_SCOPE} className="flex-1 bg-page">
         <View className="px-6 pt-3">{toggle}</View>
         <ErrorState onRetry={refetch} />
       </SafeAreaView>
@@ -215,14 +221,14 @@ function MonthTable({ toggle }: { toggle: React.ReactNode }) {
 
   if (isLoading) {
     return (
-      <SafeAreaView className="flex-1 items-center justify-center bg-page">
+      <SafeAreaView style={PINK_SCOPE} className="flex-1 items-center justify-center bg-page">
         <ActivityIndicator color={vars['--accent']} />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-page" edges={['top']}>
+    <SafeAreaView style={PINK_SCOPE} className="flex-1 bg-page" edges={['top']}>
       <View className="gap-3 px-6 pt-3">
         <Pressable
           onPress={() => router.navigate('/(app)/settings')}
@@ -262,58 +268,63 @@ function MonthTable({ toggle }: { toggle: React.ReactNode }) {
         {toggle}
       </View>
 
-      <ScrollView horizontal contentContainerClassName="px-6 py-4">
-        <View>
-          <View className="flex-row border-b border-gridline pb-2">
-            <View style={{ width: MONTH_W }} />
-            <View style={{ width: CELL_W }}>
-              <Text className="text-right font-body-semibold text-xs text-ink">Income</Text>
-            </View>
-            {categories.map((c) => (
-              <View key={c.id} style={{ width: CELL_W }}>
-                <Text numberOfLines={1} style={{ color: c.color ?? vars['--ink'] }} className="text-right font-body-semibold text-xs">
-                  {c.name}
-                </Text>
-              </View>
-            ))}
-            <View style={{ width: CELL_W }}>
-              <Text className="text-right font-body-semibold text-xs text-ink">Total</Text>
-            </View>
-          </View>
-
-          {months.map((month) => {
-            const monthStart = fromDateOnly(`${month}-01`);
-            const income = scheduledMonthTotal(incomesQuery.data ?? [], monthStart);
-            const values = categories.map((c) => cellValue(c, month));
-            const total = categories.reduce((sum, c, i) => (c.kind === 'fund' ? sum + values[i] : sum), 0);
-            return (
-              <View
-                key={month}
-                className={`flex-row items-center py-2 ${month === currentMonth ? 'bg-surface' : ''}`}
-              >
-                <View style={{ width: MONTH_W }}>
-                  <Text className="font-body-semibold text-xs text-ink">{monthLabel(month)}</Text>
-                </View>
-                <View style={{ width: CELL_W }}>
-                  <Text className="text-right font-body text-xs text-ink-2">{formatPeso(income)}</Text>
-                </View>
-                {categories.map((c, i) => (
-                  <View key={c.id} style={{ width: CELL_W }}>
-                    <Text className="text-right font-body text-xs text-ink-2">{formatPeso(values[i])}</Text>
-                  </View>
-                ))}
-                <View style={{ width: CELL_W }}>
-                  <Text className="text-right font-body-semibold text-xs text-ink">{formatPeso(total)}</Text>
+      <ScrollView contentContainerClassName="gap-4 px-6 py-4">
+        <View className="gap-2">
+          {months.map((month) => (
+            <Pressable
+              key={month}
+              onPress={() => setSelectedMonth(month)}
+              accessibilityRole="button"
+              accessibilityLabel={monthLabel(month)}
+              accessibilityState={{ selected: month === selected }}
+              className={`flex-row items-center gap-3 rounded-md px-2 py-2 ${month === selected ? 'bg-accent-soft' : ''}`}
+            >
+              <Text className="w-14 font-body-semibold text-xs text-ink">{monthLabel(month)}</Text>
+              <View className="h-5 flex-1">
+                <View style={{ width: `${(barSum(month) / maxSum) * 100}%` }} className="h-5 flex-row overflow-hidden rounded-sm">
+                  {categories.map((c) => {
+                    const value = cellValue(c, month);
+                    return value > 0 ? (
+                      <View key={c.id} style={{ flex: value, backgroundColor: categoryColor(c) }} />
+                    ) : null;
+                  })}
                 </View>
               </View>
-            );
-          })}
+            </Pressable>
+          ))}
         </View>
+
+        <View className="flex-row flex-wrap gap-x-4 gap-y-1">
+          {categories.map((c) => (
+            <View key={c.id} className="flex-row items-center gap-2">
+              <View style={{ backgroundColor: categoryColor(c) }} className="h-3 w-3 rounded-sm" />
+              <Text className="font-body text-xs text-ink-2">{c.name}</Text>
+            </View>
+          ))}
+        </View>
+
+        <Card className="gap-2 p-5">
+          <Text className="font-body-semibold text-xs uppercase tracking-widest text-ink-muted">
+            {selected < currentMonth ? 'Your real history' : 'Projected'}
+          </Text>
+          <Text className="font-display-semibold text-lg text-ink">{monthTitle(selected)}</Text>
+          {categories.map((c) => (
+            <View key={c.id} className="flex-row items-center gap-2">
+              <View style={{ backgroundColor: categoryColor(c) }} className="h-3 w-3 rounded-sm" />
+              <Text numberOfLines={1} className="flex-1 font-body text-sm text-ink-2">
+                {c.name}
+              </Text>
+              <Text className="font-mono text-sm text-ink">{formatPeso(cellValue(c, selected))}</Text>
+            </View>
+          ))}
+        </Card>
+
+        <Text className="font-body text-xs leading-[1.5] text-ink-muted">
+          Tap a month to see its amounts. Months before today are your real checked history; {monthLabel(currentMonth)}{' '}
+          onward is projected from your current rules. A linked fund shows its share of its parent fund’s projected
+          month; the parent shows the rest. Bar length compares months.
+        </Text>
       </ScrollView>
-      <Text className="px-6 pb-4 font-body text-xs leading-[1.5] text-ink-muted">
-        Months before today are your real checked history; {monthLabel(currentMonth)} onward is projected from your
-        current rules. A linked fund shows its share of its parent fund’s projected month; the parent shows the rest.
-      </Text>
     </SafeAreaView>
   );
 }

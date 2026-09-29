@@ -66,7 +66,7 @@ beforeEach(() => {
 // The calendar is the default view; the existing table sits behind a toggle.
 async function openTable(ui: ReturnType<typeof renderWithTheme>) {
   const utils = await ui;
-  await fireEvent.press(utils.getByText('Month table'));
+  await fireEvent.press(utils.getByText('Month chart'));
   return utils;
 }
 
@@ -106,35 +106,36 @@ describe('Breakdown', () => {
     expect(queryAllByText('March 2027')).toHaveLength(0);
   });
 
-  it('renders every category as a column and the schedule-based rows for every month', async () => {
-    const { getByText, getAllByText } = await openTable(renderWithTheme(<Breakdown />));
+  it('lists every category in the legend and shows the selected month\'s amounts, with no Total', async () => {
+    const { getAllByText, getByText, queryByText } = await openTable(renderWithTheme(<Breakdown />));
 
-    await waitFor(() => expect(getByText('RENT')).toBeTruthy());
-    expect(getByText('SAVINGS')).toBeTruthy();
-    expect(getByText('Total')).toBeTruthy();
-
-    // Bill and income columns are schedule-based, so the same amount repeats
-    // for all 12 months in the window.
-    expect(getAllByText('₱ 5,000')).toHaveLength(12);
-    expect(getAllByText('₱ 20,000')).toHaveLength(12);
+    // Legend + detail panel each name every category; Oct 2026 is selected on open.
+    await waitFor(() => expect(getAllByText('RENT')).toHaveLength(2));
+    expect(getAllByText('SAVINGS')).toHaveLength(2);
+    expect(getByText('October 2026')).toBeTruthy();
+    expect(getByText('₱ 5,000')).toBeTruthy();
+    expect(queryByText('Total')).toBeNull();
+    expect(queryByText('Income')).toBeNull();
+    expect(queryByText('₱ 20,000')).toBeNull();
   });
 
   it('shows real ledger history for a past month and the forecast for the current month', async () => {
     jest.setSystemTime(new Date(2026, 11, 15));
-    const { getAllByText } = await openTable(renderWithTheme(<Breakdown />));
+    const { getByText, getAllByText, getByLabelText } = await openTable(renderWithTheme(<Breakdown />));
 
-    // SAVINGS column + Total column both show the same amount that month.
-    await waitFor(() => expect(getAllByText('₱ 3,000').length).toBeGreaterThan(0));
-    expect(getAllByText('₱ 4,000').length).toBeGreaterThan(0);
+    // Opens on the current month (Dec), which is projected.
+    await waitFor(() => expect(getByText('December 2026')).toBeTruthy());
+    expect(getAllByText('₱ 2,000')).toHaveLength(2);
+    await fireEvent.press(getByLabelText('Nov 26'));
+    expect(getByText('November 2026')).toBeTruthy();
+    expect(getByText('₱ 3,000')).toBeTruthy();
   });
 
   it('shows a linked child its share of the parent\'s projected month and the parent what is left', async () => {
     const { getAllByText, queryByText } = await openTable(renderWithTheme(<Breakdown />));
 
-    // Oct 2026: SAVINGS pool 4,000 -> child 50% = 2,000, parent keeps 2,000,
-    // and the row Total is still the whole 4,000.
+    // Oct 2026: SAVINGS pool 4,000 -> child 50% = 2,000, parent keeps 2,000.
     await waitFor(() => expect(getAllByText('₱ 2,000')).toHaveLength(2));
-    expect(getAllByText('₱ 4,000')).toHaveLength(1);
     expect(queryByText('–')).toBeNull();
   });
 
@@ -147,6 +148,7 @@ describe('Breakdown', () => {
           : c,
       ),
     });
+    mockUseMonthlyLedgerTotals.mockReturnValue({ ...ok, data: {} });
     mockUseFundTotalsForecast.mockReturnValue({
       ...ok,
       data: [
@@ -154,11 +156,12 @@ describe('Breakdown', () => {
         { category_id: 'cat-savings', month_index: 2, amount: 4000 },
       ],
     });
-    const { getAllByText } = await openTable(renderWithTheme(<Breakdown />));
+    const { getByText, getByLabelText } = await openTable(renderWithTheme(<Breakdown />));
 
     // Oct: child 2,000 (room 2,500 -> 500 left). Nov: child capped at 500, parent 3,500.
-    await waitFor(() => expect(getAllByText('₱ 500').length).toBeGreaterThan(0));
-    expect(getAllByText('₱ 3,500').length).toBeGreaterThan(0);
+    await fireEvent.press(getByLabelText('Nov 26'));
+    expect(getByText('₱ 500')).toBeTruthy();
+    expect(getByText('₱ 3,500')).toBeTruthy();
   });
 
   it('shows an error state that can be retried', async () => {
