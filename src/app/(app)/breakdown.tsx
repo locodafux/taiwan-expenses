@@ -1,6 +1,7 @@
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
+import { vars as nativeWindVars } from 'nativewind';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PaydayCalendar } from '@/components/PaydayCalendar';
@@ -19,6 +20,7 @@ import {
 } from '@/lib/queries';
 import type { Category } from '@/lib/database.types';
 import { useTheme } from '@/theme/ThemeProvider';
+import { PAYDAY_PINK } from '@/theme/tokens';
 
 // Mirrors taiwan-fund-planner.html's "Full numbers" table: one row per
 // month, one column per category, real history behind today and a forward
@@ -35,6 +37,9 @@ const MONTH_W = 84;
 function monthLabel(month: string) {
   return fromDateOnly(`${month}-01`).toLocaleDateString(undefined, { month: 'short', year: '2-digit' });
 }
+
+// Soft-pink theme scope for the payday calendar view (see PAYDAY_PINK).
+const PINK_SCOPE = nativeWindVars(PAYDAY_PINK);
 
 type BreakdownView = 'calendar' | 'table';
 
@@ -66,7 +71,7 @@ export default function Breakdown() {
   const toggle = <ViewToggle value={view} onChange={setView} />;
   if (view === 'table') return <MonthTable toggle={toggle} />;
   return (
-    <SafeAreaView className="flex-1 bg-page" edges={['top']}>
+    <SafeAreaView style={PINK_SCOPE} className="flex-1 bg-page" edges={['top']}>
       <View className="gap-3 px-6 pb-2 pt-3">
         <Pressable
           onPress={() => router.navigate('/(app)/settings')}

@@ -15,6 +15,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: 'Sep 29, 2026',
     items: [
       'New Payday calendar on the Breakdown screen: October 2026 to March 2027 with every payday (5th, 15th, 20th, 30th) marked. Tap one to see what comes in, what gets paid, and how much goes to Taiwan, Emergency, Savings and what’s left — plus a monthly summary that adds up those paydays.',
+      'The Payday calendar now has a soft pink look — dusty rose highlights for paydays and the Taiwan, Emergency and Savings sections.',
     ],
   },
   {

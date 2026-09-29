@@ -8,6 +8,7 @@ import { formatPeso } from '@/lib/format';
 import { PLAN_MONTHS, buildPlan, total, validatePlan, type PlannedPayday } from '@/lib/paydayPlan';
 import { fromDateOnly, toDateOnly } from '@/lib/payday';
 import { useTheme } from '@/theme/ThemeProvider';
+import { PAYDAY_PINK } from '@/theme/tokens';
 
 const WEEKDAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
@@ -28,12 +29,14 @@ function compact(n: number) {
 function Section({
   title,
   color,
+  titleColor,
   rows,
   totalLabel,
   children,
 }: {
   title: string;
   color: string;
+  titleColor?: string;
   rows?: { label: string; amount: number }[];
   totalLabel?: string;
   children?: React.ReactNode;
@@ -41,7 +44,7 @@ function Section({
   const sum = (rows ?? []).reduce((s, r) => s + r.amount, 0);
   return (
     <View style={{ borderLeftWidth: 3, borderLeftColor: color }} className="gap-1 py-1 pl-4">
-      <Text style={{ color }} className="font-body-semibold text-xs uppercase tracking-widest">
+      <Text style={{ color: titleColor ?? color }} className="font-body-semibold text-xs uppercase tracking-widest">
         {title}
       </Text>
       {rows?.length === 0 && <Text className="font-body text-sm italic text-ink-muted">None this payday</Text>}
@@ -75,7 +78,8 @@ function AmountRow({ label, amount }: { label: string; amount: number }) {
 // selected payday's full split underneath, then that month's summary (only
 // ever the sum of its paydays). Fixed schedule - see src/lib/paydayPlan.ts.
 export function PaydayCalendar() {
-  const { vars } = useTheme();
+  const { vars: themeVars } = useTheme();
+  const vars = { ...themeVars, ...PAYDAY_PINK };
   const plan = useMemo(() => buildPlan(), []);
   const issues = useMemo(() => validatePlan(plan), [plan]);
   const paydayById = useMemo(() => new Map(plan.paydays.map((p) => [p.id, p])), [plan]);
@@ -121,13 +125,15 @@ export function PaydayCalendar() {
     emergency: vars['--cat-emergency'],
     savings: vars['--cat-savings'],
     excess: vars['--cat-excess'],
+    // pink is a fill tone; pink section titles are set in Deep Rose for contrast
+    pinkText: vars['--accent'],
   };
 
   return (
     <ScrollView contentContainerClassName="gap-4 px-6 pb-10 pt-2">
       <Card className="gap-2 p-5">
         <View className="flex-row flex-wrap items-baseline justify-between gap-2">
-          <Text style={{ color: color.taiwan }} className="font-body-semibold text-xs uppercase tracking-widest">
+          <Text style={{ color: color.pinkText }} className="font-body-semibold text-xs uppercase tracking-widest">
             Taiwan Fund plan · trip March 2027
           </Text>
           <Text className="font-mono text-sm text-ink">
@@ -204,7 +210,7 @@ export function PaydayCalendar() {
                         } payments, ${formatPeso(payday.excess)} left`
                       : dateTitle(id)
                   }
-                  style={{ borderColor: isSelected ? vars['--ink'] : payday ? vars['--accent'] : 'transparent' }}
+                  style={{ borderColor: isSelected ? vars['--accent'] : payday ? vars['--pink'] : 'transparent' }}
                   className={`min-h-[64px] flex-1 items-center gap-[2px] rounded-md border px-[2px] py-1 ${
                     payday ? 'bg-accent-soft' : ''
                   } ${isSelected ? 'border-2' : ''}`}
@@ -267,14 +273,14 @@ export function PaydayCalendar() {
         <Section title="Debt" color={color.debt}>
           <AmountRow label="Total" amount={total(monthPaydays, 'debtTotal')} />
         </Section>
-        <Section title="Taiwan Fund" color={color.taiwan}>
+        <Section title="Taiwan Fund" color={color.taiwan} titleColor={color.pinkText}>
           <AmountRow label="This month" amount={total(monthPaydays, 'taiwan')} />
           <AmountRow label="Saved by end of month" amount={lastOfMonth.taiwanCumulative} />
         </Section>
-        <Section title="Emergency Fund" color={color.emergency}>
+        <Section title="Emergency Fund" color={color.emergency} titleColor={color.pinkText}>
           <AmountRow label="Total" amount={total(monthPaydays, 'emergency')} />
         </Section>
-        <Section title="Savings" color={color.savings}>
+        <Section title="Savings" color={color.savings} titleColor={color.pinkText}>
           <AmountRow label="Total" amount={total(monthPaydays, 'savings')} />
         </Section>
         <Section title="Excess / Remaining" color={color.excess}>
@@ -343,16 +349,16 @@ function PaydayDetail({
         rows={p.debts.map((d) => ({ label: d.name, amount: d.amount }))}
         totalLabel="Total debt"
       />
-      <Section title="Taiwan Fund" color={color.taiwan}>
+      <Section title="Taiwan Fund" color={color.taiwan} titleColor={color.pinkText}>
         <AmountRow label="This payday" amount={p.taiwan} />
         <AmountRow label="Saved so far" amount={p.taiwanCumulative} />
         <AmountRow label="Still to go" amount={Math.max(0, plan.target - p.taiwanCumulative)} />
         <Meter percent={(p.taiwanCumulative / plan.target) * 100} color={color.taiwan} thin className="mt-1" />
       </Section>
-      <Section title="Emergency Fund" color={color.emergency}>
+      <Section title="Emergency Fund" color={color.emergency} titleColor={color.pinkText}>
         <AmountRow label="This payday" amount={p.emergency} />
       </Section>
-      <Section title="Savings" color={color.savings}>
+      <Section title="Savings" color={color.savings} titleColor={color.pinkText}>
         <AmountRow label="This payday" amount={p.savings} />
       </Section>
       <Section title="Excess / Remaining" color={color.excess}>
