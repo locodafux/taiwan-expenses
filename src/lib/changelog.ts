@@ -11,6 +11,13 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-09-29',
+    date: 'Sep 29, 2026',
+    items: [
+      'New Payday calendar on the Breakdown screen: October 2026 to March 2027 with every payday (5th, 15th, 20th, 30th) marked. Tap one to see what comes in, what gets paid, and how much goes to Taiwan, Emergency, Savings and what’s left — plus a monthly summary that adds up those paydays.',
+    ],
+  },
+  {
     id: '2026-09-28',
     date: 'Sep 28, 2026',
     items: [

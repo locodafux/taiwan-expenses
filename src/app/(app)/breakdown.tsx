@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { PaydayCalendar } from '@/components/PaydayCalendar';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { Icon } from '@/components/ui/Icon';
 import { formatPeso } from '@/lib/format';
@@ -35,7 +36,55 @@ function monthLabel(month: string) {
   return fromDateOnly(`${month}-01`).toLocaleDateString(undefined, { month: 'short', year: '2-digit' });
 }
 
+type BreakdownView = 'calendar' | 'table';
+
+// Payday calendar (fixed plan, no queries) or the month-by-month table of the
+// household's real data; the calendar is the main view.
+function ViewToggle({ value, onChange }: { value: BreakdownView; onChange: (v: BreakdownView) => void }) {
+  return (
+    <View className="flex-row gap-1 self-start rounded-pill bg-surface-2 p-1">
+      {(['calendar', 'table'] as const).map((v) => (
+        <Pressable
+          key={v}
+          onPress={() => onChange(v)}
+          accessibilityRole="button"
+          accessibilityState={{ selected: value === v }}
+          className={`rounded-pill px-4 py-2 ${value === v ? 'bg-surface' : ''}`}
+        >
+          <Text className={`font-body-semibold text-sm ${value === v ? 'text-ink' : 'text-ink-muted'}`}>
+            {v === 'calendar' ? 'Payday calendar' : 'Month table'}
+          </Text>
+        </Pressable>
+      ))}
+    </View>
+  );
+}
+
 export default function Breakdown() {
+  const [view, setView] = useState<BreakdownView>('calendar');
+  const router = useRouter();
+  const toggle = <ViewToggle value={view} onChange={setView} />;
+  if (view === 'table') return <MonthTable toggle={toggle} />;
+  return (
+    <SafeAreaView className="flex-1 bg-page" edges={['top']}>
+      <View className="gap-3 px-6 pb-2 pt-3">
+        <Pressable
+          onPress={() => router.navigate('/(app)/settings')}
+          hitSlop={13}
+          accessibilityRole="button"
+          className="self-start py-3"
+        >
+          <Text className="font-body text-sm text-ink-2">‹ Settings</Text>
+        </Pressable>
+        <Text className="font-display-semibold text-lg text-ink">Breakdown</Text>
+        {toggle}
+      </View>
+      <PaydayCalendar />
+    </SafeAreaView>
+  );
+}
+
+function MonthTable({ toggle }: { toggle: React.ReactNode }) {
   const { vars } = useTheme();
   const router = useRouter();
   const membershipQuery = useHouseholdMembership();
@@ -112,6 +161,7 @@ export default function Breakdown() {
   if (isError) {
     return (
       <SafeAreaView className="flex-1 bg-page">
+        <View className="px-6 pt-3">{toggle}</View>
         <ErrorState onRetry={refetch} />
       </SafeAreaView>
     );
@@ -160,6 +210,7 @@ export default function Breakdown() {
             </Pressable>
           </View>
         </View>
+        {toggle}
       </View>
 
       <ScrollView horizontal contentContainerClassName="px-6 py-4">

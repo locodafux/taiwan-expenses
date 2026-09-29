@@ -1,4 +1,4 @@
-import { waitFor } from '@testing-library/react-native';
+import { fireEvent, waitFor } from '@testing-library/react-native';
 
 import { renderWithTheme } from '@/test/renderWithTheme';
 import { addMonths, toDateOnly } from '@/lib/payday';
@@ -62,9 +62,51 @@ beforeEach(() => {
   });
 });
 
+// The calendar is the default view; the existing table sits behind a toggle.
+async function openTable(ui: ReturnType<typeof renderWithTheme>) {
+  const utils = await ui;
+  await fireEvent.press(utils.getByText('Month table'));
+  return utils;
+}
+
 describe('Breakdown', () => {
-  it('renders every category as a column and the schedule-based rows for every month', async () => {
+  it('opens on the payday calendar with October 2026 selected and the checks passing', async () => {
     const { getByText, getAllByText } = await renderWithTheme(<Breakdown />);
+
+    expect(getAllByText('October 2026')).toHaveLength(2); // calendar header + monthly summary
+    expect(getByText('October 5 · Leo payday')).toBeTruthy();
+    expect(getByText('Total expenses')).toBeTruthy();
+    expect(getByText('Monthly summary · sum of the four paydays')).toBeTruthy();
+    expect(getByText('All checks pass')).toBeTruthy();
+    // Four paydays a month, each showing its income.
+    expect(getAllByText('💰20k')).toHaveLength(2);
+    expect(getAllByText('💰10k')).toHaveLength(2);
+  });
+
+  it('shows another payday\'s split on tap and a plain note for a normal date', async () => {
+    const { getByText, queryByText } = await renderWithTheme(<Breakdown />);
+
+    await fireEvent.press(getByText('6'));
+    expect(getByText('No scheduled payday')).toBeTruthy();
+    expect(queryByText('Total expenses')).toBeNull();
+
+    await fireEvent.press(getByText('15'));
+    expect(getByText('October 15 · Ann payday')).toBeTruthy();
+    expect(getByText('MacBook')).toBeTruthy();
+  });
+
+  it('pages through Oct 2026 - Mar 2027 and Today returns to the first month', async () => {
+    const { getByText, getAllByText, getByLabelText, queryAllByText } = await renderWithTheme(<Breakdown />);
+
+    for (let i = 0; i < 5; i++) await fireEvent.press(getByLabelText('Next month'));
+    expect(getAllByText('March 2027').length).toBeGreaterThan(0);
+    await fireEvent.press(getByText('Today'));
+    expect(getAllByText('October 2026').length).toBeGreaterThan(0);
+    expect(queryAllByText('March 2027')).toHaveLength(0);
+  });
+
+  it('renders every category as a column and the schedule-based rows for every month', async () => {
+    const { getByText, getAllByText } = await openTable(renderWithTheme(<Breakdown />));
 
     await waitFor(() => expect(getByText('RENT')).toBeTruthy());
     expect(getByText('SAVINGS')).toBeTruthy();
@@ -77,7 +119,7 @@ describe('Breakdown', () => {
   });
 
   it('shows real ledger history for a past month and the forecast for the current month', async () => {
-    const { getAllByText } = await renderWithTheme(<Breakdown />);
+    const { getAllByText } = await openTable(renderWithTheme(<Breakdown />));
 
     // SAVINGS column + Total column both show the same amount that month.
     await waitFor(() => expect(getAllByText('₱ 3,000').length).toBeGreaterThan(0));
@@ -85,14 +127,14 @@ describe('Breakdown', () => {
   });
 
   it('shows a dash for a linked group/excess child in a future month', async () => {
-    const { getAllByText } = await renderWithTheme(<Breakdown />);
+    const { getAllByText } = await openTable(renderWithTheme(<Breakdown />));
 
     await waitFor(() => expect(getAllByText('–').length).toBeGreaterThan(0));
   });
 
   it('shows an error state that can be retried', async () => {
     mockUseCategories.mockReturnValue({ ...ok, isError: true });
-    const { getByText } = await renderWithTheme(<Breakdown />);
+    const { getByText } = await openTable(renderWithTheme(<Breakdown />));
 
     await waitFor(() => expect(getByText(/Couldn't load/)).toBeTruthy());
   });
@@ -104,7 +146,7 @@ describe('Breakdown', () => {
   // all, which only calls the same RPC when a goal-dated fund exists.
   it('shows an error state when the fund-totals-forecast RPC call fails', async () => {
     mockUseFundTotalsForecast.mockReturnValue({ ...ok, isError: true });
-    const { getByText } = await renderWithTheme(<Breakdown />);
+    const { getByText } = await openTable(renderWithTheme(<Breakdown />));
 
     await waitFor(() => expect(getByText(/Couldn't load/)).toBeTruthy());
   });
