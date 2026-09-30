@@ -6,6 +6,7 @@ jest.mock('expo-router', () => ({ useRouter: () => ({ navigate: jest.fn() }) }))
 
 const mockUseHouseholdMembership = jest.fn();
 const mockUseCategories = jest.fn();
+const mockUseCategoryMonthPercents = jest.fn();
 const mockUseHouseholdBillItems = jest.fn();
 const mockUseIncomes = jest.fn();
 const mockUseMonthlyLedgerTotals = jest.fn();
@@ -15,6 +16,7 @@ jest.mock('@/lib/queries', () => ({
   ...jest.requireActual('@/lib/queries'),
   useHouseholdMembership: (...args: unknown[]) => mockUseHouseholdMembership(...args),
   useCategories: (...args: unknown[]) => mockUseCategories(...args),
+  useCategoryMonthPercents: (...args: unknown[]) => mockUseCategoryMonthPercents(...args),
   useHouseholdBillItems: (...args: unknown[]) => mockUseHouseholdBillItems(...args),
   useIncomes: (...args: unknown[]) => mockUseIncomes(...args),
   useMonthlyLedgerTotals: (...args: unknown[]) => mockUseMonthlyLedgerTotals(...args),
@@ -51,6 +53,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockUseHouseholdMembership.mockReturnValue({ ...ok, data: member });
   mockUseCategories.mockReturnValue({ ...ok, data: categories });
+  mockUseCategoryMonthPercents.mockReturnValue({ ...ok, data: [] });
   mockUseHouseholdBillItems.mockReturnValue({ ...ok, data: billItems });
   mockUseIncomes.mockReturnValue({ ...ok, data: incomes });
   mockUseMonthlyLedgerTotals.mockReturnValue({
@@ -137,6 +140,29 @@ describe('Breakdown', () => {
     // Oct 2026: SAVINGS pool 4,000 -> child 50% = 2,000, parent keeps 2,000.
     await waitFor(() => expect(getAllByText('₱ 2,000')).toHaveLength(2));
     expect(queryByText('–')).toBeNull();
+  });
+
+  it("uses a child's percentage for that month instead of its default", async () => {
+    mockUseCategoryMonthPercents.mockReturnValue({
+      ...ok,
+      data: [{ category_id: 'cat-excess-kid', month: '2026-10-01', percent: 25 }],
+    });
+    const { getByText } = await openTable(renderWithTheme(<Breakdown />));
+
+    // Oct 2026: pool 4,000 at 25% (not the default 50%) -> child 1,000, parent keeps 3,000.
+    await waitFor(() => expect(getByText('₱ 1,000')).toBeTruthy());
+    expect(getByText('₱ 3,000')).toBeTruthy();
+  });
+
+  it('gives a 0% month to the parent entirely', async () => {
+    mockUseCategoryMonthPercents.mockReturnValue({
+      ...ok,
+      data: [{ category_id: 'cat-excess-kid', month: '2026-10-01', percent: 0 }],
+    });
+    const { getByText, queryByText } = await openTable(renderWithTheme(<Breakdown />));
+
+    await waitFor(() => expect(getByText('₱ 4,000')).toBeTruthy());
+    expect(queryByText('₱ 2,000')).toBeNull();
   });
 
   it('caps a linked child at its goal and hands the rest back to the parent', async () => {

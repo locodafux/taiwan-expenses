@@ -15,6 +15,7 @@ const mockUseHouseholdMembership = jest.fn();
 const mockUseIncomes = jest.fn();
 const mockUseHouseholdBillItems = jest.fn();
 const mockUseCategories = jest.fn();
+const mockUseCategoryMonthPercents = jest.fn();
 const mockUseLedgerEntriesForPayday = jest.fn();
 const mockUseMaterializePayday = jest.fn();
 const mockUseCheckLedgerEntry = jest.fn();
@@ -30,6 +31,7 @@ jest.mock('@/lib/queries', () => ({
   useIncomes: (...args: unknown[]) => mockUseIncomes(...args),
   useHouseholdBillItems: (...args: unknown[]) => mockUseHouseholdBillItems(...args),
   useCategories: (...args: unknown[]) => mockUseCategories(...args),
+  useCategoryMonthPercents: (...args: unknown[]) => mockUseCategoryMonthPercents(...args),
   useLedgerEntriesForPayday: (...args: unknown[]) => mockUseLedgerEntriesForPayday(...args),
   useMaterializePayday: (...args: unknown[]) => mockUseMaterializePayday(...args),
   useCheckLedgerEntry: (...args: unknown[]) => mockUseCheckLedgerEntry(...args),
@@ -79,6 +81,7 @@ beforeEach(() => {
   mockUseIncomes.mockReturnValue(okQuery(incomes));
   mockUseHouseholdBillItems.mockReturnValue(okQuery([]));
   mockUseCategories.mockReturnValue(okQuery([]));
+  mockUseCategoryMonthPercents.mockReturnValue(okQuery([]));
   mockUseLedgerEntriesForPayday.mockReturnValue(okQuery(entries));
   mockUseMaterializePayday.mockReturnValue({ mutate: mockMaterializeMutate });
   mockUseCheckLedgerEntry.mockReturnValue({ mutate: mockCheckMutate });

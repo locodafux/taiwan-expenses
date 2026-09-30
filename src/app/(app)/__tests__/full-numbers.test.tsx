@@ -2,6 +2,7 @@ import { renderWithTheme } from '@/test/renderWithTheme';
 
 const mockUseHouseholdMembership = jest.fn();
 const mockUseCategories = jest.fn();
+const mockUseCategoryMonthPercents = jest.fn();
 const mockUseHouseholdBillItems = jest.fn();
 const mockUseIncomes = jest.fn();
 const mockUseMonthlyLedgerTotals = jest.fn();
@@ -11,6 +12,7 @@ jest.mock('@/lib/queries', () => ({
   ...jest.requireActual('@/lib/queries'),
   useHouseholdMembership: (...a: unknown[]) => mockUseHouseholdMembership(...a),
   useCategories: (...a: unknown[]) => mockUseCategories(...a),
+  useCategoryMonthPercents: (...a: unknown[]) => mockUseCategoryMonthPercents(...a),
   useHouseholdBillItems: (...a: unknown[]) => mockUseHouseholdBillItems(...a),
   useIncomes: (...a: unknown[]) => mockUseIncomes(...a),
   useMonthlyLedgerTotals: (...a: unknown[]) => mockUseMonthlyLedgerTotals(...a),
@@ -36,6 +38,7 @@ beforeEach(() => {
   jest.useFakeTimers({ now: new Date(2026, 8, 29), advanceTimers: true });
   mockUseHouseholdMembership.mockReturnValue({ ...ok, data: { household_id: 'h1' } });
   mockUseCategories.mockReturnValue({ ...ok, data: categories });
+  mockUseCategoryMonthPercents.mockReturnValue({ ...ok, data: [] });
   mockUseHouseholdBillItems.mockReturnValue({ ...ok, data: bills });
   mockUseIncomes.mockReturnValue({ ...ok, data: [{ amount: 20000, recurring_day: 5, active: true }] });
   mockUseMonthlyLedgerTotals.mockReturnValue({ ...ok, data: {} });

@@ -15,6 +15,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: 'Sep 30, 2026',
     items: [
       'A category inside a group can now have 0% - it simply gets nothing until you raise it, and its share stays in the group.',
+      'Each month of a category inside a group can have its own percentage: open the category and fill in the month you want to change (0 is fine). Blank months use the usual percentage.',
     ],
   },
   {
