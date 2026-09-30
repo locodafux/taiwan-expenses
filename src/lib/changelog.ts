@@ -11,6 +11,13 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-09-30-bottom-tabs',
+    date: 'Sep 30, 2026',
+    items: [
+      'The bottom bar is back with Dashboard, Checklist, Categories and Chat (with the unread badge on Chat). Settings and Full numbers stay in the side menu.',
+    ],
+  },
+  {
     id: '2026-09-30-menu-spacing',
     date: 'Sep 30, 2026',
     items: [
