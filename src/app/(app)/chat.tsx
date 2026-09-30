@@ -130,14 +130,14 @@ export default function Chat() {
 
   if (isError) {
     return (
-      <SafeAreaView className="flex-1 bg-page">
+      <SafeAreaView className="flex-1 bg-page" edges={[]}>
         <ErrorState onRetry={refetch} />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-page" edges={['top']}>
+    <SafeAreaView className="flex-1 bg-page" edges={[]}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <View className="flex-row items-center justify-between px-6 py-5">
           <Text className="font-display-semibold text-lg text-ink">Household chat</Text>

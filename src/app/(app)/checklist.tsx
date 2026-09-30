@@ -159,7 +159,7 @@ export default function PaydayChecklist() {
 
   if (isError) {
     return (
-      <SafeAreaView className="flex-1 bg-page">
+      <SafeAreaView className="flex-1 bg-page" edges={[]}>
         <ErrorState onRetry={refetch} />
       </SafeAreaView>
     );
@@ -167,7 +167,7 @@ export default function PaydayChecklist() {
 
   if (isLoading) {
     return (
-      <SafeAreaView className="flex-1 items-center justify-center bg-page">
+      <SafeAreaView className="flex-1 items-center justify-center bg-page" edges={[]}>
         <ActivityIndicator color={vars['--accent']} />
       </SafeAreaView>
     );
@@ -175,7 +175,7 @@ export default function PaydayChecklist() {
 
   if (!paydayDate) {
     return (
-      <SafeAreaView className="flex-1 justify-center gap-4 bg-page px-10">
+      <SafeAreaView className="flex-1 justify-center gap-4 bg-page px-10" edges={[]}>
         <EmptyState>Add an income first to see your payday checklist.</EmptyState>
         <Button variant="secondary" size="sm" onPress={() => router.push('/(app)/income')}>
           Go to Income
@@ -230,7 +230,7 @@ export default function PaydayChecklist() {
     : 0;
 
   return (
-    <SafeAreaView className="flex-1 bg-page" edges={['top']}>
+    <SafeAreaView className="flex-1 bg-page" edges={[]}>
       <KeyboardScroll contentContainerClassName="gap-4 px-6 py-5">
         <ScreenHeader
           kicker={formatFolioDate(fromDateOnly(paydayDate))}
