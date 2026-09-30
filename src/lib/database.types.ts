@@ -98,6 +98,18 @@ export type BillItem = {
   created_at: string;
 };
 
+// One month's percentage for a group child; overrides its rule.percent for
+// that month only (20260930000003_group_child_monthly_percent.sql).
+export type CategoryMonthPercent = {
+  id: string;
+  household_id: string;
+  category_id: string;
+  // first of the month, YYYY-MM-01
+  month: string;
+  percent: number;
+  created_at: string;
+};
+
 export type LedgerEntry = {
   id: string;
   household_id: string;
@@ -240,6 +252,18 @@ export interface Database {
             foreignKeyName: 'ledger_entries_bill_item_id_fkey';
             columns: ['bill_item_id'];
             referencedRelation: 'bill_items';
+            referencedColumns: ['id'];
+          },
+        ]
+      >;
+      category_month_percents: TableDef<
+        CategoryMonthPercent,
+        Partial<CategoryMonthPercent> & { category_id: string; month: string; percent: number },
+        [
+          {
+            foreignKeyName: 'category_month_percents_category_id_fkey';
+            columns: ['category_id'];
+            referencedRelation: 'categories';
             referencedColumns: ['id'];
           },
         ]

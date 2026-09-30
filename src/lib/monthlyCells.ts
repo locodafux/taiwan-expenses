@@ -12,6 +12,7 @@ import {
 import {
   combineQueryState,
   useCategories,
+  useCategoryMonthPercents,
   useFundTotalsForecast,
   useHouseholdBillItems,
   useHouseholdMembership,
@@ -32,6 +33,7 @@ export function useMonthlyCells(months: string[]) {
 
   const categoriesQuery = useCategories(householdId);
   const billItemsQuery = useHouseholdBillItems(householdId);
+  const monthPercentsQuery = useCategoryMonthPercents(householdId);
   // All history since the app's start, not just this window: a linked child's
   // goal room below is target minus everything already checked.
   const ledgerQuery = useMonthlyLedgerTotals(householdId, APP_START_MONTH);
@@ -41,6 +43,7 @@ export function useMonthlyCells(months: string[]) {
     membershipQuery,
     categoriesQuery,
     billItemsQuery,
+    monthPercentsQuery,
     ledgerQuery,
     forecastQuery,
   );
@@ -48,6 +51,7 @@ export function useMonthlyCells(months: string[]) {
     membershipQuery.isLoading ||
     categoriesQuery.isLoading ||
     billItemsQuery.isLoading ||
+    monthPercentsQuery.isLoading ||
     ledgerQuery.isLoading ||
     (forecastMonths.length > 0 && forecastQuery.isLoading);
 
@@ -71,6 +75,12 @@ export function useMonthlyCells(months: string[]) {
   }, [forecastQuery.data, forecastMonths]);
 
   const ledgerTotals = ledgerQuery.data ?? {};
+  // 'categoryId:YYYY-MM' -> that month's override of a group child's percentage.
+  const monthPercents = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const row of monthPercentsQuery.data ?? []) map[`${row.category_id}:${row.month.slice(0, 7)}`] = row.percent;
+    return map;
+  }, [monthPercentsQuery.data]);
 
   // Each group parent's projected pool, split the way private.
   // excess_group_allocations splits a payday: children take their percentages
@@ -98,11 +108,13 @@ export function useMonthlyCells(months: string[]) {
         const pool = forecastByMonth[month]?.[parentId] ?? 0;
         // A linked fund outside its start/end months takes no share (private.excess_group_allocations).
         const live = kids.map((k, i) => i).filter((i) => categoryActiveInMonth(kids[i].category, month));
-        const weightSum = live.reduce((sum, i) => sum + kids[i].percent, 0);
+        // A month's own percentage (if set) beats the child's default.
+        const pcts = kids.map((k) => monthPercents[`${k.id}:${month}`] ?? k.percent);
+        const weightSum = live.reduce((sum, i) => sum + pcts[i], 0);
         const total = pool > 0 ? (pool * weightSum) / 100 : 0;
-        const shares = kids.map((k) => (weightSum > 0 ? Math.round((total * k.percent) / weightSum) : 0));
+        const shares = kids.map((k, i) => (weightSum > 0 ? Math.round((total * pcts[i]) / weightSum) : 0));
         // Rounding residue goes to the heaviest child (first on a tie), like allocate_proportional.
-        const heaviest = live.reduce((best, i) => (kids[i].percent > kids[best].percent ? i : best), live[0] ?? 0);
+        const heaviest = live.reduce((best, i) => (pcts[i] > pcts[best] ? i : best), live[0] ?? 0);
         if (live.length > 0) shares[heaviest] += Math.round(total) - live.reduce((a, i) => a + shares[i], 0);
         let given = 0;
         for (const i of live) {

@@ -4,6 +4,7 @@ import { Alert, BackHandler, Pressable, Switch, Text, View } from 'react-native'
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { MonthlyPercentCard } from '@/components/MonthlyPercentCard';
 import { Button } from '@/components/ui/Button';
 import { ColorPicker } from '@/components/ui/ColorPicker';
 import { KeyboardScroll } from '@/components/ui/KeyboardScroll';
@@ -588,6 +589,9 @@ export default function CategoryDetail() {
                 : 'The linked parent no longer exists.'}
             </Text>
           </Card>
+        )}
+        {category.kind === 'fund' && isGroupChild && linkedParent && linkedPercent !== null && (
+          <MonthlyPercentCard category={category} householdId={householdId} defaultPercent={linkedPercent} />
         )}
         {category.rule?.type !== 'excess' &&
           category.rule?.type !== 'group_child' &&

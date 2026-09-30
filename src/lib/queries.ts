@@ -252,6 +252,52 @@ export function useDeleteCategory(householdId: string | undefined) {
   });
 }
 
+// Every month override of a group child's percentage in the household
+// (an override beats the child's rule.percent for that month only).
+export function useCategoryMonthPercents(householdId: string | undefined) {
+  return useQuery({
+    queryKey: ['category-month-percents', householdId],
+    enabled: !!householdId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('category_month_percents')
+        .select('*')
+        .eq('household_id', householdId as string);
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
+// percent null clears the override (the child goes back to its default).
+export function useSetMonthPercent(householdId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ categoryId, month, percent }: { categoryId: string; month: string; percent: number | null }) => {
+      if (percent === null) {
+        const { error } = await supabase
+          .from('category_month_percents')
+          .delete()
+          .eq('category_id', categoryId)
+          .eq('month', month);
+        if (error) throw error;
+        return;
+      }
+      const { error } = await supabase
+        .from('category_month_percents')
+        .upsert({ category_id: categoryId, month, percent }, { onConflict: 'category_id,month' });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['category-month-percents', householdId] });
+      // The checklist re-materializes on these, and the previews/shortfalls read the shares.
+      queryClient.invalidateQueries({ queryKey: ['payday-preview'] });
+      queryClient.invalidateQueries({ queryKey: ['goal-shortfalls'] });
+      queryClient.invalidateQueries({ queryKey: ['ledger-entries'] });
+    },
+  });
+}
+
 // Claims the one-time goal-celebration for a category: the `.is(...)` guard
 // means only the first caller to reach this (across devices/household
 // members) gets a non-null row back, so the celebration modal shows exactly

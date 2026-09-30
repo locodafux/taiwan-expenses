@@ -19,6 +19,7 @@ import { ProgressBar } from '@/components/ui/ProgressBar';
 import {
   combineQueryState,
   useCategories,
+  useCategoryMonthPercents,
   useCheckLedgerEntry,
   useGoalShortfalls,
   useHouseholdBillItems,
@@ -56,6 +57,7 @@ export default function PaydayChecklist() {
   const billsQuery = useHouseholdBillItems(householdId);
   const bills = billsQuery.data;
   const categoriesQuery = useCategories(householdId);
+  const monthPercentsQuery = useCategoryMonthPercents(householdId);
 
   // The true next payday - the only one materialize_payday ever writes real
   // rows for. A date param further out (dashboard stepper's Review button)
@@ -122,8 +124,12 @@ export default function PaydayChecklist() {
   // mounted — so re-run it whenever the categories/bill items it reads change
   // (added here, on another screen, or by a partner via Realtime), not just when
   // the target payday changes. Waits for both lists so mount materializes once.
+  // (A failed month-percent load falls back to none rather than never materializing.)
+  const monthPercents = monthPercentsQuery.data ?? (monthPercentsQuery.isError ? [] : undefined);
   const planInputs =
-    categoriesQuery.data && bills ? JSON.stringify([categoriesQuery.data, bills]) : undefined;
+    categoriesQuery.data && bills && monthPercents
+      ? JSON.stringify([categoriesQuery.data, bills, monthPercents])
+      : undefined;
 
   useEffect(() => {
     // Only the current payday ever gets real rows - a future one is preview-only,

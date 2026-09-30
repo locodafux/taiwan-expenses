@@ -41,6 +41,14 @@ export function useRealtimeSync(householdId: string | undefined) {
       )
       .on(
         'postgres_changes',
+        { event: '*', schema: 'public', table: 'category_month_percents', filter: `household_id=eq.${householdId}` },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['category-month-percents', householdId] });
+          queryClient.invalidateQueries({ queryKey: ['payday-preview'] });
+        },
+      )
+      .on(
+        'postgres_changes',
         { event: '*', schema: 'public', table: 'incomes', filter: `household_id=eq.${householdId}` },
         () => {
           queryClient.invalidateQueries({ queryKey: ['incomes', householdId] });
