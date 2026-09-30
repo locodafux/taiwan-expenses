@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/ui/Button';
 import { ColorPicker } from '@/components/ui/ColorPicker';
 import { KeyboardScroll } from '@/components/ui/KeyboardScroll';
+import { CategoryRangePicker } from '@/components/ui/CategoryRangePicker';
 import { MonthPicker } from '@/components/ui/MonthPicker';
 import { TextField } from '@/components/ui/TextField';
 import { Card, ListRow } from '@/components/ui/Card';
@@ -116,6 +117,7 @@ export default function CategoryDetail() {
   const [editExcessSource, setEditExcessSource] = useState(false);
   const [editExcessParentId, setEditExcessParentId] = useState<string | null>(null);
   const [editExcessPercent, setEditExcessPercent] = useState('20');
+  const [editRange, setEditRange] = useState<{ start: string; end: string | null }>({ start: APP_START_MONTH, end: null });
 
   const balance = useMemo(
     () => (history ?? []).reduce((s, h) => s + h.amount, 0),
@@ -254,6 +256,7 @@ export default function CategoryDetail() {
         ? String(category!.rule.percent)
         : '20',
     );
+    setEditRange({ start: category!.start_month.slice(0, 7), end: category!.end_month?.slice(0, 7) ?? null });
     setError(null);
     setEditingCategory(true);
   }
@@ -323,6 +326,8 @@ export default function CategoryDetail() {
         name: editName.trim(),
         color: editColor || null,
         rule: nextRule,
+        start_month: `${editRange.start}-01`,
+        end_month: editRange.end ? `${editRange.end}-01` : null,
         ...(editExcessSource || category!.is_group_parent !== undefined
           ? { is_group_parent: editExcessSource }
           : {}),
@@ -526,6 +531,7 @@ export default function CategoryDetail() {
                   </View>
                 </>
               )}
+              <CategoryRangePicker start={editRange.start} end={editRange.end} onChange={setEditRange} />
               {error && <Text className="font-body text-sm text-status-bad">{error}</Text>}
               <View className="flex-row gap-3">
                 <Button

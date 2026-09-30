@@ -10,11 +10,13 @@ export function MonthPicker({
   min: minProp,
   onChange,
   emptyLabel = 'Never ends · set a last month',
+  clearable = true,
 }: {
   value: string | null;
   min: string;
   onChange: (month: string | null) => void;
   emptyLabel?: string;
+  clearable?: boolean;
 }) {
   const min = minProp < APP_START_MONTH ? APP_START_MONTH : minProp;
   if (!value) {
@@ -53,9 +55,11 @@ export function MonthPicker({
       >
         <Text className="font-body text-lg text-ink">›</Text>
       </Pressable>
-      <Pressable onPress={() => onChange(null)} hitSlop={8} accessibilityRole="button">
-        <Text className="font-body text-sm text-ink-2">Clear</Text>
-      </Pressable>
+      {clearable && (
+        <Pressable onPress={() => onChange(null)} hitSlop={8} accessibilityRole="button">
+          <Text className="font-body text-sm text-ink-2">Clear</Text>
+        </Pressable>
+      )}
     </View>
   );
 }

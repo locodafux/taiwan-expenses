@@ -9,7 +9,15 @@ import { Card } from '@/components/ui/Card';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { Icon } from '@/components/ui/Icon';
 import { formatPeso } from '@/lib/format';
-import { addMonths, APP_START_MONTH, appToday, fromDateOnly, scheduledMonthTotal, toDateOnly } from '@/lib/payday';
+import {
+  addMonths,
+  APP_START_MONTH,
+  appToday,
+  categoryActiveInMonth,
+  fromDateOnly,
+  scheduledMonthTotal,
+  toDateOnly,
+} from '@/lib/payday';
 import {
   combineQueryState,
   useCategories,
@@ -163,7 +171,7 @@ function MonthChart({ toggle }: { toggle: React.ReactNode }) {
     for (const parentId of parentIds) {
       const kids = categories.flatMap((c) =>
         (c.rule?.type === 'excess' || c.rule?.type === 'group_child') && c.rule.parent_id === parentId
-          ? [{ id: c.id, percent: c.rule.percent, goal: c.rule.type === 'group_child' ? c.rule.goal : undefined }]
+          ? [{ id: c.id, category: c, percent: c.rule.percent, goal: c.rule.type === 'group_child' ? c.rule.goal : undefined }]
           : [],
       );
       const rooms = kids.map((k) => {
@@ -171,21 +179,23 @@ function MonthChart({ toggle }: { toggle: React.ReactNode }) {
         const checked = Object.values(ledgerTotals).reduce((sum, byCat) => sum + (byCat[k.id] ?? 0), 0);
         return Math.max(0, k.goal.target_amount - checked);
       });
-      const weightSum = kids.reduce((sum, k) => sum + k.percent, 0);
       for (const month of forecastMonths) {
         const pool = forecastByMonth[month]?.[parentId] ?? 0;
+        // A linked fund outside its start/end months takes no share (private.excess_group_allocations).
+        const live = kids.map((k, i) => i).filter((i) => categoryActiveInMonth(kids[i].category, month));
+        const weightSum = live.reduce((sum, i) => sum + kids[i].percent, 0);
         const total = pool > 0 ? (pool * weightSum) / 100 : 0;
-        const shares = kids.map((k) => Math.round((total * k.percent) / weightSum));
+        const shares = kids.map((k) => (weightSum > 0 ? Math.round((total * k.percent) / weightSum) : 0));
         // Rounding residue goes to the heaviest child (first on a tie), like allocate_proportional.
-        const heaviest = kids.reduce((best, k, i) => (k.percent > kids[best].percent ? i : best), 0);
-        shares[heaviest] += Math.round(total) - shares.reduce((a, b) => a + b, 0);
+        const heaviest = live.reduce((best, i) => (kids[i].percent > kids[best].percent ? i : best), live[0] ?? 0);
+        if (live.length > 0) shares[heaviest] += Math.round(total) - live.reduce((a, i) => a + shares[i], 0);
         let given = 0;
-        kids.forEach((k, i) => {
+        for (const i of live) {
           const share = Math.min(shares[i], rooms[i]);
           rooms[i] -= share;
           given += share;
-          (out[month] ??= {})[k.id] = share;
-        });
+          (out[month] ??= {})[kids[i].id] = share;
+        }
         (out[month] ??= {})[parentId] = pool - given;
       }
     }
@@ -195,11 +205,12 @@ function MonthChart({ toggle }: { toggle: React.ReactNode }) {
   function cellValue(category: Category, month: string): number {
     const monthStart = fromDateOnly(`${month}-01`);
     if (category.kind === 'bill') {
+      if (!categoryActiveInMonth(category, month)) return 0;
       return scheduledMonthTotal(billItemsByCategory[category.id] ?? [], monthStart);
     }
     const historical = ledgerTotals[month]?.[category.id];
     if (historical !== undefined) return historical;
-    if (month < currentMonth) return 0;
+    if (month < currentMonth || !categoryActiveInMonth(category, month)) return 0;
     return groupProjection[month]?.[category.id] ?? forecastByMonth[month]?.[category.id] ?? 0;
   }
 
@@ -308,7 +319,9 @@ function MonthChart({ toggle }: { toggle: React.ReactNode }) {
             {selected < currentMonth ? 'Your real history' : 'Projected'}
           </Text>
           <Text className="font-display-semibold text-lg text-ink">{monthTitle(selected)}</Text>
-          {categories.map((c) => (
+          {categories
+            .filter((c) => categoryActiveInMonth(c, selected) || cellValue(c, selected) > 0)
+            .map((c) => (
             <View key={c.id} className="flex-row items-center gap-2">
               <View style={{ backgroundColor: categoryColor(c) }} className="h-3 w-3 rounded-sm" />
               <Text numberOfLines={1} className="flex-1 font-body text-sm text-ink-2">

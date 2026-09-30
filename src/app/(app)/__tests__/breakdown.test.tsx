@@ -28,11 +28,11 @@ const member = { id: 'member-1', household_id: 'household-1', user_id: 'user-1' 
 const pastMonth = '2026-11';
 
 const categories = [
-  { id: 'cat-rent', kind: 'bill', name: 'RENT', color: '#c0392b', rule: null, sort_order: 0 },
-  { id: 'cat-savings', kind: 'fund', name: 'SAVINGS', color: '#3b6fa0', rule: { type: 'remainder', percent: 100 }, sort_order: 1 },
+  { id: 'cat-rent', kind: 'bill', start_month: '2026-10-01', end_month: null, name: 'RENT', color: '#c0392b', rule: null, sort_order: 0 },
+  { id: 'cat-savings', kind: 'fund', start_month: '2026-10-01', end_month: null, name: 'SAVINGS', color: '#3b6fa0', rule: { type: 'remainder', percent: 100 }, sort_order: 1 },
   {
     id: 'cat-excess-kid',
-    kind: 'fund',
+    kind: 'fund', start_month: '2026-10-01', end_month: null,
     name: 'EXCESS KID',
     color: '#6b4c9a',
     rule: { type: 'group_child', parent_id: 'cat-savings', percent: 50 },

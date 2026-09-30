@@ -170,6 +170,8 @@ export function useCreateCategory(householdId: string | undefined) {
       rule?: CategoryRule;
       is_group_parent?: boolean;
       sort_order?: number;
+      start_month?: string;
+      end_month?: string | null;
     }) => {
       const { data, error } = await supabase
         .from('categories')
@@ -185,6 +187,27 @@ export function useCreateCategory(householdId: string | undefined) {
   });
 }
 
+// Drops the category's not-yet-checked checklist rows for months outside its
+// (new) range - materialize_payday only upserts, so they would otherwise
+// linger. Checked rows are history and stay.
+async function deleteOutOfRangeEntries(c: { id: string; start_month: string; end_month: string | null }) {
+  let query = supabase
+    .from('ledger_entries')
+    .delete()
+    .eq('category_id', c.id)
+    .eq('status', 'pending')
+    .eq('manual', false);
+  if (c.end_month) {
+    const [y, m] = c.end_month.split('-').map(Number);
+    const afterEnd = toDateOnly(new Date(y, m, 1));
+    query = query.or(`payday_date.lt.${c.start_month},payday_date.gte.${afterEnd}`);
+  } else {
+    query = query.lt('payday_date', c.start_month);
+  }
+  const { error } = await query;
+  if (error) throw error;
+}
+
 export function useUpdateCategory(householdId: string | undefined) {
   const queryClient = useQueryClient();
   return useMutation({
@@ -196,10 +219,15 @@ export function useUpdateCategory(householdId: string | undefined) {
         .select()
         .single();
       if (error) throw error;
+      if ('start_month' in patch || 'end_month' in patch) await deleteOutOfRangeEntries(data);
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['categories', householdId] });
+      // A changed range moves what the plan, forecast and checklist show.
+      queryClient.invalidateQueries({ queryKey: ['fund-totals-forecast'] });
+      queryClient.invalidateQueries({ queryKey: ['ledger-entries'] });
+      queryClient.invalidateQueries({ queryKey: ['goal-shortfalls'] });
     },
   });
 }
@@ -319,7 +347,7 @@ export function useHouseholdBillItems(householdId: string | undefined) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('bill_items')
-        .select('*, categories!inner(household_id, kind)')
+        .select('*, categories!inner(household_id, kind, start_month, end_month)')
         .eq('categories.household_id', householdId as string)
         .eq('categories.kind', 'bill');
       if (error) throw error;

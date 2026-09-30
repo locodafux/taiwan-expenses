@@ -51,7 +51,7 @@ const entries = [
     category_id: 'cat-bill',
     amount: 1500,
     status: 'pending',
-    categories: { name: 'Rent', color: '#c1552f', kind: 'bill' },
+    categories: { name: 'Rent', color: '#c1552f', kind: 'bill', start_month: '2026-10-01', end_month: null, },
     bill_items: { label: 'Rent' },
   },
   {
@@ -59,7 +59,7 @@ const entries = [
     category_id: 'cat-fund',
     amount: 2000,
     status: 'checked',
-    categories: { name: 'Taiwan fund', color: '#1f5c56', kind: 'fund' },
+    categories: { name: 'Taiwan fund', color: '#1f5c56', kind: 'fund', start_month: '2026-10-01', end_month: null, },
     bill_items: null,
   },
 ];
@@ -104,7 +104,7 @@ describe('PaydayChecklist', () => {
   });
 
   it('warns when a goal cannot be fully funded before its deadline', async () => {
-    mockUseCategories.mockReturnValue(okQuery([{ id: 'cat-trip', name: 'Japan trip', kind: 'fund' }]));
+    mockUseCategories.mockReturnValue(okQuery([{ id: 'cat-trip', name: 'Japan trip', kind: 'fund', start_month: '2026-10-01', end_month: null, }]));
     mockUseGoalShortfalls.mockReturnValue(okQuery([{ category_id: 'cat-trip', shortfall: 5000 }]));
     const { getByText } = await renderWithTheme(<PaydayChecklist />);
 
@@ -229,7 +229,7 @@ describe('PaydayChecklist', () => {
     );
     await waitFor(() => expect(mockMaterializeMutate).toHaveBeenCalledTimes(1));
 
-    mockUseHouseholdBillItems.mockReturnValue(okQuery([{ id: 'bill-1', amount: 1200, recurring_day: 5 }]));
+    mockUseHouseholdBillItems.mockReturnValue(okQuery([{ id: 'bill-1', amount: 1200, recurring_day: 5, categories: { start_month: '2026-10-01', end_month: null } }]));
     await rerender(themed);
 
     await waitFor(() => expect(mockMaterializeMutate).toHaveBeenCalledTimes(2));
@@ -245,7 +245,7 @@ describe('PaydayChecklist', () => {
     );
     await waitFor(() => expect(mockMaterializeMutate).toHaveBeenCalledTimes(1));
 
-    mockUseCategories.mockReturnValue(okQuery([{ id: 'cat-new', kind: 'fund' }]));
+    mockUseCategories.mockReturnValue(okQuery([{ id: 'cat-new', kind: 'fund', start_month: '2026-10-01', end_month: null, }]));
     await rerender(themed);
 
     await waitFor(() => expect(mockMaterializeMutate).toHaveBeenCalledTimes(2));
@@ -274,7 +274,7 @@ describe('PaydayChecklist', () => {
           category_id: 'cat-excess',
           amount: 0,
           status: 'pending',
-          categories: { name: 'Excess', color: '#7a8b3f', kind: 'fund' },
+          categories: { name: 'Excess', color: '#7a8b3f', kind: 'fund', start_month: '2026-10-01', end_month: null, },
           bill_items: null,
         },
       ]),
@@ -336,7 +336,7 @@ describe('PaydayChecklist', () => {
         okQuery([{ category_id: 'cat-bill', bill_item_id: null, amount: 1500 }]),
       );
       mockUseCategories.mockReturnValue(
-        okQuery([{ id: 'cat-bill', name: 'Rent', color: '#c1552f', kind: 'bill' }]),
+        okQuery([{ id: 'cat-bill', name: 'Rent', color: '#c1552f', kind: 'bill', start_month: '2026-10-01', end_month: null, }]),
       );
 
       const { getByText, queryByText } = await renderWithTheme(<PaydayChecklist />);

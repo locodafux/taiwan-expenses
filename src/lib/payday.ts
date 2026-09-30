@@ -203,3 +203,12 @@ export function scheduledMonthTotal(
     return sum + dueThatDay.reduce((s, i) => s + i.amount, 0);
   }, 0);
 }
+
+// Whether a category runs in `month` ('YYYY-MM'): its start_month/end_month
+// ('YYYY-MM-01' dates, end null = ongoing) mirror private.category_in_range.
+export function categoryActiveInMonth(
+  category: { start_month: string; end_month: string | null },
+  month: string,
+): boolean {
+  return month >= category.start_month.slice(0, 7) && (!category.end_month || month <= category.end_month.slice(0, 7));
+}

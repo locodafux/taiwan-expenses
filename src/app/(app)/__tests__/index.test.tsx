@@ -35,8 +35,8 @@ const members = [
   { id: 'member-2', display_name: 'Alex', color: '#1f5c56' },
 ];
 const categories = [
-  { id: 'cat-fund', name: 'Taiwan fund', kind: 'fund', color: '#1f5c56', rule: { type: 'goal', target_amount: 50000 } },
-  { id: 'cat-bill', name: 'Rent', kind: 'bill', color: '#c1552f', rule: null },
+  { id: 'cat-fund', name: 'Taiwan fund', kind: 'fund', start_month: '2026-10-01', end_month: null, color: '#1f5c56', rule: { type: 'goal', target_amount: 50000 } },
+  { id: 'cat-bill', name: 'Rent', kind: 'bill', start_month: '2026-10-01', end_month: null, color: '#c1552f', rule: null },
 ];
 const incomes = [{ id: 'inc-1', active: true, recurring_day: 5, amount: 30000 }];
 
@@ -179,9 +179,9 @@ describe('Dashboard', () => {
   it('charts the household’s Taiwan, Emergency and Savings funds with progress toward a goal or the plan', async () => {
     mockUseCategories.mockReturnValue(
       okQuery([
-        { id: 'tw', name: 'Taiwan fund', kind: 'fund', color: null, rule: { type: 'group_child', parent_id: 'x', percent: 50, goal: { target_amount: 80000 } } },
-        { id: 'em', name: 'Emergency Fund', kind: 'fund', color: null, rule: { type: 'group_child', parent_id: 'x', percent: 15 } },
-        { id: 'sv', name: 'Savings', kind: 'fund', color: null, rule: { type: 'group_child', parent_id: 'x', percent: 25 } },
+        { id: 'tw', name: 'Taiwan fund', kind: 'fund', start_month: '2026-10-01', end_month: null, color: null, rule: { type: 'group_child', parent_id: 'x', percent: 50, goal: { target_amount: 80000 } } },
+        { id: 'em', name: 'Emergency Fund', kind: 'fund', start_month: '2026-10-01', end_month: null, color: null, rule: { type: 'group_child', parent_id: 'x', percent: 15 } },
+        { id: 'sv', name: 'Savings', kind: 'fund', start_month: '2026-10-01', end_month: null, color: null, rule: { type: 'group_child', parent_id: 'x', percent: 25 } },
       ]),
     );
     mockUseCategoryBalances.mockReturnValue(okQuery({ tw: 20000, em: 5000, sv: 0 }));
@@ -204,7 +204,7 @@ describe('Dashboard', () => {
 
   it('frames the fund summary as an intentional empty state when nothing is saved', async () => {
     mockUseCategories.mockReturnValue(
-      okQuery([{ id: 'tw', name: 'Taiwan fund', kind: 'fund', color: null, rule: { type: 'goal', target_amount: 80000 } }]),
+      okQuery([{ id: 'tw', name: 'Taiwan fund', kind: 'fund', start_month: '2026-10-01', end_month: null, color: null, rule: { type: 'goal', target_amount: 80000 } }]),
     );
     mockUseCategoryBalances.mockReturnValue(okQuery({}));
     const { getByText } = await renderWithTheme(<Dashboard />);
@@ -215,7 +215,7 @@ describe('Dashboard', () => {
 
   it('leaves out the fund summary when the household has none of those funds', async () => {
     mockUseCategories.mockReturnValue(
-      okQuery([{ id: 'bill', name: 'Rent', kind: 'bill', color: null, rule: null }]),
+      okQuery([{ id: 'bill', name: 'Rent', kind: 'bill', start_month: '2026-10-01', end_month: null, color: null, rule: null }]),
     );
     const { queryByText, getByText } = await renderWithTheme(<Dashboard />);
 

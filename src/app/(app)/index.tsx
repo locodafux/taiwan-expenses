@@ -25,7 +25,14 @@ import {
   usePaydayAmounts,
 } from '@/lib/queries';
 import { formatPeso } from '@/lib/format';
-import { APP_START_DATE, daysUntil, incomeAmountForPayday, paydayAtOffset, toDateOnly } from '@/lib/payday';
+import {
+  APP_START_DATE,
+  appToday,
+  daysUntil,
+  incomeAmountForPayday,
+  paydayAtOffset,
+  toDateOnly,
+} from '@/lib/payday';
 import { useTheme } from '@/theme/ThemeProvider';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
@@ -136,6 +143,9 @@ export default function Dashboard() {
     { label: 'Invite your partner', done: (members ?? []).length > 1, href: '/(app)/settings' as const },
   ];
   const setupComplete = setupSteps.every((s) => s.done);
+  // A category that hasn't started yet isn't shown; one that has ended keeps its balance.
+  const thisMonth = toDateOnly(appToday()).slice(0, 7);
+  const shownCategories = (categories ?? []).filter((c) => c.start_month.slice(0, 7) <= thisMonth);
 
   return (
     <SafeAreaView className="flex-1 bg-page" edges={['top']}>
@@ -235,23 +245,23 @@ export default function Dashboard() {
           </View>
         )}
 
-        <FundSummaryChart categories={categories ?? []} balances={balances} />
+        <FundSummaryChart categories={shownCategories} balances={balances} />
 
         <View>
           <SectionLabel>Category balances</SectionLabel>
-          {(categories ?? []).length === 0 && (
+          {shownCategories.length === 0 && (
             <EmptyState>No categories yet — add one from the Categories tab.</EmptyState>
           )}
-          {(categories ?? []).length > 0 && (
+          {shownCategories.length > 0 && (
             <Card>
-              {(categories ?? []).map((c, i) => {
+              {shownCategories.map((c, i) => {
                 const balance = balances?.[c.id] ?? 0;
                 const goal = c.rule?.type === 'goal' ? c.rule.target_amount : null;
                 const target = goal ?? (c.rule?.type === 'capped_percent' ? c.rule.cap ?? null : null);
                 return (
                   <ListRow
                     key={c.id}
-                    isLast={i === (categories?.length ?? 0) - 1}
+                    isLast={i === shownCategories.length - 1}
                     onPress={() => router.push(`/(app)/categories/${c.id}`)}
                   >
                     <CategoryMark color={c.color} size={32} label={c.name} />
