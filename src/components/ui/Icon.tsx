@@ -8,6 +8,7 @@ import { useTheme } from '@/theme/ThemeProvider';
 const PATHS = {
   home: ['M3.5 11 12 4l8.5 7', 'M6 9v11h12V9', 'M10 20v-5h4v5'],
   checklist: ['M10 6.5h10', 'M10 12h10', 'M10 17.5h10', 'M3.5 6.5 5 8l2.5-3', 'M3.5 12 5 13.5 7.5 10.5', 'M4 17.5h3'],
+  table: ['M4 5h16v14H4z', 'M4 10h16', 'M10 10v9'],
   tabs: ['M3 7h7l2 2h9v10H3z', 'M3 12h18'],
   chat: ['M4 5h16v11H10l-6 4z', 'M8 9.5h8', 'M8 12.5h5'],
   peso: ['M8 20V4h5a4 4 0 0 1 0 8H8', 'M5 7h14', 'M5 10h14'],

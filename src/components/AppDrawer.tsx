@@ -10,12 +10,13 @@ export const DRAWER_ITEMS: { name: string; label: string; icon: IconName }[] = [
   { name: 'index', label: 'Dashboard', icon: 'home' },
   { name: 'checklist', label: 'Checklist', icon: 'checklist' },
   { name: 'categories', label: 'Categories', icon: 'tabs' },
+  { name: 'full-numbers', label: 'Full numbers', icon: 'table' },
   { name: 'chat', label: 'Chat', icon: 'chat' },
   { name: 'settings', label: 'Settings', icon: 'sliders' },
 ];
 
 // The household name and email that used to sit at the top of the Dashboard
-// live here now, above the same five destinations the bottom bar had.
+// live here now, above the destinations the bottom bar had, plus Full numbers.
 export function AppDrawerContent({ state, navigation, ...scrollProps }: DrawerContentComponentProps) {
   const { vars } = useTheme();
   const { session } = useAuth();

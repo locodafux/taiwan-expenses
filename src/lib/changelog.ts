@@ -11,6 +11,13 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-09-30-full-numbers',
+    date: 'Sep 30, 2026',
+    items: [
+      'New Full numbers screen in the side menu: one table with every month from Oct 2026 to Jul 2027 — income, expenses, debt and each fund — with a Total row at the bottom. Swipe sideways to see every column; the month names stay in place.',
+    ],
+  },
+  {
     id: '2026-09-30-menu',
     date: 'Sep 30, 2026',
     items: [

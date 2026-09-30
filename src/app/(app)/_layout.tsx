@@ -60,6 +60,7 @@ export default function AppLayout() {
         <Drawer.Screen name="index" options={{ title: 'Dashboard' }} />
         <Drawer.Screen name="checklist" options={{ title: 'Checklist' }} />
         <Drawer.Screen name="categories" options={{ title: 'Categories' }} />
+        <Drawer.Screen name="full-numbers" options={{ title: 'Full numbers' }} />
         <Drawer.Screen name="chat" options={{ title: 'Chat' }} />
         <Drawer.Screen name="settings" options={{ title: 'Settings' }} />
         {/* Reached from Settings (Income under Your profile, Feedback, Breakdown, Summary of all):
