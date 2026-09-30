@@ -11,6 +11,13 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-09-30-dashboard-all-categories',
+    date: 'Sep 30, 2026',
+    items: [
+      'The Dashboard shows every category again, even ones that start in a later month (they say "starts Nov 2026"), and the fund summary now includes every fund, like Pinatubo.',
+    ],
+  },
+  {
     id: '2026-09-30-bottom-tabs',
     date: 'Sep 30, 2026',
     items: [

@@ -5,16 +5,19 @@ import { Card } from '@/components/ui/Card';
 import { Meter } from '@/components/ui/ProgressBar';
 import type { Category } from '@/lib/database.types';
 import { formatPeso } from '@/lib/format';
+import { startsNote } from '@/lib/payday';
 import { buildPlan, total } from '@/lib/paydayPlan';
 import { PAYDAY_PINK } from '@/theme/tokens';
 
 // Soft-pink scope, same as the payday calendar (see PAYDAY_PINK).
 const PINK_SCOPE = nativeWindVars(PAYDAY_PINK);
 
-// The household's own fund categories are matched by name - the app has no
-// fixed "Taiwan / Emergency / Savings" ids. A fund the household doesn't have
-// just isn't drawn. `fallback` colors a fund whose category has none set;
-// `planKey` is the fund's column in the Breakdown payday plan.
+// Every `kind === 'fund'` category is drawn. Taiwan / Emergency / Savings are
+// recognized by name (the app has no fixed ids) to get a friendly label and the
+// Breakdown payday-plan goal when no goal is stored; any other fund (e.g.
+// Pinatubo) shows under its own name with its stored goal, if any. `fallback`
+// colors a fund whose category has none set; `planKey` is the fund's column in
+// the Breakdown payday plan.
 const FUNDS = [
   { label: 'Taiwan Fund', match: /taiwan/i, fallback: PAYDAY_PINK['--pink'], planKey: 'taiwan' },
   { label: 'Emergency Fund', match: /emergency/i, fallback: PAYDAY_PINK['--accent'], planKey: 'emergency' },
@@ -38,16 +41,25 @@ export function FundSummaryChart({
   categories: Category[];
   balances: Record<string, number> | undefined;
 }) {
-  const funds = FUNDS.flatMap(({ label, match, fallback, planKey }) => {
-    const c = categories.find((x) => x.kind === 'fund' && match.test(x.name));
-    if (!c) return [];
-    const stored = goalOf(c);
-    // No stored goal: fall back to the fund's planned total by the last plan
-    // payday (March 2027), the same figure the Breakdown calendar shows.
-    const fromPlan = !(stored && stored > 0);
-    const goal = fromPlan ? total(buildPlan().paydays, planKey) : (stored as number);
-    return [{ id: c.id, label, color: c.color ?? fallback, amount: balances?.[c.id] ?? 0, goal: goal > 0 ? goal : null, fromPlan }];
-  });
+  const funds = categories
+    .filter((c) => c.kind === 'fund')
+    .map((c) => {
+      const known = FUNDS.find((f) => f.match.test(c.name));
+      const stored = goalOf(c);
+      // No stored goal: a named fund falls back to its planned total by the last
+      // plan payday (March 2027), the same figure the Breakdown calendar shows.
+      const fromPlan = !(stored && stored > 0) && !!known;
+      const goal = fromPlan ? total(buildPlan().paydays, known.planKey) : (stored ?? 0);
+      return {
+        id: c.id,
+        label: known?.label ?? c.name,
+        color: c.color ?? known?.fallback ?? PAYDAY_PINK['--ink-2'],
+        amount: balances?.[c.id] ?? 0,
+        goal: goal > 0 ? goal : null,
+        fromPlan,
+        starts: startsNote(c.start_month),
+      };
+    });
   if (funds.length === 0) return null;
 
   const empty = funds.every((f) => f.amount <= 0);
@@ -61,7 +73,10 @@ export function FundSummaryChart({
             <View key={f.id} className="gap-1">
               <View className="flex-row items-center gap-2">
                 <View style={{ backgroundColor: f.color }} className="h-[10px] w-[10px] rounded-full" />
-                <Text className="flex-1 font-body-semibold text-xs text-ink-2">{f.label}</Text>
+                <Text className="flex-1 font-body-semibold text-xs text-ink-2">
+                  {f.label}
+                  {f.starts ? ` · ${f.starts}` : ''}
+                </Text>
                 <Text className="font-mono text-xs text-ink">{formatPeso(f.amount)}</Text>
               </View>
               {f.goal != null && (
