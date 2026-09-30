@@ -11,6 +11,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-09-30-1',
+    date: 'Sep 30, 2026',
+    items: [
+      'Every category now has a Starts month and an optional Last month, in Categories when you add or edit one. Outside those months it gets no money set aside and no bills.',
+      'Existing categories start in October 2026 with no end, so nothing changes until you set a Last month.',
+    ],
+  },
+  {
     id: '2026-09-29-6',
     date: 'Sep 29, 2026',
     items: [

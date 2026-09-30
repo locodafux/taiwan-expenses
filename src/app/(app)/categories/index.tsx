@@ -7,7 +7,7 @@ import { Card, CategoryMark, ListRow } from '@/components/ui/Card';
 import { Icon } from '@/components/ui/Icon';
 import { formatPeso } from '@/lib/format';
 import { ErrorState } from '@/components/ui/ErrorState';
-import { fromDateOnly } from '@/lib/payday';
+import { APP_START_MONTH, fromDateOnly } from '@/lib/payday';
 import {
   combineQueryState,
   useCategories,
@@ -58,6 +58,15 @@ function describeCategory(
     return `${c.rule.percent}% share · gets ${effective}% of what's left${groupSuffix}`;
   }
   return '';
+}
+
+// " · starts Dec 2026 · last month Mar 2027" - empty for the default (Oct 2026, no end).
+function rangeNote(c: { start_month: string; end_month: string | null }): string {
+  const label = (d: string) => fromDateOnly(d).toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
+  const parts: string[] = [];
+  if (c.start_month.slice(0, 7) > APP_START_MONTH) parts.push(`starts ${label(c.start_month)}`);
+  if (c.end_month) parts.push(`last month ${label(c.end_month)}`);
+  return parts.length ? ` · ${parts.join(' · ')}` : '';
 }
 
 export default function CategoryManagement() {
@@ -123,6 +132,7 @@ export default function CategoryManagement() {
                 </View>
                 <Text className="mt-[2px] font-body text-xs text-ink-muted">
                   {describeCategory(c, billCountByCategory[c.id] ?? 0, balances?.[c.id] ?? 0, shareTotal, categories ?? [])}
+                  {rangeNote(c)}
                 </Text>
               </View>
               <Icon name="chevronRight" size={16} color={vars['--ink-muted']} />

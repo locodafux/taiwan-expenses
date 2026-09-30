@@ -44,14 +44,14 @@ const member = { id: 'member-1', household_id: 'household-1', user_id: 'user-1' 
 const fundCategory = {
   id: 'cat-fund',
   name: 'Taiwan fund',
-  kind: 'fund',
+  kind: 'fund', start_month: '2026-10-01', end_month: null,
   color: '#1f5c56',
   rule: { type: 'goal', target_amount: 50000 },
 };
 const billCategory = {
   id: 'cat-bill',
   name: 'Rent',
-  kind: 'bill',
+  kind: 'bill', start_month: '2026-10-01', end_month: null,
   color: '#c1552f',
   rule: null,
 };
@@ -409,6 +409,8 @@ describe('CategoryDetail', () => {
         name: 'Japan fund',
         color: '#1f5c56',
         rule: { type: 'goal', target_amount: 60000, target_date: null, one_time: false },
+        start_month: '2026-10-01',
+        end_month: null,
       }),
     );
   });
@@ -449,13 +451,13 @@ describe('CategoryDetail', () => {
 
   it('sets a goal deadline month from the edit form', async () => {
     jest.useFakeTimers().setSystemTime(new Date(2026, 10, 21));
-    const { getByText, getByLabelText } = await renderWithTheme(<CategoryDetail />);
+    const { getByText, getByLabelText, getAllByLabelText } = await renderWithTheme(<CategoryDetail />);
 
     await fireEvent.press(await waitFor(() => getByText('Edit')));
     await fireEvent.press(getByText('No deadline · set a month'));
     expect(getByText('Dec 2026')).toBeTruthy();
     // Past months aren't offered.
-    await fireEvent.press(getByLabelText('Previous month'));
+    await fireEvent.press(getAllByLabelText('Previous month')[0]);
     expect(getByText('Dec 2026')).toBeTruthy();
     await fireEvent.press(getByText('Save'));
 
@@ -472,11 +474,11 @@ describe('CategoryDetail', () => {
     mockUseCategories.mockReturnValue({
       data: [{ ...fundCategory, rule: { type: 'goal', target_amount: 80000, target_date: '2027-03-01' } }],
     });
-    const { getByText, getByLabelText } = await renderWithTheme(<CategoryDetail />);
+    const { getByText, getByLabelText, getAllByLabelText } = await renderWithTheme(<CategoryDetail />);
 
     await fireEvent.press(await waitFor(() => getByText('Edit')));
     expect(getByText('Mar 2027')).toBeTruthy();
-    await fireEvent.press(getByLabelText('Next month'));
+    await fireEvent.press(getAllByLabelText('Next month')[0]);
     await fireEvent.press(getByText('Save'));
     await waitFor(() =>
       expect(mockUpdateCategoryMutateAsync).toHaveBeenCalledWith(

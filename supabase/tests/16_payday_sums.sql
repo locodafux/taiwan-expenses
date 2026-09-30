@@ -23,6 +23,8 @@ insert into public.categories (household_id, kind, name, rule) values
   (:'hid', 'fund', 'SAVINGS', '{"type":"remainder","percent":20,"target_amount":0}'),
   (:'hid', 'fund', 'EMERGENCY FUND', '{"type":"goal","target_amount":200000}'),
   (:'hid', 'fund', 'TAIWAN FUND', '{"type":"goal","one_time":true,"target_amount":80000,"target_date":"2027-02-01"}');
+-- This fixture plans September 2026, before the app's October start.
+update public.categories set start_month = '2026-01-01' where household_id = :'hid';
 insert into public.bill_items (category_id, label, amount, recurring_day, end_date)
 select c.id, v.label, v.amount, v.day, v.end_date::date from (values
   ('EXPENSES', 'JEEP', 840, 5, null), ('EXPENSES', 'LEO MED', 500, 5, null), ('EXPENSES', 'MILDRED MED', 1500, 5, null),

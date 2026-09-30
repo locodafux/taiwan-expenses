@@ -6,11 +6,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/ui/Button';
 import { ColorPicker, useCategoryColors } from '@/components/ui/ColorPicker';
 import { KeyboardScroll } from '@/components/ui/KeyboardScroll';
+import { CategoryRangePicker } from '@/components/ui/CategoryRangePicker';
 import { MonthPicker } from '@/components/ui/MonthPicker';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { TextField } from '@/components/ui/TextField';
 import { parseAmount } from '@/lib/format';
-import { nextMonth } from '@/lib/payday';
+import { APP_START_MONTH, nextMonth } from '@/lib/payday';
 import { combineQueryState, useCategories, useCreateCategory, useHouseholdMembership } from '@/lib/queries';
 import type { CategoryRule } from '@/lib/database.types';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -43,6 +44,8 @@ export default function AddCategory() {
   const [excessSource, setExcessSource] = useState(false);
   const [excessParentId, setExcessParentId] = useState<string | null>(null);
   const [excessPercent, setExcessPercent] = useState('20');
+  // The months this category runs ('YYYY-MM'); end null = ongoing.
+  const [range, setRange] = useState<{ start: string; end: string | null }>({ start: APP_START_MONTH, end: null });
   const [error, setError] = useState<string | null>(null);
 
   const groupParents = (categoriesQuery.data ?? []).filter(
@@ -102,6 +105,8 @@ export default function AddCategory() {
         kind,
         color,
         rule,
+        start_month: `${range.start}-01`,
+        end_month: range.end ? `${range.end}-01` : null,
         ...(excessSource ? { is_group_parent: true } : {}),
       });
       router.back();
@@ -292,6 +297,8 @@ export default function AddCategory() {
             </View>
           </View>
         )}
+
+        <CategoryRangePicker start={range.start} end={range.end} onChange={setRange} />
 
         {error && <Text className="font-body text-sm text-status-bad">{error}</Text>}
 

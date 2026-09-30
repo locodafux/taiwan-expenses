@@ -35,6 +35,7 @@ import { formatFolioDate, formatPeso } from '@/lib/format';
 import {
   APP_START_DATE,
   appToday,
+  categoryActiveInMonth,
   completedPaydayStreak,
   fromDateOnly,
   leftoverByPaydayInMonth,
@@ -134,7 +135,13 @@ export default function PaydayChecklist() {
 
   const cutAdvice = useMemo(() => {
     if (!incomes || !bills) return null;
-    const rows = leftoverByPaydayInMonth(incomes, bills, appToday());
+    const month = toDateOnly(appToday()).slice(0, 7);
+    // Bills of a category outside its start/end months aren't due.
+    const rows = leftoverByPaydayInMonth(
+      incomes,
+      bills.filter((b) => categoryActiveInMonth(b.categories, month)),
+      appToday(),
+    );
     if (rows.length < 2) return null;
     const worst = rows.reduce((a, b) => (b.leftover < a.leftover ? b : a));
     return `If cash gets tight this month, trim the ${worst.day}th payday first — it carries the least cushion.`;

@@ -24,8 +24,8 @@ import CategoryManagement from '../index';
 
 const member = { id: 'member-1', household_id: 'household-1', user_id: 'user-1' };
 const categories = [
-  { id: 'cat-fund', name: 'Taiwan fund', kind: 'fund', color: '#1f5c56', rule: { type: 'goal', target_amount: 50000 } },
-  { id: 'cat-bill', name: 'Rent & utilities', kind: 'bill', color: '#c1552f', rule: null },
+  { id: 'cat-fund', name: 'Taiwan fund', kind: 'fund', start_month: '2026-10-01', end_month: null, color: '#1f5c56', rule: { type: 'goal', target_amount: 50000 } },
+  { id: 'cat-bill', name: 'Rent & utilities', kind: 'bill', start_month: '2026-10-01', end_month: null, color: '#c1552f', rule: null },
 ];
 const billItems = [
   { id: 'bill-1', category_id: 'cat-bill', label: 'Rent', amount: 1500, recurring_day: 5 },
@@ -60,8 +60,8 @@ describe('CategoryManagement', () => {
   it('states each remainder fund\'s share and what it actually gets', async () => {
     mockUseCategories.mockReturnValue(
       okQuery([
-        { id: 'a', name: 'Taiwan', kind: 'fund', color: '#111', rule: { type: 'remainder', percent: 30 } },
-        { id: 'b', name: 'Savings', kind: 'fund', color: '#222', rule: { type: 'remainder', percent: 20 } },
+        { id: 'a', name: 'Taiwan', kind: 'fund', start_month: '2026-10-01', end_month: null, color: '#111', rule: { type: 'remainder', percent: 30 } },
+        { id: 'b', name: 'Savings', kind: 'fund', start_month: '2026-10-01', end_month: null, color: '#222', rule: { type: 'remainder', percent: 20 } },
       ]),
     );
     const { getByText } = await renderWithTheme(<CategoryManagement />);

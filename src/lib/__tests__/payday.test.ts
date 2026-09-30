@@ -1,5 +1,6 @@
 import {
   appToday,
+  categoryActiveInMonth,
   clampDayToMonth,
   daysUntil,
   fromDateOnly,
@@ -158,5 +159,20 @@ describe('October 2026 floor', () => {
   it('nextMonth (earliest goal deadline) is November on Sep 29 2026, since October is the first month saved', () => {
     jest.useFakeTimers({ now: new Date(2026, 8, 29) });
     expect(nextMonth()).toBe('2026-11');
+  });
+});
+
+describe('categoryActiveInMonth', () => {
+  const range = { start_month: '2026-11-01', end_month: '2027-01-01' };
+
+  it('is true only from the start month through the last month, inclusive', () => {
+    expect(categoryActiveInMonth(range, '2026-10')).toBe(false);
+    expect(categoryActiveInMonth(range, '2026-11')).toBe(true);
+    expect(categoryActiveInMonth(range, '2027-01')).toBe(true);
+    expect(categoryActiveInMonth(range, '2027-02')).toBe(false);
+  });
+
+  it('never ends when end_month is null', () => {
+    expect(categoryActiveInMonth({ start_month: '2026-10-01', end_month: null }, '2035-06')).toBe(true);
   });
 });

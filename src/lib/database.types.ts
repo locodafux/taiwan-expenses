@@ -70,6 +70,9 @@ export type Category = {
   is_group_parent?: boolean;
   archived: boolean;
   goal_celebrated_at: string | null;
+  // First-of-month dates: the category runs from start_month through end_month (null = ongoing).
+  start_month: string;
+  end_month: string | null;
   created_at: string;
 };
 

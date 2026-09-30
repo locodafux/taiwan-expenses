@@ -21,4 +21,9 @@ describe('MonthPicker', () => {
     await fireEvent.press(getByText('Never ends · set a last month'));
     expect(onChange).toHaveBeenCalledWith('2026-10');
   });
+
+  it('hides Clear when clearable is false', async () => {
+    const { queryByText } = await renderWithTheme(<MonthPicker value="2026-11" min="2026-10" clearable={false} onChange={jest.fn()} />);
+    expect(queryByText('Clear')).toBeNull();
+  });
 });

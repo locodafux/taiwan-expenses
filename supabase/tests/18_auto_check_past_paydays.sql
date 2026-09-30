@@ -51,12 +51,13 @@ begin
 
   insert into public.incomes (member_id, label, amount, recurring_day)
   values (v_member, 'Salary', 10000, 5);
-  insert into public.categories (household_id, kind, name, sort_order)
-  values (v_household, 'bill', 'Bills', 0) returning id into v_bill_cat;
+  -- start_month back-dated: this fixture materializes 2020 paydays.
+  insert into public.categories (household_id, kind, name, sort_order, start_month)
+  values (v_household, 'bill', 'Bills', 0, '2020-01-01') returning id into v_bill_cat;
   insert into public.bill_items (category_id, label, amount, recurring_day)
   values (v_bill_cat, 'Rent', 2000, 5);
-  insert into public.categories (household_id, kind, name, sort_order, rule)
-  values (v_household, 'fund', 'Savings', 1, '{"type":"remainder","percent":100}'::jsonb)
+  insert into public.categories (household_id, kind, name, sort_order, rule, start_month)
+  values (v_household, 'fund', 'Savings', 1, '{"type":"remainder","percent":100}'::jsonb, '2020-01-01')
   returning id into v_fund_cat;
 
   -- January 2020: bill + fund pending. February 2020: bill pending, fund
