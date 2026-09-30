@@ -98,6 +98,34 @@ describe('AddCategorySheet', () => {
     );
   });
 
+  it('accepts 0% for a group child, so it gets nothing that month', async () => {
+    mockUseCategories.mockReturnValue({
+      data: [
+        {
+          id: 'group-1',
+          name: 'Savings excess',
+          kind: 'fund',
+          archived: false,
+          rule: { type: 'remainder', percent: 20, excess_source: true },
+        },
+      ],
+      isError: false,
+      refetch: jest.fn(),
+    });
+    const { getByText, getByPlaceholderText, getByDisplayValue } = await renderWithTheme(<AddCategorySheet />);
+
+    await fireEvent.changeText(getByPlaceholderText('e.g. New laptop fund'), 'Paused fund');
+    await fireEvent.press(getByText('Savings excess'));
+    await fireEvent.changeText(getByDisplayValue('20'), '0');
+    await fireEvent.press(getByText('Add category'));
+
+    await waitFor(() =>
+      expect(mockCreateCategoryMutateAsync).toHaveBeenCalledWith(
+        expect.objectContaining({ rule: { type: 'group_child', parent_id: 'group-1', percent: 0 } }),
+      ),
+    );
+  });
+
   it('keeps a child target when selecting its category parent', async () => {
     mockUseCategories.mockReturnValue({
       data: [

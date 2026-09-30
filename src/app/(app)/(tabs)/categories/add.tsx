@@ -65,8 +65,8 @@ export default function AddCategory() {
       return setError('Enter a share between 1 and 100');
     }
     const parsedExcessPercent = parseAmount(excessPercent);
-    if (kind === 'fund' && excessParentId && !(parsedExcessPercent > 0 && parsedExcessPercent <= 100)) {
-      return setError('Enter an excess share between 1 and 100');
+    if (kind === 'fund' && excessParentId && !(parsedExcessPercent >= 0 && parsedExcessPercent <= 100)) {
+      return setError('Enter an excess share between 0 and 100');
     }
     if (kind === 'fund' && excessParentId && excessSource) {
       return setError('A category can be a group source or a linked child, not both');
@@ -248,7 +248,7 @@ export default function AddCategory() {
                 />
                 <Text className="mt-1 font-body text-xs leading-[1.4] text-ink-muted">
                   This is the maximum share. If this fund has a target, the share counts toward it
-                  and stops when the target is full. Sibling shares must total 100% or less.
+                  and stops when the target is full. Sibling shares must total 100% or less. 0% means it gets nothing.
                 </Text>
               </View>
             )}
