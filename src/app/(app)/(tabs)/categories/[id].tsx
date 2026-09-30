@@ -278,8 +278,8 @@ export default function CategoryDetail() {
       : undefined;
     if (editExcessParentId) {
       const parsedPercent = parseAmount(editExcessPercent);
-      if (!(parsedPercent > 0 && parsedPercent <= 100)) {
-        return setError('Enter a group share between 1 and 100');
+      if (!(parsedPercent >= 0 && parsedPercent <= 100)) {
+        return setError('Enter a group share between 0 and 100');
       }
       nextRule = {
         type: 'group_child',

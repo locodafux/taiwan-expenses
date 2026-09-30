@@ -11,6 +11,13 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-09-30-zero-percent-child',
+    date: 'Sep 30, 2026',
+    items: [
+      'A category inside a group can now have 0% - it simply gets nothing until you raise it, and its share stays in the group.',
+    ],
+  },
+  {
     id: '2026-09-30-dashboard-all-categories',
     date: 'Sep 30, 2026',
     items: [
