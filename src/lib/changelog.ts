@@ -11,6 +11,13 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-09-30-menu-spacing',
+    date: 'Sep 30, 2026',
+    items: [
+      'Removed the big empty gap under the menu button on every screen, and made "Category balances" on the Dashboard a proper big title.',
+    ],
+  },
+  {
     id: '2026-09-30-full-numbers',
     date: 'Sep 30, 2026',
     items: [

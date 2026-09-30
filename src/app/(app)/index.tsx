@@ -10,7 +10,7 @@ import { FundSummaryChart } from '@/components/FundSummaryChart';
 import { Card, CategoryMark, ListRow } from '@/components/ui/Card';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
-import { SectionLabel } from '@/components/ui/Heading';
+import { ScreenHeader } from '@/components/ui/Heading';
 import { Icon } from '@/components/ui/Icon';
 import { Meter } from '@/components/ui/ProgressBar';
 import {
@@ -122,7 +122,7 @@ export default function Dashboard() {
 
   if (isError) {
     return (
-      <SafeAreaView className="flex-1 bg-page">
+      <SafeAreaView className="flex-1 bg-page" edges={[]}>
         <ErrorState onRetry={refetch} />
       </SafeAreaView>
     );
@@ -130,7 +130,7 @@ export default function Dashboard() {
 
   if (categoriesLoading) {
     return (
-      <SafeAreaView className="flex-1 items-center justify-center bg-page">
+      <SafeAreaView className="flex-1 items-center justify-center bg-page" edges={[]}>
         <ActivityIndicator color={vars['--accent']} />
       </SafeAreaView>
     );
@@ -147,7 +147,7 @@ export default function Dashboard() {
   const shownCategories = (categories ?? []).filter((c) => c.start_month.slice(0, 7) <= thisMonth);
 
   return (
-    <SafeAreaView className="flex-1 bg-page" edges={['top']}>
+    <SafeAreaView className="flex-1 bg-page" edges={[]}>
       <ScrollView contentContainerClassName="gap-4 px-6 py-5" className="flex-1">
         {!setupComplete && (
           <Card className="gap-1 p-4">
@@ -227,7 +227,9 @@ export default function Dashboard() {
         <FundSummaryChart categories={shownCategories} balances={balances} />
 
         <View>
-          <SectionLabel>Category balances</SectionLabel>
+          <View className="mb-2">
+            <ScreenHeader title="Category balances" />
+          </View>
           {shownCategories.length === 0 && (
             <EmptyState>No categories yet — add one from Categories in the menu.</EmptyState>
           )}

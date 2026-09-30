@@ -135,14 +135,14 @@ export default function Settings() {
 
   if (isError) {
     return (
-      <SafeAreaView className="flex-1 bg-page">
+      <SafeAreaView className="flex-1 bg-page" edges={[]}>
         <ErrorState onRetry={refetch} />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-page" edges={['top']}>
+    <SafeAreaView className="flex-1 bg-page" edges={[]}>
       <KeyboardScroll contentContainerClassName="gap-4 px-6 py-5">
         <Text className="font-display-semibold text-lg text-ink">Settings</Text>
 

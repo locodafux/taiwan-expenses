@@ -59,14 +59,14 @@ export default function FullNumbers() {
 
   if (isError || incomesQuery.isError) {
     return (
-      <SafeAreaView className="flex-1 bg-page">
+      <SafeAreaView className="flex-1 bg-page" edges={[]}>
         <ErrorState onRetry={() => { refetch(); incomesQuery.refetch(); }} />
       </SafeAreaView>
     );
   }
   if (isLoading || incomesQuery.isLoading) {
     return (
-      <SafeAreaView className="flex-1 items-center justify-center bg-page">
+      <SafeAreaView className="flex-1 items-center justify-center bg-page" edges={[]}>
         <ActivityIndicator color={vars['--accent']} />
       </SafeAreaView>
     );
