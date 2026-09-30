@@ -26,10 +26,10 @@ import {
 import { formatPeso } from '@/lib/format';
 import {
   APP_START_DATE,
-  appToday,
   daysUntil,
   incomeAmountForPayday,
   paydayAtOffset,
+  startsNote,
   toDateOnly,
 } from '@/lib/payday';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -142,9 +142,8 @@ export default function Dashboard() {
     { label: 'Invite your partner', done: (members ?? []).length > 1, href: '/(app)/settings' as const },
   ];
   const setupComplete = setupSteps.every((s) => s.done);
-  // A category that hasn't started yet isn't shown; one that has ended keeps its balance.
-  const thisMonth = toDateOnly(appToday()).slice(0, 7);
-  const shownCategories = (categories ?? []).filter((c) => c.start_month.slice(0, 7) <= thisMonth);
+  // Every category shows, even one that hasn't started yet (it gets a "starts ..." note).
+  const shownCategories = categories ?? [];
 
   return (
     <SafeAreaView className="flex-1 bg-page" edges={[]}>
@@ -256,6 +255,7 @@ export default function Dashboard() {
                             : target != null
                               ? `Capped · ${formatPeso(target)}`
                               : 'No cap'}
+                        {startsNote(c.start_month) ? ` · ${startsNote(c.start_month)}` : ''}
                       </Text>
                       {target != null && (
                         <Meter

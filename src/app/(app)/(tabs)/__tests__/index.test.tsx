@@ -69,6 +69,19 @@ describe('Dashboard', () => {
     expect(getByText(/^Next payday/)).toBeTruthy();
   });
 
+  it('shows categories and funds that start in a later month, with a starts note', async () => {
+    mockUseCategories.mockReturnValue(
+      okQuery([
+        { id: 'cat-late', name: 'Pinatubo', kind: 'fund', start_month: '2027-02-01', end_month: null, color: '#1f5c56', rule: null },
+      ]),
+    );
+    const { getByText } = await renderWithTheme(<Dashboard />);
+
+    // Once in the fund summary, once in the category list.
+    await waitFor(() => expect(getByText(/Pinatubo · starts Feb 2027/)).toBeTruthy());
+    expect(getByText(/No cap · starts Feb 2027/)).toBeTruthy();
+  });
+
   it('shows the empty state when there are no categories yet', async () => {
     mockUseCategories.mockReturnValue(okQuery([]));
     const { getByText } = await renderWithTheme(<Dashboard />);

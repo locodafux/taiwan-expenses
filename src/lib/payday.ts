@@ -37,6 +37,12 @@ export function fromDateOnly(dateOnly: string): Date {
   return new Date(y, m - 1, d);
 }
 
+// "Nov 2026" when the category hasn't started yet (relative to appToday), else null.
+export function startsNote(startMonth: string): string | null {
+  if (startMonth.slice(0, 7) <= toDateOnly(appToday()).slice(0, 7)) return null;
+  return `starts ${fromDateOnly(startMonth).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}`;
+}
+
 export function nextPayday(recurringDays: number[], from: Date = appToday()): Date {
   return paydayAtOffset(recurringDays, 0, from);
 }
