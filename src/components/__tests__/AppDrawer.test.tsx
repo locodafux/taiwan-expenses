@@ -11,24 +11,23 @@ jest.mock('@/lib/auth', () => ({ useAuth: () => ({ session: { user: { email: 'le
 jest.mock('@/lib/queries', () => ({
   useHouseholdMembership: () => ({ data: { household_id: 'h1' } }),
   useHousehold: () => ({ data: { name: 'Leo & Alex' } }),
-  useUnreadMessageCount: () => ({ data: 3 }),
 }));
 
 import { AppDrawerContent } from '../AppDrawer';
 
 describe('AppDrawerContent', () => {
-  it('shows household + email, the six destinations, and navigates on press', async () => {
+  it('shows household + email and only the destinations the bottom tabs lack, and navigates on press', async () => {
     const navigate = jest.fn();
     const props = {
-      state: { index: 1, routes: [{ key: 'a', name: 'index' }, { key: 'b', name: 'checklist' }] },
+      state: { index: 0, routes: [{ key: 'a', name: '(tabs)' }, { key: 'b', name: 'settings' }] },
       navigation: { navigate },
     } as unknown as ComponentProps<typeof AppDrawerContent>;
-    const { getByText } = await renderWithTheme(<AppDrawerContent {...props} />);
+    const { getByText, queryByText } = await renderWithTheme(<AppDrawerContent {...props} />);
     expect(getByText('Leo & Alex')).toBeTruthy();
     expect(getByText('leo@example.com')).toBeTruthy();
-    expect(getByText('3')).toBeTruthy();
-    for (const label of ['Dashboard', 'Checklist', 'Categories', 'Full numbers', 'Chat', 'Settings']) expect(getByText(label)).toBeTruthy();
-    await fireEvent.press(getByText('Chat'));
-    expect(navigate).toHaveBeenCalledWith('chat');
+    for (const label of ['Full numbers', 'Settings']) expect(getByText(label)).toBeTruthy();
+    for (const label of ['Dashboard', 'Checklist', 'Categories', 'Chat']) expect(queryByText(label)).toBeNull();
+    await fireEvent.press(getByText('Settings'));
+    expect(navigate).toHaveBeenCalledWith('settings');
   });
 });

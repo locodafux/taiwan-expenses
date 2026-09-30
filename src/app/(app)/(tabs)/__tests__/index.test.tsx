@@ -74,7 +74,7 @@ describe('Dashboard', () => {
     const { getByText } = await renderWithTheme(<Dashboard />);
 
     await waitFor(() =>
-      expect(getByText('No categories yet — add one from Categories in the menu.')).toBeTruthy(),
+      expect(getByText('No categories yet — add one from the Categories tab.')).toBeTruthy(),
     );
   });
 

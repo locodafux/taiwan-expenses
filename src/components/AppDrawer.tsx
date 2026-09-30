@@ -3,26 +3,21 @@ import { Pressable, Text, View } from 'react-native';
 
 import { Icon, type IconName } from '@/components/ui/Icon';
 import { useAuth } from '@/lib/auth';
-import { useHousehold, useHouseholdMembership, useUnreadMessageCount } from '@/lib/queries';
+import { useHousehold, useHouseholdMembership } from '@/lib/queries';
 import { useTheme } from '@/theme/ThemeProvider';
 
 export const DRAWER_ITEMS: { name: string; label: string; icon: IconName }[] = [
-  { name: 'index', label: 'Dashboard', icon: 'home' },
-  { name: 'checklist', label: 'Checklist', icon: 'checklist' },
-  { name: 'categories', label: 'Categories', icon: 'tabs' },
   { name: 'full-numbers', label: 'Full numbers', icon: 'table' },
-  { name: 'chat', label: 'Chat', icon: 'chat' },
   { name: 'settings', label: 'Settings', icon: 'sliders' },
 ];
 
 // The household name and email that used to sit at the top of the Dashboard
-// live here now, above the destinations the bottom bar had, plus Full numbers.
+// live here now, above the destinations the bottom tab bar doesn't have.
 export function AppDrawerContent({ state, navigation, ...scrollProps }: DrawerContentComponentProps) {
   const { vars } = useTheme();
   const { session } = useAuth();
   const { data: member } = useHouseholdMembership();
   const { data: household } = useHousehold(member?.household_id);
-  const { data: unreadMessages } = useUnreadMessageCount(member?.household_id);
   const activeName = state.routes[state.index]?.name;
 
   return (
@@ -48,11 +43,6 @@ export function AppDrawerContent({ state, navigation, ...scrollProps }: DrawerCo
           >
             <Icon name={icon} size={22} color={color} strokeWidth={focused ? 2.2 : 1.7} />
             <Text className={`flex-1 font-body-semibold text-md ${focused ? 'text-accent' : 'text-ink-2'}`}>{label}</Text>
-            {name === 'chat' && unreadMessages ? (
-              <View className="min-w-[20px] items-center rounded-full bg-accent px-1.5 py-0.5">
-                <Text className="font-body-semibold text-xs text-white">{unreadMessages}</Text>
-              </View>
-            ) : null}
           </Pressable>
         );
       })}

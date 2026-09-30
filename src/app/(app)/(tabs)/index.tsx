@@ -231,7 +231,7 @@ export default function Dashboard() {
             <ScreenHeader title="Category balances" />
           </View>
           {shownCategories.length === 0 && (
-            <EmptyState>No categories yet — add one from Categories in the menu.</EmptyState>
+            <EmptyState>No categories yet — add one from the Categories tab.</EmptyState>
           )}
           {shownCategories.length > 0 && (
             <Card>
