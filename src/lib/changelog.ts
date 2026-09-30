@@ -11,6 +11,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-09-30-menu',
+    date: 'Sep 30, 2026',
+    items: [
+      'The bottom tab bar is now a side menu: tap the menu button at the top-left of any screen to jump to Dashboard, Checklist, Categories, Chat or Settings. A dot on the button means unread chat messages.',
+      'Your household name and email moved into the side menu; the Dashboard no longer repeats them at the top.',
+    ],
+  },
+  {
     id: '2026-09-30-1',
     date: 'Sep 30, 2026',
     items: [

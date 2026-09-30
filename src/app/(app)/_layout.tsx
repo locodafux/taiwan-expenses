@@ -1,8 +1,9 @@
-import { Redirect, Tabs } from 'expo-router';
-import type { ColorValue } from 'react-native';
+import { Redirect } from 'expo-router';
+import { Drawer, DrawerToggleButton } from 'expo-router/drawer';
+import { View } from 'react-native';
 
 import { GoalCelebration } from '@/components/GoalCelebration';
-import { Icon, type IconName } from '@/components/ui/Icon';
+import { AppDrawerContent } from '@/components/AppDrawer';
 import { UpdateBanner } from '@/components/UpdateBanner';
 import { WhatsNew } from '@/components/WhatsNew';
 import { useAuth } from '@/lib/auth';
@@ -12,11 +13,7 @@ import { useRealtimeSync } from '@/lib/realtime';
 import { THEMES } from '@/theme/tokens';
 import { useTheme } from '@/theme/ThemeProvider';
 
-function tabIcon(name: IconName) {
-  return function TabIcon({ color, focused }: { color: ColorValue; focused: boolean }) {
-    return <Icon name={name} size={22} color={color as string} strokeWidth={focused ? 2.2 : 1.7} />;
-  };
-}
+const HIDDEN_SCREENS = ['income', 'feedback', 'breakdown', 'summary'];
 
 export default function AppLayout() {
   const { session, initializing } = useAuth();
@@ -36,66 +33,45 @@ export default function AppLayout() {
       <GoalCelebration householdId={member?.household_id} />
       <UpdateBanner />
       <WhatsNew />
-      <Tabs
+      <Drawer
+        drawerContent={(props) => <AppDrawerContent {...props} />}
         screenOptions={{
-          headerShown: false,
-          tabBarActiveTintColor: vars['--ink'],
-          tabBarInactiveTintColor: vars['--ink-muted'],
-          tabBarStyle: {
-            backgroundColor: vars['--surface'],
-            // Sits on the page by tone alone, like the cards: no rule, no shadow.
-            borderTopWidth: 0,
-            elevation: 0,
-          },
-          tabBarLabelStyle: { fontFamily: 'Figtree_600SemiBold', fontSize: 11 },
+          // Just the menu button on the page's own tone; each screen keeps its own title.
+          headerTitle: '',
+          // The bottom bar's unread-chat badge is gone with it, so the menu button carries a dot instead.
+          headerLeft: (props) => (
+            <View>
+              <DrawerToggleButton {...props} />
+              {unreadMessages ? (
+                <View
+                  className="absolute right-2 top-2 h-2.5 w-2.5 rounded-full bg-accent"
+                  accessibilityLabel="Unread chat messages"
+                />
+              ) : null}
+            </View>
+          ),
+          headerShadowVisible: false,
+          headerStyle: { backgroundColor: vars['--page'] },
+          headerTintColor: vars['--ink'],
+          drawerStyle: { backgroundColor: vars['--surface'], width: 300 },
+          drawerType: 'front',
         }}
       >
-        <Tabs.Screen
-          name="index"
-          options={{ title: 'Dashboard', tabBarIcon: tabIcon('home') }}
-        />
-        <Tabs.Screen
-          name="checklist"
-          options={{ title: 'Checklist', tabBarIcon: tabIcon('checklist') }}
-        />
-        <Tabs.Screen
-          name="categories"
-          options={{ title: 'Categories', tabBarIcon: tabIcon('tabs') }}
-        />
-        <Tabs.Screen
-          name="chat"
-          options={{
-            title: 'Chat',
-            tabBarIcon: tabIcon('chat'),
-            tabBarBadge: unreadMessages ? unreadMessages : undefined,
-            tabBarBadgeStyle: { backgroundColor: vars['--accent'], color: '#fff9f4', fontSize: 10 },
-          }}
-        />
-        <Tabs.Screen
-          name="income"
-          // Lives under Settings -> Your profile now (bug report: "hide the income bar").
-          options={{ title: 'Income', href: null }}
-        />
-        <Tabs.Screen
-          name="feedback"
-          // Reached from Settings -> Feedback.
-          options={{ title: 'Feedback', href: null }}
-        />
-        <Tabs.Screen
-          name="breakdown"
-          // Reached from Settings -> Breakdown.
-          options={{ title: 'Breakdown', href: null }}
-        />
-        <Tabs.Screen
-          name="summary"
-          // Reached from Settings -> Summary of all.
-          options={{ title: 'Summary of all', href: null }}
-        />
-        <Tabs.Screen
-          name="settings"
-          options={{ title: 'Settings', tabBarIcon: tabIcon('sliders') }}
-        />
-      </Tabs>
+        <Drawer.Screen name="index" options={{ title: 'Dashboard' }} />
+        <Drawer.Screen name="checklist" options={{ title: 'Checklist' }} />
+        <Drawer.Screen name="categories" options={{ title: 'Categories' }} />
+        <Drawer.Screen name="chat" options={{ title: 'Chat' }} />
+        <Drawer.Screen name="settings" options={{ title: 'Settings' }} />
+        {/* Reached from Settings (Income under Your profile, Feedback, Breakdown, Summary of all):
+            not in the drawer, and they keep their own back button instead of the menu header. */}
+        {HIDDEN_SCREENS.map((name) => (
+          <Drawer.Screen
+            key={name}
+            name={name}
+            options={{ headerShown: false, drawerItemStyle: { display: 'none' } }}
+          />
+        ))}
+      </Drawer>
     </>
   );
 }
