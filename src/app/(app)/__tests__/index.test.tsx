@@ -58,12 +58,11 @@ beforeEach(() => {
 });
 
 describe('Dashboard', () => {
-  it('renders household members, categories and the next payday with realistic data', async () => {
+  it('renders categories and the next payday with realistic data', async () => {
     const { getByText, getAllByText } = await renderWithTheme(<Dashboard />);
 
     await waitFor(() => expect(getByText('Taiwan fund')).toBeTruthy());
     expect(getByText('Rent')).toBeTruthy();
-    expect(getByText(/Leo & Alex/)).toBeTruthy();
     // The fund summary's amount and the category list.
     expect(getAllByText(/₱\s?12,000/)).toHaveLength(2);
     expect(getByText(/₱\s?3,500 this month/)).toBeTruthy();
@@ -75,7 +74,7 @@ describe('Dashboard', () => {
     const { getByText } = await renderWithTheme(<Dashboard />);
 
     await waitFor(() =>
-      expect(getByText('No categories yet — add one from the Categories tab.')).toBeTruthy(),
+      expect(getByText('No categories yet — add one from Categories in the menu.')).toBeTruthy(),
     );
   });
 

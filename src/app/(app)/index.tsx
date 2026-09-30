@@ -5,7 +5,6 @@ import Animated, { Easing, useAnimatedProps, useSharedValue, withTiming } from '
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
 
-import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import { FundSummaryChart } from '@/components/FundSummaryChart';
 import { Card, CategoryMark, ListRow } from '@/components/ui/Card';
@@ -150,26 +149,6 @@ export default function Dashboard() {
   return (
     <SafeAreaView className="flex-1 bg-page" edges={['top']}>
       <ScrollView contentContainerClassName="gap-4 px-6 py-5" className="flex-1">
-        <View className="flex-row items-center gap-3">
-          <View className="flex-row">
-            {(members ?? []).slice(0, 2).map((m, i) => (
-              <Avatar
-                key={m.id}
-                initial={m.display_name[0]?.toUpperCase() ?? '?'}
-                color={m.color ?? vars['--accent']}
-                size={30}
-                style={i > 0 ? { marginLeft: -10, borderWidth: 2, borderColor: vars['--surface'] } : undefined}
-              />
-            ))}
-          </View>
-          <View className="flex-1">
-            <Text className="font-body-medium text-sm text-ink-muted">
-              Hi {(members ?? []).map((m) => m.display_name).join(' & ')}
-            </Text>
-            <Text className="font-display text-xl text-ink">Our household</Text>
-          </View>
-        </View>
-
         {!setupComplete && (
           <Card className="gap-1 p-4">
             <View className="mb-2 flex-row items-center gap-3">
@@ -250,7 +229,7 @@ export default function Dashboard() {
         <View>
           <SectionLabel>Category balances</SectionLabel>
           {shownCategories.length === 0 && (
-            <EmptyState>No categories yet — add one from the Categories tab.</EmptyState>
+            <EmptyState>No categories yet — add one from Categories in the menu.</EmptyState>
           )}
           {shownCategories.length > 0 && (
             <Card>
