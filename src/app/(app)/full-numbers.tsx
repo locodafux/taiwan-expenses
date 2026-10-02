@@ -76,7 +76,6 @@ export default function FullNumbers() {
     <SafeAreaView className="flex-1 bg-page" edges={[]}>
       <ScrollView contentContainerClassName="gap-4 px-6 py-4">
         <View className="gap-1">
-          <Text className="font-display-semibold text-lg text-ink">Full numbers</Text>
           <Text className="font-body text-sm text-ink-muted">
             Every month, {monthLabel(MONTHS[0])} – {monthLabel(MONTHS[MONTHS.length - 1])}
           </Text>

@@ -144,8 +144,6 @@ export default function Settings() {
   return (
     <SafeAreaView className="flex-1 bg-page" edges={[]}>
       <KeyboardScroll contentContainerClassName="gap-4 px-6 py-5">
-        <Text className="font-display-semibold text-lg text-ink">Settings</Text>
-
         <View>
           <Text className="mb-2 font-body-semibold text-sm text-ink">Your profile</Text>
           <Card className="gap-3 p-4">

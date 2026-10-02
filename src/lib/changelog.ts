@@ -11,6 +11,13 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-02-header-title',
+    date: 'Oct 2, 2026',
+    items: [
+      'The top bar now shows the screen name next to the menu button, so there is no more empty strip beside it.',
+    ],
+  },
+  {
     id: '2026-09-30-zero-percent-child',
     date: 'Sep 30, 2026',
     items: [
