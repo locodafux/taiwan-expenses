@@ -139,8 +139,7 @@ export default function Chat() {
   return (
     <SafeAreaView className="flex-1 bg-page" edges={[]}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-        <View className="flex-row items-center justify-between px-6 py-5">
-          <Text className="font-display-semibold text-lg text-ink">Household chat</Text>
+        <View className="flex-row items-center justify-end px-6 py-5">
           {messages.length > 0 && (
             <Button size="sm" variant="ghost" onPress={confirmClear}>
               Clear history
