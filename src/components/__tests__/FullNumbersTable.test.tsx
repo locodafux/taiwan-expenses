@@ -49,20 +49,20 @@ beforeEach(() => {
 });
 
 describe('FullNumbersTable (Yearly Cashflow)', () => {
-  it('lays out ten months with income, expenses, debt, the live funds and a Total row', async () => {
+  it('lays out 36 months with income, expenses, debt, money staying, the live funds and a Total row', async () => {
     const { getByText, getAllByText, queryByTestId } = await renderWithTheme(<FullNumbersTable />);
 
     expect(getByText('Yearly Cashflow')).toBeTruthy();
     expect(queryByTestId('cashflow-graph')).toBeNull(); // the graph moved to the Fund summary
     for (const h of ['Month', 'Total']) expect(getByText(h)).toBeTruthy();
-    for (const h of ['Income', 'Expenses', 'Debt', 'TRIP']) expect(getByText(h)).toBeTruthy();
+    for (const h of ['Income', 'Expenses', 'Debt', 'Money staying', 'TRIP']) expect(getByText(h)).toBeTruthy();
     expect(getByText("Oct '26")).toBeTruthy();
-    expect(getByText("Jul '27")).toBeTruthy();
-    expect(getAllByText('20,000')).toHaveLength(10);
-    expect(getByText('200,000')).toBeTruthy(); // income total
+    expect(getByText("Sep '29")).toBeTruthy();
+    expect(getAllByText('20,000')).toHaveLength(36);
+    expect(getByText('720,000')).toBeTruthy(); // income total: 20k x 36
     expect(getAllByText('–').length).toBeGreaterThan(0); // zero cells read as a dash, not ₱ 0
-    expect(getByText('50,000')).toBeTruthy(); // rent total: 5k x 10
+    expect(getByText('180,000')).toBeTruthy(); // rent total: 5k x 36
     expect(getByText('4,000')).toBeTruthy(); // debt total: loan ends after Nov (Oct + Nov)
-    expect(getAllByText('15,000')).toHaveLength(2); // Nov cell + total: the fund only shows in its own month
+    expect(getAllByText('15,000')).toHaveLength(4); // Nov cell + total, for both Money staying and TRIP: the fund only shows in its own month
   });
 });

@@ -9,10 +9,10 @@ import { useHouseholdMembership, useIncomes } from '@/lib/queries';
 import { useTheme } from '@/theme/ThemeProvider';
 
 // Mirrors taiwan-fund-planner.html's "Full numbers" table (now the Dashboard's Yearly Cashflow): October 2026 through
-// July 2027, one row per month. Amounts come from useMonthlyCells (the same
+// September 2029 (the forecast RPC's 36-month cap), one row per month. Amounts come from useMonthlyCells (the same
 // calculation as the Breakdown chart), so this only lays them out.
 const FIRST_MONTH = '2026-10';
-const MONTHS = Array.from({ length: 10 }, (_, i) => addMonths(FIRST_MONTH, i));
+const MONTHS = Array.from({ length: 36 }, (_, i) => addMonths(FIRST_MONTH, i));
 
 const MONTH_COL = 'w-16';
 const AMOUNT_COL = 'w-28';
@@ -48,14 +48,13 @@ export function FullNumbersTable() {
       debt += scheduledMonthTotal(items.filter((i) => i.end_date), monthStart);
       expenses += scheduledMonthTotal(items.filter((i) => !i.end_date), monthStart);
     }
+    const fundCells = funds.map((c) => cellValue(c, month));
+    // Money staying = every fund column added up (Excess included: a group parent's cell is
+    // only what its children leave, so nothing is counted twice).
+    const staying = fundCells.reduce((sum, v) => sum + v, 0);
     return {
       month,
-      cells: [
-        scheduledMonthTotal(incomesQuery.data ?? [], monthStart),
-        expenses,
-        debt,
-        ...funds.map((c) => cellValue(c, month)),
-      ],
+      cells: [scheduledMonthTotal(incomesQuery.data ?? [], monthStart), expenses, debt, staying, ...fundCells],
     };
   });
   const totals = (rows[0]?.cells ?? []).map((_, col) => rows.reduce((sum, r) => sum + r.cells[col], 0));
@@ -63,6 +62,7 @@ export function FullNumbersTable() {
   const series = [
     { label: 'Expenses', color: vars['--cat-expenses'] },
     { label: 'Debt', color: vars['--cat-debt'] },
+    { label: 'Money staying', color: vars['--accent'] },
     ...funds.map((c) => ({ label: c.name, color: c.color ?? vars['--ink-muted'] })),
   ];
   const headers = ['Income', ...series.map((s) => s.label)];
@@ -128,7 +128,7 @@ export function FullNumbersTable() {
                 {r.cells.map((v, i) => (
                   <View key={i} className={`${AMOUNT_COL} ${ROW} px-3`}>
                     <Text
-                      className={`text-right font-mono text-sm ${Math.round(v) === 0 ? 'text-ink-muted' : i === 0 ? 'font-bold text-ink' : 'text-ink'}`}
+                      className={`text-right font-mono text-sm ${Math.round(v) === 0 ? 'text-ink-muted' : i === 0 ? 'font-bold text-ink' : i === 3 ? 'font-body-semibold text-ink' : 'text-ink'}`}
                     >
                       {num(v)}
                     </Text>
@@ -149,7 +149,8 @@ export function FullNumbersTable() {
 
       <Text className="font-body text-xs leading-[1.5] text-ink-muted">
         Months before today are your real checked history; the rest is projected from your current rules. Debt is
-        bills that have a last payment date; Expenses is the rest.
+        bills that have a last payment date; Expenses is the rest. Money staying is all the fund columns added
+        together. Months beyond your next payday assume today's income, bills and rules stay the same.
       </Text>
     </View>
   );

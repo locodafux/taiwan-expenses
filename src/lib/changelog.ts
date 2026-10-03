@@ -11,6 +11,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-04-money-staying-36-months',
+    date: 'Oct 4, 2026',
+    items: [
+      'Yearly Cashflow has a new Money staying column right after Debt: all your fund columns added up, so you can see what is left each month without swiping.',
+      'Yearly Cashflow now runs three years, Oct 2026 to Sep 2029. Months beyond your next payday assume today\'s income, bills and rules.',
+    ],
+  },
+  {
     id: '2026-10-04-excess-graph-removed',
     date: 'Oct 4, 2026',
     items: ['The Excess graph in the Fund summary on the Dashboard is gone.'],
