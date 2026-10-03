@@ -11,6 +11,13 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-04-yearly-cashflow',
+    date: 'Oct 4, 2026',
+    items: [
+      'The Full numbers table on the Dashboard is now called Yearly Cashflow, and it has a graph on top: one bar per month for your income and one for where it goes.',
+    ],
+  },
+  {
     id: '2026-10-04-dashboard-full-numbers',
     date: 'Oct 4, 2026',
     items: [

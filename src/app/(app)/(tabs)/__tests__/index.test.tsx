@@ -81,13 +81,16 @@ describe('Dashboard', () => {
     expect(getByText(/^Next payday/)).toBeTruthy();
   });
 
-  it('shows the Full numbers table under the category balances', async () => {
-    const { getByText } = await renderWithTheme(<Dashboard />);
+  it('shows the Yearly Cashflow table under the category balances', async () => {
+    const { getByText, getAllByText, getByTestId } = await renderWithTheme(<Dashboard />);
 
-    await waitFor(() => expect(getByText('Full numbers')).toBeTruthy());
-    for (const h of ['Month', 'Income', 'Expenses', 'Debt', 'Total']) expect(getByText(h)).toBeTruthy();
-    expect(getByText("Oct '26")).toBeTruthy();
-    expect(getByText("Jul '27")).toBeTruthy();
+    await waitFor(() => expect(getByText('Yearly Cashflow')).toBeTruthy());
+    expect(getByTestId('cashflow-graph')).toBeTruthy();
+    for (const h of ['Month', 'Total']) expect(getByText(h)).toBeTruthy();
+    // Each of these is both a table column header and a graph legend entry.
+    for (const h of ['Income', 'Expenses', 'Debt']) expect(getAllByText(h)).toHaveLength(2);
+    expect(getAllByText("Oct '26")).toHaveLength(2);
+    expect(getAllByText("Jul '27")).toHaveLength(2);
   });
 
   it('shows categories and funds that start in a later month, with a starts note', async () => {
@@ -133,7 +136,7 @@ describe('Dashboard', () => {
 
   it('navigates to a category on press', async () => {
     const { getAllByText } = await renderWithTheme(<Dashboard />);
-    // The first match is the category row; the same name is also a Full numbers column header.
+    // The first match is the category row; the same name is also a Yearly Cashflow column header.
     await fireEvent.press(await waitFor(() => getAllByText('Taiwan fund')[0]));
     expect(mockPush).toHaveBeenCalledWith('/(app)/categories/cat-fund');
   });
@@ -222,10 +225,10 @@ describe('Dashboard', () => {
     const { getByText, getAllByText, queryByTestId } = await renderWithTheme(<Dashboard />);
 
     expect(await waitFor(() => getByText('Fund summary'))).toBeTruthy();
-    // Legend labels are fixed names; the category list and the Full numbers headers show the household's own.
+    // Legend labels are fixed names; the category list and the Yearly Cashflow headers show the household's own.
     expect(getByText('Taiwan Fund')).toBeTruthy();
-    expect(getAllByText('Emergency Fund')).toHaveLength(3);
-    expect(getAllByText('Savings')).toHaveLength(3);
+    expect(getAllByText('Emergency Fund')).toHaveLength(4);
+    expect(getAllByText('Savings')).toHaveLength(4);
     expect(getByText(/25% of ₱\s?80,000/)).toBeTruthy();
     // Emergency and Savings have no stored goal, so they show the plan-by-March total.
     expect(getByText(/21% of ₱\s?23,750 \(plan by March\)/)).toBeTruthy();

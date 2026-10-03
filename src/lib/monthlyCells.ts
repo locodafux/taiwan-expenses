@@ -24,7 +24,7 @@ type BillItemLike = { amount: number; recurring_day: number; end_date: string | 
 // Every category's amount for each month in `months` ('YYYY-MM', contiguous and
 // ascending): real checked history for past months, a projection from today on
 // (private.fund_totals_plan), and a bill category's schedule. Shared by the
-// Breakdown month chart and the Full numbers table so both read one calculation.
+// Breakdown month chart and the Yearly Cashflow table so both read one calculation.
 export function useMonthlyCells(months: string[]) {
   const membershipQuery = useHouseholdMembership();
   const householdId = membershipQuery.data?.household_id;
