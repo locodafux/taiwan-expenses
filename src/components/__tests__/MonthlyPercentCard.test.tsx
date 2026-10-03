@@ -111,4 +111,28 @@ describe('MonthlyPercentCard', () => {
     );
     expect(queryByLabelText('Percentage for 2026-12')).toBeTruthy();
   });
+
+  const withDeadline = (target_date: string | null, start_month = '2026-10-01') =>
+    ({ ...(child as object), start_month, rule: { type: 'group_child', parent_id: 'p', percent: 30, goal: { target_amount: 1000, target_date } } }) as never;
+  const renderWith = (category: never) =>
+    renderWithTheme(<MonthlyPercentCard category={category} householdId="h" defaultPercent={30} parentName="Excess" siblings={siblings} />);
+
+  it('stops at the Complete by month, inclusive, and keeps an override beyond it untouched', async () => {
+    mockUseCategoryMonthPercents.mockReturnValue({ data: [{ category_id: 'kid', month: '2027-01-01', percent: 5 }] });
+    const { queryByLabelText } = await renderWith(withDeadline('2026-12-01'));
+    expect(queryByLabelText('Percentage for 2026-12')).toBeTruthy();
+    expect(queryByLabelText('Percentage for 2027-01')).toBeNull();
+    expect(mockMutateAsync).not.toHaveBeenCalled();
+  });
+
+  it('lists the usual 12 months when no Complete by is set', async () => {
+    const { queryByLabelText } = await renderWith(withDeadline(null));
+    expect(queryByLabelText('Percentage for 2027-09')).toBeTruthy();
+  });
+
+  it('shows no month rows, with a note, when Complete by is before the first month', async () => {
+    const { queryByLabelText, getByText } = await renderWith(withDeadline('2026-08-01'));
+    expect(queryByLabelText('Percentage for 2026-10')).toBeNull();
+    expect(getByText(/No months left/)).toBeTruthy();
+  });
 });
