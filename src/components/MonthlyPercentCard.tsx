@@ -37,7 +37,11 @@ export function MonthlyPercentCard({
   );
   const thisMonth = toDateOnly(appToday()).slice(0, 7);
   const first = category.start_month.slice(0, 7) > thisMonth ? category.start_month.slice(0, 7) : thisMonth;
-  const months = Array.from({ length: MONTHS_SHOWN }, (_, i) => addMonths(first, i));
+  // The fund's "Complete by" month (its goal deadline) is the last month shown.
+  const completeBy = category.rule?.type === 'group_child' ? category.rule.goal?.target_date?.slice(0, 7) : undefined;
+  const months = Array.from({ length: MONTHS_SHOWN }, (_, i) => addMonths(first, i)).filter(
+    (m) => !completeBy || m <= completeBy,
+  );
 
   // What this month's field would take: what is typed (if it is a valid
   // number), else its saved override, else the default.
@@ -83,6 +87,11 @@ export function MonthlyPercentCard({
         Leave a month blank to use {defaultPercent}%. Type a number (0 is fine) to change just that month.
         Sibling shares in a month must total 100% or less.
       </Text>
+      {months.length === 0 && completeBy && (
+        <Text className="font-body text-xs text-ink-muted">
+          No months left - this fund was due to be complete by {fromDateOnly(`${completeBy}-01`).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}.
+        </Text>
+      )}
       {months.map((month) => {
         const [y, m] = month.split('-').map(Number);
         const value = drafts[month] ?? (overrides.has(month) ? String(overrides.get(month)) : '');
