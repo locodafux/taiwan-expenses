@@ -45,7 +45,7 @@ export default function AddCategory() {
   const [excessParentId, setExcessParentId] = useState<string | null>(null);
   const [excessPercent, setExcessPercent] = useState('20');
   // The months this category runs ('YYYY-MM'); end null = ongoing.
-  const [range, setRange] = useState<{ start: string; end: string | null }>({ start: APP_START_MONTH, end: null });
+  const [startMonth, setStartMonth] = useState(APP_START_MONTH);
   const [error, setError] = useState<string | null>(null);
 
   const groupParents = (categoriesQuery.data ?? []).filter(
@@ -105,8 +105,7 @@ export default function AddCategory() {
         kind,
         color,
         rule,
-        start_month: `${range.start}-01`,
-        end_month: range.end ? `${range.end}-01` : null,
+        start_month: `${startMonth}-01`,
         ...(excessSource ? { is_group_parent: true } : {}),
       });
       router.back();
@@ -298,7 +297,7 @@ export default function AddCategory() {
           </View>
         )}
 
-        <CategoryRangePicker start={range.start} end={range.end} onChange={setRange} />
+        <CategoryRangePicker start={startMonth} onChange={setStartMonth} />
 
         {error && <Text className="font-body text-sm text-status-bad">{error}</Text>}
 

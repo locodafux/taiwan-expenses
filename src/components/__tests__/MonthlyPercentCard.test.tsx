@@ -18,9 +18,13 @@ const child = {
   name: 'Kid',
   kind: 'fund',
   start_month: '2026-10-01',
-  end_month: null,
-  rule: { type: 'group_child', parent_id: 'p', percent: 30 },
+    rule: { type: 'group_child', parent_id: 'p', percent: 30 },
 } as never;
+
+const siblings = [
+  { id: 'other', name: 'Other fund', start_month: '2026-10-01', percent: 20 },
+  { id: 'late', name: 'Late fund', start_month: '2027-03-01', percent: 100 },
+];
 
 beforeEach(() => {
   jest.useFakeTimers({ now: new Date(2026, 9, 10), advanceTimers: true });
@@ -38,7 +42,7 @@ afterEach(() => jest.useRealTimers());
 describe('MonthlyPercentCard', () => {
   it('shows this child\'s overrides (0 included) and the default as the placeholder', async () => {
     const { getByLabelText } = await renderWithTheme(
-      <MonthlyPercentCard category={child} householdId="h" defaultPercent={30} />,
+      <MonthlyPercentCard category={child} householdId="h" defaultPercent={30} parentName="Excess" siblings={siblings} />,
     );
     expect(getByLabelText('Percentage for 2026-11').props.value).toBe('0');
     expect(getByLabelText('Percentage for 2026-12').props.value).toBe('');
@@ -47,7 +51,7 @@ describe('MonthlyPercentCard', () => {
 
   it('saves a month, allowing 0, and clears an override when emptied', async () => {
     const { getByLabelText } = await renderWithTheme(
-      <MonthlyPercentCard category={child} householdId="h" defaultPercent={30} />,
+      <MonthlyPercentCard category={child} householdId="h" defaultPercent={30} parentName="Excess" siblings={siblings} />,
     );
     const dec = getByLabelText('Percentage for 2026-12');
     await fireEvent.changeText(dec, '0');
@@ -66,7 +70,7 @@ describe('MonthlyPercentCard', () => {
 
   it('rejects a percentage above 100 and shows the database error', async () => {
     const { getByLabelText, getByText } = await renderWithTheme(
-      <MonthlyPercentCard category={child} householdId="h" defaultPercent={30} />,
+      <MonthlyPercentCard category={child} householdId="h" defaultPercent={30} parentName="Excess" siblings={siblings} />,
     );
     const jan = getByLabelText('Percentage for 2027-01');
     await fireEvent.changeText(jan, '101');
@@ -75,16 +79,36 @@ describe('MonthlyPercentCard', () => {
     expect(mockMutateAsync).not.toHaveBeenCalled();
 
     mockMutateAsync.mockRejectedValueOnce(new Error('group child percentages cannot exceed 100 in Jan 2027 (got 120)'));
-    await fireEvent.changeText(jan, '90');
+    await fireEvent.changeText(jan, '50');
     await fireEvent(jan, 'endEditing');
     await waitFor(() => expect(getByText(/cannot exceed 100 in Jan 2027/)).toBeTruthy());
   });
 
-  it('stops at the category\'s last month', async () => {
-    const { queryByLabelText } = await renderWithTheme(
-      <MonthlyPercentCard category={{ ...(child as object), end_month: '2026-11-01' } as never} householdId="h" defaultPercent={30} />,
+  it('shows what is left per month and leaves out a sibling that has not started', async () => {
+    const { getByText, getAllByText } = await renderWithTheme(
+      <MonthlyPercentCard category={child} householdId="h" defaultPercent={30} parentName="Excess" siblings={siblings} />,
     );
-    expect(queryByLabelText('Percentage for 2026-11')).toBeTruthy();
-    expect(queryByLabelText('Percentage for 2026-12')).toBeNull();
+    // Oct: this 30 + Other 20 -> 50 left; Nov override 0 -> 80 left; Dec: Other overrides to 90 -> -20 over.
+    expect(getAllByText(/50% left - stays in Excess · Late fund starts Mar 2027/).length).toBeGreaterThan(0);
+    expect(getAllByText(/80% left - stays in Excess/)).toHaveLength(1);
+    expect(getByText(/20% over - Other fund 90%/)).toBeTruthy();
+  });
+
+  it('refuses a save that would pass 100 before asking the server, with the message on that row', async () => {
+    const { getByLabelText, getByText } = await renderWithTheme(
+      <MonthlyPercentCard category={child} householdId="h" defaultPercent={30} parentName="Excess" siblings={siblings} />,
+    );
+    const dec = getByLabelText('Percentage for 2026-12');
+    await fireEvent.changeText(dec, '50');
+    await fireEvent(dec, 'endEditing');
+    expect(getByText('Only 10% fits here - the other funds in the group already take 90% that month.')).toBeTruthy();
+    expect(mockMutateAsync).not.toHaveBeenCalled();
+  });
+
+  it('keeps ranges open-ended: a far month is listed whatever any end_month says', async () => {
+    const { queryByLabelText } = await renderWithTheme(
+      <MonthlyPercentCard category={{ ...(child as object), end_month: '2026-11-01' } as never} householdId="h" defaultPercent={30} parentName="Excess" siblings={siblings} />,
+    );
+    expect(queryByLabelText('Percentage for 2026-12')).toBeTruthy();
   });
 });

@@ -60,13 +60,10 @@ function describeCategory(
   return '';
 }
 
-// " · starts Dec 2026 · last month Mar 2027" - empty for the default (Oct 2026, no end).
-function rangeNote(c: { start_month: string; end_month: string | null }): string {
-  const label = (d: string) => fromDateOnly(d).toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
-  const parts: string[] = [];
-  if (c.start_month.slice(0, 7) > APP_START_MONTH) parts.push(`starts ${label(c.start_month)}`);
-  if (c.end_month) parts.push(`last month ${label(c.end_month)}`);
-  return parts.length ? ` · ${parts.join(' · ')}` : '';
+// " · starts Dec 2026" - empty for the default (Oct 2026).
+function rangeNote(c: { start_month: string }): string {
+  if (c.start_month.slice(0, 7) <= APP_START_MONTH) return '';
+  return ` · starts ${fromDateOnly(c.start_month).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}`;
 }
 
 export default function CategoryManagement() {

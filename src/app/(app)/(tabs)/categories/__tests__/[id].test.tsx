@@ -410,7 +410,6 @@ describe('CategoryDetail', () => {
         color: '#1f5c56',
         rule: { type: 'goal', target_amount: 60000, target_date: null, one_time: false },
         start_month: '2026-10-01',
-        end_month: null,
       }),
     );
   });

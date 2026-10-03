@@ -11,6 +11,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-04-no-last-month',
+    date: 'Oct 4, 2026',
+    items: [
+      'Categories no longer have a Last month - a category just keeps going from its Starts month.',
+      'Saving a percentage for one month inside a group now works when the other funds in the group are not running that month (for example Pinatubo in Oct-Nov and Taiwan Fund from Dec).',
+      'Each month in a fund\'s "Percentage by month" now shows how much of the group is left, and a save that would go over 100% says so right there.',
+    ],
+  },
+  {
     id: '2026-10-02-header-title',
     date: 'Oct 2, 2026',
     items: [

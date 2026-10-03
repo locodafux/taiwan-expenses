@@ -1,6 +1,7 @@
 import {
   appToday,
   categoryActiveInMonth,
+  groupMonthLeft,
   clampDayToMonth,
   daysUntil,
   fromDateOnly,
@@ -163,16 +164,29 @@ describe('October 2026 floor', () => {
 });
 
 describe('categoryActiveInMonth', () => {
-  const range = { start_month: '2026-11-01', end_month: '2027-01-01' };
+  it('is true from the start month onward, with no end', () => {
+    const c = { start_month: '2026-11-01' };
+    expect(categoryActiveInMonth(c, '2026-10')).toBe(false);
+    expect(categoryActiveInMonth(c, '2026-11')).toBe(true);
+    expect(categoryActiveInMonth(c, '2035-06')).toBe(true);
+  });
+});
 
-  it('is true only from the start month through the last month, inclusive', () => {
-    expect(categoryActiveInMonth(range, '2026-10')).toBe(false);
-    expect(categoryActiveInMonth(range, '2026-11')).toBe(true);
-    expect(categoryActiveInMonth(range, '2027-01')).toBe(true);
-    expect(categoryActiveInMonth(range, '2027-02')).toBe(false);
+describe('groupMonthLeft', () => {
+  const siblings = [
+    { id: 'pin', name: 'Pinatubo', start_month: '2026-10-01', percent: 0 },
+    { id: 'tw', name: 'Taiwan Fund', start_month: '2026-12-01', percent: 100 },
+  ];
+  const overrides = new Map([['pin:2026-10', 100]]);
+
+  it('counts siblings by override-or-default and leaves out ones not started', () => {
+    const oct = groupMonthLeft('2026-10', 0, siblings, overrides);
+    expect(oct.left).toBe(0);
+    expect(oct.waiting.map((s) => s.name)).toEqual(['Taiwan Fund']);
+    expect(groupMonthLeft('2026-12', 0, siblings, overrides).left).toBe(0);
   });
 
-  it('never ends when end_month is null', () => {
-    expect(categoryActiveInMonth({ start_month: '2026-10-01', end_month: null }, '2035-06')).toBe(true);
+  it('goes negative when this fund takes too much', () => {
+    expect(groupMonthLeft('2026-10', 30, siblings, overrides).left).toBe(-30);
   });
 });

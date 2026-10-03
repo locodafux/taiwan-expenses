@@ -118,7 +118,7 @@ export default function CategoryDetail() {
   const [editExcessSource, setEditExcessSource] = useState(false);
   const [editExcessParentId, setEditExcessParentId] = useState<string | null>(null);
   const [editExcessPercent, setEditExcessPercent] = useState('20');
-  const [editRange, setEditRange] = useState<{ start: string; end: string | null }>({ start: APP_START_MONTH, end: null });
+  const [editStart, setEditStart] = useState(APP_START_MONTH);
 
   const balance = useMemo(
     () => (history ?? []).reduce((s, h) => s + h.amount, 0),
@@ -257,7 +257,7 @@ export default function CategoryDetail() {
         ? String(category!.rule.percent)
         : '20',
     );
-    setEditRange({ start: category!.start_month.slice(0, 7), end: category!.end_month?.slice(0, 7) ?? null });
+    setEditStart(category!.start_month.slice(0, 7));
     setError(null);
     setEditingCategory(true);
   }
@@ -327,8 +327,7 @@ export default function CategoryDetail() {
         name: editName.trim(),
         color: editColor || null,
         rule: nextRule,
-        start_month: `${editRange.start}-01`,
-        end_month: editRange.end ? `${editRange.end}-01` : null,
+        start_month: `${editStart}-01`,
         ...(editExcessSource || category!.is_group_parent !== undefined
           ? { is_group_parent: editExcessSource }
           : {}),
@@ -532,7 +531,7 @@ export default function CategoryDetail() {
                   </View>
                 </>
               )}
-              <CategoryRangePicker start={editRange.start} end={editRange.end} onChange={setEditRange} />
+              <CategoryRangePicker start={editStart} onChange={setEditStart} />
               {error && <Text className="font-body text-sm text-status-bad">{error}</Text>}
               <View className="flex-row gap-3">
                 <Button
@@ -591,7 +590,19 @@ export default function CategoryDetail() {
           </Card>
         )}
         {category.kind === 'fund' && isGroupChild && linkedParent && linkedPercent !== null && (
-          <MonthlyPercentCard category={category} householdId={householdId} defaultPercent={linkedPercent} />
+          <MonthlyPercentCard
+            category={category}
+            householdId={householdId}
+            defaultPercent={linkedPercent}
+            parentName={linkedParent.name}
+            siblings={(categories ?? []).flatMap((c) =>
+              c.id !== category.id &&
+              (c.rule?.type === 'excess' || c.rule?.type === 'group_child') &&
+              c.rule.parent_id === linkedParent.id
+                ? [{ id: c.id, name: c.name, start_month: c.start_month, percent: c.rule.percent }]
+                : [],
+            )}
+          />
         )}
         {category.rule?.type !== 'excess' &&
           category.rule?.type !== 'group_child' &&

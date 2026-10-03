@@ -210,11 +210,31 @@ export function scheduledMonthTotal(
   }, 0);
 }
 
-// Whether a category runs in `month` ('YYYY-MM'): its start_month/end_month
-// ('YYYY-MM-01' dates, end null = ongoing) mirror private.category_in_range.
-export function categoryActiveInMonth(
-  category: { start_month: string; end_month: string | null },
+// Whether a category runs in `month` ('YYYY-MM'): from its start_month
+// ('YYYY-MM-01') onward. The end_month column is unused (every category is
+// ongoing); private.category_in_range still honours it if one is ever set.
+export function categoryActiveInMonth(category: { start_month: string }, month: string): boolean {
+  return month >= category.start_month.slice(0, 7);
+}
+
+// What is left of a group's 100% in `month` ('YYYY-MM') while one child takes
+// `ownPercent`: the siblings already started that month each take their
+// override ('YYYY-MM' key in `overrides`: `${id}:${month}`) or default, and
+// what is left stays in the group's parent. Siblings not started yet take
+// nothing (mirrors private.group_month_total).
+export function groupMonthLeft(
   month: string,
-): boolean {
-  return month >= category.start_month.slice(0, 7) && (!category.end_month || month <= category.end_month.slice(0, 7));
+  ownPercent: number,
+  siblings: { id: string; name: string; start_month: string; percent: number }[],
+  overrides: Map<string, number>,
+) {
+  const counted = siblings
+    .filter((s) => categoryActiveInMonth(s, month))
+    .map((s) => ({ name: s.name, percent: overrides.get(`${s.id}:${month}`) ?? s.percent }));
+  const waiting = siblings.filter((s) => !categoryActiveInMonth(s, month));
+  return {
+    left: 100 - ownPercent - counted.reduce((sum, s) => sum + s.percent, 0),
+    counted,
+    waiting,
+  };
 }
