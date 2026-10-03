@@ -1,7 +1,6 @@
 import { Text, View } from 'react-native';
 import { vars as nativeWindVars } from 'nativewind';
 
-import { ExcessGraph } from '@/components/ExcessGraph';
 import { Card } from '@/components/ui/Card';
 import { Meter } from '@/components/ui/ProgressBar';
 import type { Category } from '@/lib/database.types';
@@ -63,12 +62,6 @@ export function FundSummaryChart({
     });
   if (funds.length === 0) return null;
 
-  // Each group parent (e.g. Excess) gets a per-month graph of its own amount.
-  const parentIds = new Set(
-    categories.flatMap((c) => (c.rule?.type === 'excess' || c.rule?.type === 'group_child' ? [c.rule.parent_id] : [])),
-  );
-  const parents = categories.filter((c) => parentIds.has(c.id));
-
   const empty = funds.every((f) => f.amount <= 0);
 
   return (
@@ -98,9 +91,6 @@ export function FundSummaryChart({
             </View>
           ))}
         </View>
-        {parents.map((p) => (
-          <ExcessGraph key={p.id} parent={p} />
-        ))}
         {empty && (
           <Text className="text-center font-body text-xs text-ink-muted">
             Nothing saved yet — it grows as you tick off paydays.

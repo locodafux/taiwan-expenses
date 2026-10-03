@@ -11,6 +11,11 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-04-excess-graph-removed',
+    date: 'Oct 4, 2026',
+    items: ['The Excess graph in the Fund summary on the Dashboard is gone.'],
+  },
+  {
     id: '2026-10-04-excess-graph',
     date: 'Oct 4, 2026',
     items: [

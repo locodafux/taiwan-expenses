@@ -12,7 +12,7 @@ import { useTheme } from '@/theme/ThemeProvider';
 // July 2027, one row per month. Amounts come from useMonthlyCells (the same
 // calculation as the Breakdown chart), so this only lays them out.
 const FIRST_MONTH = '2026-10';
-export const MONTHS = Array.from({ length: 10 }, (_, i) => addMonths(FIRST_MONTH, i));
+const MONTHS = Array.from({ length: 10 }, (_, i) => addMonths(FIRST_MONTH, i));
 
 const MONTH_COL = 'w-16';
 const AMOUNT_COL = 'w-28';
