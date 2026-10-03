@@ -12,8 +12,7 @@ function tabIcon(name: IconName) {
   };
 }
 
-// The four everyday screens. The side drawer's own header (menu button) sits above this,
-// so the tabs draw no header of their own.
+// The five everyday screens (Settings is the last tab); the header shows the screen's title.
 export default function TabsLayout() {
   const { theme } = useTheme();
   const { data: member } = useHouseholdMembership();
@@ -23,7 +22,11 @@ export default function TabsLayout() {
   return (
     <Tabs
       screenOptions={{
-        headerShown: false,
+        headerTitleAlign: 'left',
+        headerTitleStyle: { fontFamily: 'Figtree_600SemiBold', fontSize: 18 },
+        headerShadowVisible: false,
+        headerStyle: { backgroundColor: vars['--page'] },
+        headerTintColor: vars['--ink'],
         tabBarActiveTintColor: vars['--ink'],
         tabBarInactiveTintColor: vars['--ink-muted'],
         tabBarStyle: {
@@ -47,6 +50,7 @@ export default function TabsLayout() {
           tabBarBadgeStyle: { backgroundColor: vars['--accent'], color: '#fff9f4', fontSize: 10 },
         }}
       />
+      <Tabs.Screen name="settings" options={{ title: 'Settings', tabBarIcon: tabIcon('sliders') }} />
     </Tabs>
   );
 }

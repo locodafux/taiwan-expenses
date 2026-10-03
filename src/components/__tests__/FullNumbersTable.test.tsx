@@ -19,7 +19,7 @@ jest.mock('@/lib/queries', () => ({
   useFundTotalsForecast: (...a: unknown[]) => mockUseFundTotalsForecast(...a),
 }));
 
-import FullNumbers from '../full-numbers';
+import { FullNumbersTable } from '../FullNumbersTable';
 
 const ok = { isLoading: false, isError: false, refetch: jest.fn() };
 const base = { kind: 'bill', end_month: null, color: null, rule: null };
@@ -48,9 +48,9 @@ beforeEach(() => {
   });
 });
 
-describe('FullNumbers', () => {
+describe('FullNumbersTable', () => {
   it('lays out ten months with income, expenses, debt, the live funds and a Total row', async () => {
-    const { getByText, getAllByText } = await renderWithTheme(<FullNumbers />);
+    const { getByText, getAllByText } = await renderWithTheme(<FullNumbersTable />);
 
     for (const h of ['Month', 'Income', 'Expenses', 'Debt', 'TRIP', 'Total']) expect(getByText(h)).toBeTruthy();
     expect(getByText("Oct '26")).toBeTruthy();
