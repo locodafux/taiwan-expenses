@@ -82,15 +82,13 @@ describe('Dashboard', () => {
   });
 
   it('shows the Yearly Cashflow table under the category balances', async () => {
-    const { getByText, getAllByText, getByTestId } = await renderWithTheme(<Dashboard />);
+    const { getByText, queryByTestId } = await renderWithTheme(<Dashboard />);
 
     await waitFor(() => expect(getByText('Yearly Cashflow')).toBeTruthy());
-    expect(getByTestId('cashflow-graph')).toBeTruthy();
-    for (const h of ['Month', 'Total']) expect(getByText(h)).toBeTruthy();
-    // Each of these is both a table column header and a graph legend entry.
-    for (const h of ['Income', 'Expenses', 'Debt']) expect(getAllByText(h)).toHaveLength(2);
-    expect(getAllByText("Oct '26")).toHaveLength(2);
-    expect(getAllByText("Jul '27")).toHaveLength(2);
+    expect(queryByTestId('cashflow-graph')).toBeNull();
+    for (const h of ['Month', 'Total', 'Income', 'Expenses', 'Debt']) expect(getByText(h)).toBeTruthy();
+    expect(getByText("Oct '26")).toBeTruthy();
+    expect(getByText("Jul '27")).toBeTruthy();
   });
 
   it('shows categories and funds that start in a later month, with a starts note', async () => {
@@ -227,8 +225,8 @@ describe('Dashboard', () => {
     expect(await waitFor(() => getByText('Fund summary'))).toBeTruthy();
     // Legend labels are fixed names; the category list and the Yearly Cashflow headers show the household's own.
     expect(getByText('Taiwan Fund')).toBeTruthy();
-    expect(getAllByText('Emergency Fund')).toHaveLength(4);
-    expect(getAllByText('Savings')).toHaveLength(4);
+    expect(getAllByText('Emergency Fund')).toHaveLength(3);
+    expect(getAllByText('Savings')).toHaveLength(3);
     expect(getByText(/25% of ₱\s?80,000/)).toBeTruthy();
     // Emergency and Savings have no stored goal, so they show the plan-by-March total.
     expect(getByText(/21% of ₱\s?23,750 \(plan by March\)/)).toBeTruthy();
@@ -237,6 +235,32 @@ describe('Dashboard', () => {
     expect(getAllByText(/₱\s?5,000/)).toHaveLength(2);
     // No line chart any more.
     expect(queryByTestId('fund-line-tw')).toBeNull();
+  });
+
+  it('graphs the Excess fund’s own amount per month in the fund summary', async () => {
+    jest.useFakeTimers({ now: new Date(2026, 8, 29), advanceTimers: true });
+    mockUseCategories.mockReturnValue(
+      okQuery([
+        { id: 'ex', name: 'Excess', kind: 'fund', start_month: '2026-10-01', end_month: null, color: '#9B4D70', rule: { type: 'capped_percent', percent: 100, excess_source: true } },
+        { id: 'tw', name: 'Taiwan fund', kind: 'fund', start_month: '2026-10-01', end_month: null, color: null, rule: { type: 'excess', parent_id: 'ex', percent: 40 } },
+      ]),
+    );
+    // Oct: 10,000 pool, Taiwan takes 40% -> 6,000 stays in Excess; Nov: nothing.
+    mockUseFundTotalsForecast.mockReturnValue(okQuery([{ category_id: 'ex', month_index: 1, amount: 10000 }]));
+    const { getByTestId, getByText, getAllByText } = await renderWithTheme(<Dashboard />);
+
+    const graph = await waitFor(() => getByTestId('excess-graph'));
+    expect(graph).toBeTruthy();
+    expect(getByText('Excess by month')).toBeTruthy();
+    expect(getByText(/₱\s?6,000/)).toBeTruthy();
+    expect(getAllByText('–').length).toBeGreaterThan(0); // months with nothing read as a dash
+  });
+
+  it('shows no Excess graph when the household has no linked funds', async () => {
+    const { queryByTestId, getAllByText } = await renderWithTheme(<Dashboard />);
+
+    await waitFor(() => expect(getAllByText('Taiwan fund').length).toBeGreaterThan(0));
+    expect(queryByTestId('excess-graph')).toBeNull();
   });
 
   it('frames the fund summary as an intentional empty state when nothing is saved', async () => {

@@ -50,15 +50,14 @@ beforeEach(() => {
 
 describe('FullNumbersTable (Yearly Cashflow)', () => {
   it('lays out ten months with income, expenses, debt, the live funds and a Total row', async () => {
-    const { getByText, getAllByText, getByTestId } = await renderWithTheme(<FullNumbersTable />);
+    const { getByText, getAllByText, queryByTestId } = await renderWithTheme(<FullNumbersTable />);
 
     expect(getByText('Yearly Cashflow')).toBeTruthy();
-    expect(getByTestId('cashflow-graph')).toBeTruthy();
+    expect(queryByTestId('cashflow-graph')).toBeNull(); // the graph moved to the Fund summary
     for (const h of ['Month', 'Total']) expect(getByText(h)).toBeTruthy();
-    // Column headers are repeated as the graph's legend, and each month label appears in graph and table.
-    for (const h of ['Income', 'Expenses', 'Debt', 'TRIP']) expect(getAllByText(h)).toHaveLength(2);
-    expect(getAllByText("Oct '26")).toHaveLength(2);
-    expect(getAllByText("Jul '27")).toHaveLength(2);
+    for (const h of ['Income', 'Expenses', 'Debt', 'TRIP']) expect(getByText(h)).toBeTruthy();
+    expect(getByText("Oct '26")).toBeTruthy();
+    expect(getByText("Jul '27")).toBeTruthy();
     expect(getAllByText('20,000')).toHaveLength(10);
     expect(getByText('200,000')).toBeTruthy(); // income total
     expect(getAllByText('–').length).toBeGreaterThan(0); // zero cells read as a dash, not ₱ 0
