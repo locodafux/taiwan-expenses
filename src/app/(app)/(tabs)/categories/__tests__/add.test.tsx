@@ -176,7 +176,6 @@ describe('AddCategorySheet', () => {
         expect.objectContaining({
           rule: expect.objectContaining({ type: 'remainder', percent: 30 }),
           start_month: '2026-10-01',
-          end_month: null,
         }),
       ),
     );

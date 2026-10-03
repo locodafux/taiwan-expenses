@@ -37,7 +37,7 @@ export default function FullNumbers() {
     let expenses = 0;
     let debt = 0;
     for (const c of categories) {
-      if (c.kind !== 'bill' || month < c.start_month.slice(0, 7) || (c.end_month && month > c.end_month.slice(0, 7))) {
+      if (c.kind !== 'bill' || month < c.start_month.slice(0, 7)) {
         continue;
       }
       const items = billItemsByCategory[c.id] ?? [];
