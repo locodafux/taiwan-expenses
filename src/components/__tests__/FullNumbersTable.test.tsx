@@ -59,10 +59,11 @@ describe('FullNumbersTable (Yearly Cashflow)', () => {
     for (const h of ['Income', 'Expenses', 'Debt', 'TRIP']) expect(getAllByText(h)).toHaveLength(2);
     expect(getAllByText("Oct '26")).toHaveLength(2);
     expect(getAllByText("Jul '27")).toHaveLength(2);
-    expect(getAllByText('₱ 20,000')).toHaveLength(10);
-    expect(getByText('₱ 200,000')).toBeTruthy(); // income total
-    expect(getByText('₱ 50,000')).toBeTruthy(); // rent total: 5k x 10
-    expect(getByText('₱ 4,000')).toBeTruthy(); // debt total: loan ends after Nov (Oct + Nov)
-    expect(getAllByText('₱ 15,000')).toHaveLength(2); // Nov cell + total: the fund only shows in its own month
+    expect(getAllByText('20,000')).toHaveLength(10);
+    expect(getByText('200,000')).toBeTruthy(); // income total
+    expect(getAllByText('–').length).toBeGreaterThan(0); // zero cells read as a dash, not ₱ 0
+    expect(getByText('50,000')).toBeTruthy(); // rent total: 5k x 10
+    expect(getByText('4,000')).toBeTruthy(); // debt total: loan ends after Nov (Oct + Nov)
+    expect(getAllByText('15,000')).toHaveLength(2); // Nov cell + total: the fund only shows in its own month
   });
 });

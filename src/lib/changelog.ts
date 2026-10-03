@@ -15,6 +15,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: 'Oct 4, 2026',
     items: [
       'The Full numbers table on the Dashboard is now called Yearly Cashflow, and it has a graph on top: one bar per month for your income and one for where it goes.',
+      'Yearly Cashflow is easier to read: the current month is highlighted, amounts drop the repeated ₱ sign and show a dash for zero, and each column header carries its graph color.',
     ],
   },
   {
