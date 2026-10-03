@@ -19,6 +19,11 @@ export const CHANGELOG: ChangelogEntry[] = [
     ],
   },
   {
+    id: '2026-10-04-percent-until-complete-by',
+    date: 'Oct 4, 2026',
+    items: ['A fund\'s "Percentage by month" now stops at its Complete by month instead of listing a full year.'],
+  },
+  {
     id: '2026-10-04-no-last-month',
     date: 'Oct 4, 2026',
     items: [
