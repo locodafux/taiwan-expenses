@@ -11,6 +11,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-04-dashboard-full-numbers',
+    date: 'Oct 4, 2026',
+    items: [
+      'The Full numbers table now shows right on the Dashboard, under the category balances.',
+      'The side menu is gone. Settings is now a tab in the bottom bar, next to Chat.',
+    ],
+  },
+  {
     id: '2026-10-04-no-last-month',
     date: 'Oct 4, 2026',
     items: [

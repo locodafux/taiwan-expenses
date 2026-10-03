@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
 
 import { Button } from '@/components/ui/Button';
+import { FullNumbersTable } from '@/components/FullNumbersTable';
 import { FundSummaryChart } from '@/components/FundSummaryChart';
 import { Card, CategoryMark, ListRow } from '@/components/ui/Card';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -278,6 +279,8 @@ export default function Dashboard() {
             </Card>
           )}
         </View>
+
+        <FullNumbersTable />
       </ScrollView>
     </SafeAreaView>
   );
