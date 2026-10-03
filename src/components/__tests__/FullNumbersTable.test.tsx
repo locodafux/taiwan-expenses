@@ -1,3 +1,5 @@
+import { fireEvent } from '@testing-library/react-native';
+
 import { renderWithTheme } from '@/test/renderWithTheme';
 
 const mockUseHouseholdMembership = jest.fn();
@@ -49,20 +51,43 @@ beforeEach(() => {
 });
 
 describe('FullNumbersTable (Yearly Cashflow)', () => {
-  it('lays out 36 months with income, expenses, debt, money staying, the live funds and a Total row', async () => {
-    const { getByText, getAllByText, queryByTestId } = await renderWithTheme(<FullNumbersTable />);
+  it('opens on the current year: Oct-Dec 2026 with income, expenses, debt, money staying, the live funds and a year Total row', async () => {
+    const { getByText, getAllByText, queryByText, queryByTestId } = await renderWithTheme(<FullNumbersTable />);
 
     expect(getByText('Yearly Cashflow')).toBeTruthy();
+    expect(getByText('2026 · amounts in pesos')).toBeTruthy();
     expect(queryByTestId('cashflow-graph')).toBeNull(); // the graph moved to the Fund summary
-    for (const h of ['Month', 'Total']) expect(getByText(h)).toBeTruthy();
+    for (const h of ['Month', "Total '26"]) expect(getByText(h)).toBeTruthy();
     for (const h of ['Income', 'Expenses', 'Debt', 'Money staying', 'TRIP']) expect(getByText(h)).toBeTruthy();
-    expect(getByText("Oct '26")).toBeTruthy();
-    expect(getByText("Sep '29")).toBeTruthy();
-    expect(getAllByText('20,000')).toHaveLength(36);
-    expect(getByText('720,000')).toBeTruthy(); // income total: 20k x 36
+    for (const m of ["Oct '26", "Nov '26", "Dec '26"]) expect(getByText(m)).toBeTruthy();
+    expect(queryByText("Jan '27")).toBeNull();
+    expect(queryByText("Sep '29")).toBeNull();
+    expect(getAllByText('20,000')).toHaveLength(3);
+    expect(getByText('60,000')).toBeTruthy(); // income total: 20k x 3
     expect(getAllByText('–').length).toBeGreaterThan(0); // zero cells read as a dash, not ₱ 0
-    expect(getByText('180,000')).toBeTruthy(); // rent total: 5k x 36
     expect(getByText('4,000')).toBeTruthy(); // debt total: loan ends after Nov (Oct + Nov)
-    expect(getAllByText('15,000')).toHaveLength(4); // Nov cell + total, for both Money staying and TRIP: the fund only shows in its own month
+    expect(getAllByText('15,000')).toHaveLength(5); // rent total (5k x 3), plus the Nov cell + total for both Money staying and TRIP: the fund only shows in its own month
+  });
+
+  it('the year arrows reach the later years of the 36-month window and stop at its ends', async () => {
+    const { getByText, queryByText, getByLabelText } = await renderWithTheme(<FullNumbersTable />);
+
+    expect(getByLabelText('Previous year').props.accessibilityState.disabled).toBe(true);
+    await fireEvent.press(getByLabelText('Next year'));
+    expect(getByText('2027 · amounts in pesos')).toBeTruthy();
+    expect(getByText("Jan '27")).toBeTruthy();
+    expect(getByText("Dec '27")).toBeTruthy();
+    expect(queryByText("Dec '26")).toBeNull();
+    expect(getByText('240,000')).toBeTruthy(); // 2027 income total: 20k x 12
+    expect(getByText("Total '27")).toBeTruthy();
+
+    await fireEvent.press(getByLabelText('Next year'));
+    await fireEvent.press(getByLabelText('Next year'));
+    expect(getByText('2029 · amounts in pesos')).toBeTruthy();
+    expect(getByText("Sep '29")).toBeTruthy(); // the window ends in September
+    expect(queryByText("Oct '29")).toBeNull();
+    expect(getByLabelText('Next year').props.accessibilityState.disabled).toBe(true);
+    await fireEvent.press(getByLabelText('Previous year'));
+    expect(getByText('2028 · amounts in pesos')).toBeTruthy();
   });
 });

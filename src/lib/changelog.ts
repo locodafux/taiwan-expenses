@@ -11,6 +11,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-04-cashflow-year-view',
+    date: 'Oct 4, 2026',
+    items: [
+      'Yearly Cashflow now shows one year at a time, starting with this year (Oct to Dec 2026). Use the arrows to see the next years.',
+      'Yearly Cashflow lines up better: wider columns, headers that wrap instead of getting cut off, and a Total row for the year shown.',
+    ],
+  },
+  {
     id: '2026-10-04-money-staying-36-months',
     date: 'Oct 4, 2026',
     items: [
