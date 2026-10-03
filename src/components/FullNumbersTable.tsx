@@ -150,7 +150,7 @@ export function FullNumbersTable() {
       <Text className="font-body text-xs leading-[1.5] text-ink-muted">
         Months before today are your real checked history; the rest is projected from your current rules. Debt is
         bills that have a last payment date; Expenses is the rest. Money staying is all the fund columns added
-        together. Months beyond your next payday assume today's income, bills and rules stay the same.
+        together. Months beyond your next payday assume today&apos;s income, bills and rules stay the same.
       </Text>
     </View>
   );
