@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 
 import { Card, CategoryMark } from '@/components/ui/Card';
 import { ScreenHeader } from '@/components/ui/Heading';
@@ -15,22 +15,33 @@ import { useTheme } from '@/theme/ThemeProvider';
 const FIRST_MONTH = '2026-10';
 const MONTHS = Array.from({ length: 36 }, (_, i) => addMonths(FIRST_MONTH, i));
 
-const MONTH_COL = 'w-20';
-const AMOUNT_COL = 'w-32';
-// Fixed row height, border included, on both the month column and the amount rows: a border added on top of an h-10 child made
-// the amount rows 1px taller each, so the months drifted out of line with their numbers further down.
+// Fixed row height, border included: a border added on top of an h-10 child made rows 1px taller each, so months drifted out of line with their numbers.
 const ROW_H = 'h-10';
-const ROW = `${ROW_H} justify-center`;
-// Headers get a taller row so a long fund name wraps to two lines instead of being cut off; the Month header uses it too so both sides stay level.
-const HEAD = 'h-12 justify-center';
+// Headers get a taller row; the Month header uses it too so both sides stay level.
+const HEAD = 'h-12';
+// No sideways scrolling: the month column is a fixed 44px and every amount column shares the rest of the width equally.
+const MONTH_COL = 'w-[44px] shrink-0';
+const AMOUNT_COL = 'flex-1';
 
-// Amounts are in pesos (the subtitle says so once), so the cells drop the repeated ₱ and a zero reads as a dash.
-const num = (n: number) => (Math.round(n) === 0 ? '–' : Math.round(n).toLocaleString());
+// Columns are ~35px wide on a phone, so cells use a compact form ("11.8k", "240k", "1.2M"); the full pesos are one tap away in the list under the table.
+const num = (n: number) => {
+  const r = Math.round(n);
+  if (r === 0) return '–';
+  const abs = Math.abs(r);
+  if (abs < 1000) return String(r);
+  if (abs < 999500) return `${+(r / 1000).toFixed(abs < 100000 ? 1 : 0)}k`;
+  return `${+(r / 1e6).toFixed(abs < 1e8 ? 1 : 0)}M`;
+};
+const full = (n: number) => (Math.round(n) === 0 ? '–' : Math.round(n).toLocaleString());
 
 function monthLabel(month: string) {
   const d = fromDateOnly(`${month}-01`);
   return `${d.toLocaleDateString(undefined, { month: 'short' })} '${String(d.getFullYear()).slice(2)}`;
 }
+
+// Header text for a column that is only ~35px wide: the colour dot and these few letters, with the full name in the list below.
+const SHORT: Record<string, string> = { Income: 'Inc', Expenses: 'Exp', 'Money staying': 'Stay' };
+const short = (label: string) => SHORT[label] ?? label.slice(0, 4);
 
 // The Dashboard's "Yearly Cashflow" section: the table of income, expenses, debt and every fund, month by month.
 export function FullNumbersTable() {
@@ -79,6 +90,10 @@ export function FullNumbersTable() {
   const yearIndex = years.indexOf(year);
   const shown = rows.filter((r) => r.month.startsWith(`${year}-`));
   const totals = (shown[0]?.cells ?? []).map((_, col) => shown.reduce((sum, r) => sum + r.cells[col], 0));
+  // Tapping a row (or the Total row) lists its full peso amounts under the table.
+  const [selected, setSelected] = useState<string | null>(null);
+  const picks = [...shown.map((r) => ({ key: r.month, label: monthLabel(r.month), cells: r.cells })), { key: 'total', label: `Total '${String(year).slice(2)}`, cells: totals }];
+  const pick = picks.find((p) => p.key === selected);
 
   if (isError || incomesQuery.isError) {
     return <ErrorState onRetry={() => { refetch(); incomesQuery.refetch(); }} />;
@@ -106,65 +121,66 @@ export function FullNumbersTable() {
         </View>
       </View>
 
-      <Card className="flex-row overflow-hidden">
-        {/* Month column stays put while the amounts scroll sideways. */}
-        <View className={`${MONTH_COL} border-r border-gridline`}>
-          <View className={`${HEAD} bg-surface-2 px-3`}>
-            <Text className="font-body-semibold text-xs uppercase text-ink-muted">Month</Text>
+      <Card className="overflow-hidden">
+        <View className={`${HEAD} flex-row bg-surface-2`}>
+          <View className={`${MONTH_COL} justify-center pl-2`}>
+            <Text className="font-body-semibold text-[9px] uppercase text-ink-muted">Month</Text>
           </View>
-          {shown.map((r) => (
-            <View
-              key={r.month}
-              className={`${ROW} border-t border-gridline px-3 ${r.month === currentMonth ? 'bg-accent-soft' : ''}`}
-            >
-              <Text className={`text-sm ${r.month === currentMonth ? 'font-body-bold text-accent' : 'font-body-semibold text-ink'}`}>
-                {monthLabel(r.month)}
+          {headers.map((h, i) => (
+            <View key={i} className={`${AMOUNT_COL} items-center justify-center gap-1`}>
+              {i > 0 ? <CategoryMark color={series[i - 1].color} size={8} /> : <View className="h-2" />}
+              <Text numberOfLines={1} adjustsFontSizeToFit className="font-body-semibold text-[9px] uppercase text-ink-muted">
+                {short(h)}
               </Text>
             </View>
           ))}
-          <View className={`${ROW} border-t border-gridline bg-surface-2 px-3`}>
-            <Text numberOfLines={1} className="font-body-bold text-sm text-ink">
-              Total &apos;{String(year).slice(2)}
-            </Text>
-          </View>
         </View>
-        <ScrollView horizontal className="flex-1">
-          <View>
-            <View className="flex-row bg-surface-2">
-              {headers.map((h, i) => (
-                <View key={i} className={`${AMOUNT_COL} ${HEAD} flex-row items-center justify-end gap-1.5 px-3`}>
-                  {i > 0 && <CategoryMark color={series[i - 1].color} size={8} />}
-                  <Text numberOfLines={2} className="shrink text-right font-body-semibold text-xs uppercase text-ink-muted">
-                    {h}
+        {picks.map((p, n) => {
+          const isTotal = p.key === 'total';
+          const isNow = p.key === currentMonth;
+          return (
+            <Pressable
+              key={p.key}
+              accessibilityRole="button"
+              accessibilityLabel={`${p.label} full amounts`}
+              onPress={() => setSelected(p.key === selected ? null : p.key)}
+              className={`${ROW_H} flex-row border-t border-gridline ${isTotal ? 'bg-surface-2' : isNow ? 'bg-accent-soft' : ''} ${p.key === selected ? 'bg-surface-2' : ''}`}
+            >
+              <View className={`${MONTH_COL} justify-center pl-2`}>
+                <Text
+                  numberOfLines={1}
+                  className={`text-xs ${isTotal ? 'font-body-bold text-ink' : isNow ? 'font-body-bold text-accent' : 'font-body-semibold text-ink'}`}
+                >
+                  {isTotal ? 'Total' : p.label.split(' ')[0]}
+                </Text>
+              </View>
+              {p.cells.map((v, i) => (
+                <View key={i} className={`${AMOUNT_COL} justify-center`}>
+                  <Text
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    className={`text-center font-mono text-[10px] ${Math.round(v) === 0 ? 'text-ink-muted' : isTotal || i === 0 ? 'font-bold text-ink' : i === 3 ? 'font-body-semibold text-ink' : 'text-ink'}`}
+                  >
+                    {num(v)}
                   </Text>
                 </View>
               ))}
-            </View>
-            {shown.map((r) => (
-              <View
-                key={r.month}
-                className={`${ROW_H} flex-row border-t border-gridline ${r.month === currentMonth ? 'bg-accent-soft' : ''}`}
-              >
-                {r.cells.map((v, i) => (
-                  <View key={i} className={`${AMOUNT_COL} justify-center px-3`}>
-                    <Text
-                      className={`text-right font-mono text-sm ${Math.round(v) === 0 ? 'text-ink-muted' : i === 0 ? 'font-bold text-ink' : i === 3 ? 'font-body-semibold text-ink' : 'text-ink'}`}
-                    >
-                      {num(v)}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-            ))}
-            <View className={`${ROW_H} flex-row border-t border-gridline bg-surface-2`}>
-              {totals.map((v, i) => (
-                <View key={i} className={`${AMOUNT_COL} justify-center px-3`}>
-                  <Text className="text-right font-mono text-sm font-bold text-ink">{num(v)}</Text>
-                </View>
-              ))}
-            </View>
+            </Pressable>
+          );
+        })}
+      </Card>
+
+      <Card className="gap-2 p-3">
+        <Text className="font-body-semibold text-xs uppercase text-ink-muted">
+          {pick ? `${pick.label} · full amounts` : 'Columns · tap a row above for full amounts'}
+        </Text>
+        {headers.map((h, i) => (
+          <View key={i} className="flex-row items-center gap-2">
+            {i > 0 ? <CategoryMark color={series[i - 1].color} size={8} /> : <View className="h-2 w-2 shrink-0" />}
+            <Text className="flex-1 font-body text-sm text-ink">{h}</Text>
+            {pick && <Text className="font-mono text-sm text-ink">{full(pick.cells[i])}</Text>}
           </View>
-        </ScrollView>
+        ))}
       </Card>
 
       <Text className="font-body text-xs leading-[1.5] text-ink-muted">
