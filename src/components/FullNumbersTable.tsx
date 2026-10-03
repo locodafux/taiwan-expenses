@@ -1,4 +1,5 @@
-import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
+import { useState } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 
 import { Card, CategoryMark } from '@/components/ui/Card';
 import { ScreenHeader } from '@/components/ui/Heading';
@@ -9,14 +10,19 @@ import { useHouseholdMembership, useIncomes } from '@/lib/queries';
 import { useTheme } from '@/theme/ThemeProvider';
 
 // Mirrors taiwan-fund-planner.html's "Full numbers" table (now the Dashboard's Yearly Cashflow): October 2026 through
-// September 2029 (the forecast RPC's 36-month cap), one row per month. Amounts come from useMonthlyCells (the same
+// September 2029 (the forecast RPC's 36-month cap) is loaded, shown one calendar year at a time, one row per month. Amounts come from useMonthlyCells (the same
 // calculation as the Breakdown chart), so this only lays them out.
 const FIRST_MONTH = '2026-10';
 const MONTHS = Array.from({ length: 36 }, (_, i) => addMonths(FIRST_MONTH, i));
 
-const MONTH_COL = 'w-16';
-const AMOUNT_COL = 'w-28';
-const ROW = 'h-10 justify-center';
+const MONTH_COL = 'w-20';
+const AMOUNT_COL = 'w-32';
+// Fixed row height, border included, on both the month column and the amount rows: a border added on top of an h-10 child made
+// the amount rows 1px taller each, so the months drifted out of line with their numbers further down.
+const ROW_H = 'h-10';
+const ROW = `${ROW_H} justify-center`;
+// Headers get a taller row so a long fund name wraps to two lines instead of being cut off; the Month header uses it too so both sides stay level.
+const HEAD = 'h-12 justify-center';
 
 // Amounts are in pesos (the subtitle says so once), so the cells drop the repeated ₱ and a zero reads as a dash.
 const num = (n: number) => (Math.round(n) === 0 ? '–' : Math.round(n).toLocaleString());
@@ -57,7 +63,6 @@ export function FullNumbersTable() {
       cells: [scheduledMonthTotal(incomesQuery.data ?? [], monthStart), expenses, debt, staying, ...fundCells],
     };
   });
-  const totals = (rows[0]?.cells ?? []).map((_, col) => rows.reduce((sum, r) => sum + r.cells[col], 0));
   // Column headers after Income, each with its color.
   const series = [
     { label: 'Expenses', color: vars['--cat-expenses'] },
@@ -67,6 +72,13 @@ export function FullNumbersTable() {
   ];
   const headers = ['Income', ...series.map((s) => s.label)];
   const currentMonth = toDateOnly(appToday()).slice(0, 7);
+  // One calendar year at a time (today's year to start), with arrows over the 36-month window's years.
+  const years = [...new Set(MONTHS.map((m) => Number(m.slice(0, 4))))];
+  const [picked, setPicked] = useState<number | null>(null);
+  const year = picked ?? years.find((y) => y >= Number(currentMonth.slice(0, 4))) ?? years[0];
+  const yearIndex = years.indexOf(year);
+  const shown = rows.filter((r) => r.month.startsWith(`${year}-`));
+  const totals = (shown[0]?.cells ?? []).map((_, col) => shown.reduce((sum, r) => sum + r.cells[col], 0));
 
   if (isError || incomesQuery.isError) {
     return <ErrorState onRetry={() => { refetch(); incomesQuery.refetch(); }} />;
@@ -83,18 +95,24 @@ export function FullNumbersTable() {
     <View className="gap-4">
       <View className="gap-1">
         <ScreenHeader title="Yearly Cashflow" />
-        <Text className="font-body text-sm text-ink-muted">
-          Every month, {monthLabel(MONTHS[0])} – {monthLabel(MONTHS[MONTHS.length - 1])} · amounts in pesos
-        </Text>
+        <View className="flex-row items-center justify-between">
+          <Text className="font-body text-sm text-ink-muted">
+            {year} · amounts in pesos
+          </Text>
+          <View className="flex-row items-center gap-1">
+            <YearArrow label="Previous year" glyph="‹" disabled={yearIndex <= 0} onPress={() => setPicked(years[yearIndex - 1])} />
+            <YearArrow label="Next year" glyph="›" disabled={yearIndex >= years.length - 1} onPress={() => setPicked(years[yearIndex + 1])} />
+          </View>
+        </View>
       </View>
 
       <Card className="flex-row overflow-hidden">
         {/* Month column stays put while the amounts scroll sideways. */}
         <View className={`${MONTH_COL} border-r border-gridline`}>
-          <View className={`${ROW} bg-surface-2 px-3`}>
+          <View className={`${HEAD} bg-surface-2 px-3`}>
             <Text className="font-body-semibold text-xs uppercase text-ink-muted">Month</Text>
           </View>
-          {rows.map((r) => (
+          {shown.map((r) => (
             <View
               key={r.month}
               className={`${ROW} border-t border-gridline px-3 ${r.month === currentMonth ? 'bg-accent-soft' : ''}`}
@@ -105,28 +123,30 @@ export function FullNumbersTable() {
             </View>
           ))}
           <View className={`${ROW} border-t border-gridline bg-surface-2 px-3`}>
-            <Text className="font-body-bold text-sm text-ink">Total</Text>
+            <Text numberOfLines={1} className="font-body-bold text-sm text-ink">
+              Total &apos;{String(year).slice(2)}
+            </Text>
           </View>
         </View>
         <ScrollView horizontal className="flex-1">
           <View>
             <View className="flex-row bg-surface-2">
               {headers.map((h, i) => (
-                <View key={i} className={`${AMOUNT_COL} ${ROW} flex-row items-center justify-end gap-1 px-3`}>
+                <View key={i} className={`${AMOUNT_COL} ${HEAD} flex-row items-center justify-end gap-1.5 px-3`}>
                   {i > 0 && <CategoryMark color={series[i - 1].color} size={8} />}
-                  <Text numberOfLines={1} className="shrink font-body-semibold text-xs uppercase text-ink-muted">
+                  <Text numberOfLines={2} className="shrink text-right font-body-semibold text-xs uppercase text-ink-muted">
                     {h}
                   </Text>
                 </View>
               ))}
             </View>
-            {rows.map((r) => (
+            {shown.map((r) => (
               <View
                 key={r.month}
-                className={`flex-row border-t border-gridline ${r.month === currentMonth ? 'bg-accent-soft' : ''}`}
+                className={`${ROW_H} flex-row border-t border-gridline ${r.month === currentMonth ? 'bg-accent-soft' : ''}`}
               >
                 {r.cells.map((v, i) => (
-                  <View key={i} className={`${AMOUNT_COL} ${ROW} px-3`}>
+                  <View key={i} className={`${AMOUNT_COL} justify-center px-3`}>
                     <Text
                       className={`text-right font-mono text-sm ${Math.round(v) === 0 ? 'text-ink-muted' : i === 0 ? 'font-bold text-ink' : i === 3 ? 'font-body-semibold text-ink' : 'text-ink'}`}
                     >
@@ -136,9 +156,9 @@ export function FullNumbersTable() {
                 ))}
               </View>
             ))}
-            <View className="flex-row border-t border-gridline bg-surface-2">
+            <View className={`${ROW_H} flex-row border-t border-gridline bg-surface-2`}>
               {totals.map((v, i) => (
-                <View key={i} className={`${AMOUNT_COL} ${ROW} px-3`}>
+                <View key={i} className={`${AMOUNT_COL} justify-center px-3`}>
                   <Text className="text-right font-mono text-sm font-bold text-ink">{num(v)}</Text>
                 </View>
               ))}
@@ -153,5 +173,20 @@ export function FullNumbersTable() {
         together. Months beyond your next payday assume today&apos;s income, bills and rules stay the same.
       </Text>
     </View>
+  );
+}
+
+function YearArrow({ label, glyph, disabled, onPress }: { label: string; glyph: string; disabled: boolean; onPress: () => void }) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ disabled }}
+      disabled={disabled}
+      onPress={onPress}
+      className={`h-8 w-8 items-center justify-center rounded-full bg-surface-2 ${disabled ? 'opacity-40' : ''}`}
+    >
+      <Text className="font-body-bold text-lg text-ink">{glyph}</Text>
+    </Pressable>
   );
 }
