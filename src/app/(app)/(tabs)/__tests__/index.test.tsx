@@ -86,12 +86,12 @@ describe('Dashboard', () => {
 
     await waitFor(() => expect(getByText('Yearly Cashflow')).toBeTruthy());
     expect(queryByTestId('cashflow-graph')).toBeNull();
-    for (const h of ['Month', 'Total', 'Income', 'Expenses']) expect(getByText(h)).toBeTruthy();
+    for (const h of ['Month', "Total '26", 'Income', 'Expenses', 'Debt']) expect(getByText(h)).toBeTruthy();
     // Only the current year to start: Oct-Dec 2026, with the arrows for the later years.
-    expect(getByText('Oct')).toBeTruthy();
-    expect(queryByText('Jul')).toBeNull();
+    expect(getByText("Oct '26")).toBeTruthy();
+    expect(queryByText("Jul '27")).toBeNull();
     await fireEvent.press(getByText('›'));
-    expect(getByText('Jul')).toBeTruthy();
+    expect(getByText("Jul '27")).toBeTruthy();
   });
 
   it('shows categories and funds that start in a later month, with a starts note', async () => {
