@@ -21,6 +21,8 @@ const AMOUNT_COL = 'w-32';
 // the amount rows 1px taller each, so the months drifted out of line with their numbers further down.
 const ROW_H = 'h-10';
 const ROW = `${ROW_H} justify-center`;
+// The overall Total's label takes three short lines, so its row is taller on both sides to stay level.
+const TOTAL_ROW = 'h-[52px]';
 // Headers get a taller row so a long fund name wraps to two lines instead of being cut off; the Month header uses it too so both sides stay level.
 const HEAD = 'h-12 justify-center';
 
@@ -78,7 +80,9 @@ export function FullNumbersTable({ onExpand }: { onExpand?: () => void } = {}) {
   const year = picked ?? years.find((y) => y >= Number(currentMonth.slice(0, 4))) ?? years[0];
   const yearIndex = years.indexOf(year);
   const shown = rows.filter((r) => r.month.startsWith(`${year}-`));
-  const totals = (shown[0]?.cells ?? []).map((_, col) => shown.reduce((sum, r) => sum + r.cells[col], 0));
+  // The Total row is overall: every month of the loaded window, whichever year the arrows show.
+  const totals = (rows[0]?.cells ?? []).map((_, col) => rows.reduce((sum, r) => sum + r.cells[col], 0));
+  const totalLabel = ['Overall', `${monthLabel(MONTHS[0])} –`, monthLabel(MONTHS[MONTHS.length - 1])];
 
   if (isError || incomesQuery.isError) {
     return <ErrorState onRetry={() => { refetch(); incomesQuery.refetch(); }} />;
@@ -98,6 +102,7 @@ export function FullNumbersTable({ onExpand }: { onExpand?: () => void } = {}) {
       colors={series.map((s) => s.color)}
       rows={shown}
       totals={totals}
+      totalLabel={totalLabel}
       currentMonth={currentMonth}
       onPrev={yearIndex > 0 ? () => setPicked(years[yearIndex - 1]) : undefined}
       onNext={yearIndex < years.length - 1 ? () => setPicked(years[yearIndex + 1]) : undefined}
@@ -112,6 +117,7 @@ type TableProps = {
   colors: string[]; // one per header after Income
   rows: { month: string; cells: number[] }[];
   totals: number[];
+  totalLabel: string[]; // the Total row's month-column text, one line per entry
   currentMonth: string;
   onPrev?: () => void; // undefined = at the end of the window
   onNext?: () => void;
@@ -123,7 +129,7 @@ const FOOTNOTE =
 
 // Sideways (the Cashflow screen turns the phone landscape): every column shares the width so nothing scrolls sideways;
 // upright it is the wide table with its own sideways scroll, plus a button to the sideways view when onExpand is given.
-export function CashflowTable({ year, headers, colors, rows: shown, totals, currentMonth, onPrev, onNext, onExpand }: TableProps) {
+export function CashflowTable({ year, headers, colors, rows: shown, totals, totalLabel, currentMonth, onPrev, onNext, onExpand }: TableProps) {
   const { width, height } = useWindowDimensions();
   const wide = width > height;
 
@@ -170,9 +176,11 @@ export function CashflowTable({ year, headers, colors, rows: shown, totals, curr
               ))}
             </View>
           ))}
-          <View className="h-[22px] flex-row border-t border-gridline bg-surface-2">
+          <View className="h-[40px] flex-row border-t border-gridline bg-surface-2">
             <View className="w-16 justify-center px-1">
-              <Text numberOfLines={1} className="font-body-bold text-[10px] text-ink">Total &apos;{String(year).slice(2)}</Text>
+              {totalLabel.map((l) => (
+                <Text key={l} className="font-body-bold text-[10px] leading-[12px] text-ink">{l}</Text>
+              ))}
             </View>
             {totals.map((v, i) => (
               <View key={i} className={cell}>
@@ -222,10 +230,10 @@ export function CashflowTable({ year, headers, colors, rows: shown, totals, curr
               </Text>
             </View>
           ))}
-          <View className={`${ROW} border-t border-gridline bg-surface-2 px-3`}>
-            <Text numberOfLines={1} className="font-body-bold text-sm text-ink">
-              Total &apos;{String(year).slice(2)}
-            </Text>
+          <View className={`${TOTAL_ROW} justify-center border-t border-gridline bg-surface-2 px-3`}>
+            {totalLabel.map((l) => (
+              <Text key={l} className="font-body-bold text-[11px] leading-[14px] text-ink">{l}</Text>
+            ))}
           </View>
         </View>
         <ScrollView horizontal className="flex-1">
@@ -254,7 +262,7 @@ export function CashflowTable({ year, headers, colors, rows: shown, totals, curr
                 ))}
               </View>
             ))}
-            <View className={`${ROW_H} flex-row border-t border-gridline bg-surface-2`}>
+            <View className={`${TOTAL_ROW} flex-row border-t border-gridline bg-surface-2`}>
               {totals.map((v, i) => (
                 <View key={i} className={`${AMOUNT_COL} justify-center px-3`}>
                   <Text className="text-right font-mono text-sm font-bold text-ink">{num(v)}</Text>

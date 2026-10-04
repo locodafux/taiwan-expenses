@@ -86,7 +86,7 @@ describe('Dashboard', () => {
 
     await waitFor(() => expect(getByText('Yearly Cashflow')).toBeTruthy());
     expect(queryByTestId('cashflow-graph')).toBeNull();
-    for (const h of ['Month', "Total '26", 'Income', 'Expenses', 'Debt']) expect(getByText(h)).toBeTruthy();
+    for (const h of ['Month', 'Overall', 'Income', 'Expenses', 'Debt']) expect(getByText(h)).toBeTruthy();
     // Only the current year to start: Oct-Dec 2026, with the arrows for the later years.
     expect(getByText("Oct '26")).toBeTruthy();
     expect(queryByText("Jul '27")).toBeNull();
