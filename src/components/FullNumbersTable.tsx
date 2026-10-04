@@ -20,7 +20,8 @@ const ROW_H = 'h-10';
 // Headers get a taller row; the Month header uses it too so both sides stay level.
 const HEAD = 'h-12';
 // No sideways scrolling: the month column is a fixed 44px and every amount column shares the rest of the width equally.
-const MONTH_COL = 'w-[44px] shrink-0';
+const MONTH_COL = 'shrink-0 justify-center pl-2';
+const MONTH_W = { width: 44 };
 const AMOUNT_COL = 'flex-1';
 
 // Columns are ~35px wide on a phone, so cells use a compact form ("11.8k", "240k", "1.2M"); the full pesos are one tap away in the list under the table.
@@ -123,7 +124,7 @@ export function FullNumbersTable() {
 
       <Card className="overflow-hidden">
         <View className={`${HEAD} flex-row bg-surface-2`}>
-          <View className={`${MONTH_COL} justify-center pl-2`}>
+          <View className={MONTH_COL} style={MONTH_W}>
             <Text className="font-body-semibold text-[9px] uppercase text-ink-muted">Month</Text>
           </View>
           {headers.map((h, i) => (
@@ -146,7 +147,7 @@ export function FullNumbersTable() {
               onPress={() => setSelected(p.key === selected ? null : p.key)}
               className={`${ROW_H} flex-row border-t border-gridline ${isTotal ? 'bg-surface-2' : isNow ? 'bg-accent-soft' : ''} ${p.key === selected ? 'bg-surface-2' : ''}`}
             >
-              <View className={`${MONTH_COL} justify-center pl-2`}>
+              <View className={MONTH_COL} style={MONTH_W}>
                 <Text
                   numberOfLines={1}
                   className={`text-xs ${isTotal ? 'font-body-bold text-ink' : isNow ? 'font-body-bold text-accent' : 'font-body-semibold text-ink'}`}
