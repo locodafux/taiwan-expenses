@@ -11,6 +11,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-04-checklist-checkbox-total',
+    date: 'Oct 4, 2026',
+    items: [
+      'The Checklist checkboxes are back: tap the box beside a bill or fund to tick it off, and it moves below the unticked ones.',
+      'Each payday now shows a Total at the bottom of the list, with how much of it you have ticked off.',
+    ],
+  },
+  {
     id: '2026-10-04-cashflow-fits-screen',
     date: 'Oct 4, 2026',
     items: [
