@@ -11,6 +11,13 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-04-cashflow-earlier-back',
+    date: 'Oct 4, 2026',
+    items: [
+      'The earlier Yearly Cashflow is back: full amounts and full column names again, with the Total row. Swipe sideways to see every column.',
+    ],
+  },
+  {
     id: '2026-10-04-fund-planner-name-icon',
     date: 'Oct 4, 2026',
     items: [
