@@ -11,6 +11,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-04-cashflow-fits-screen',
+    date: 'Oct 4, 2026',
+    items: [
+      'Yearly Cashflow now fits your screen: every column shows at once with no swiping sideways. Amounts are short (11.8k, 240k) and each column has a colour dot and a few letters.',
+      'Tap any month, or the Total row, in Yearly Cashflow to see the full amounts under the table.',
+    ],
+  },
+  {
     id: '2026-10-04-complete-by-month-counts',
     date: 'Oct 4, 2026',
     items: [

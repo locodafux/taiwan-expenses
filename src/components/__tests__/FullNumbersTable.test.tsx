@@ -57,16 +57,30 @@ describe('FullNumbersTable (Yearly Cashflow)', () => {
     expect(getByText('Yearly Cashflow')).toBeTruthy();
     expect(getByText('2026 · amounts in pesos')).toBeTruthy();
     expect(queryByTestId('cashflow-graph')).toBeNull(); // the graph moved to the Fund summary
-    for (const h of ['Month', "Total '26"]) expect(getByText(h)).toBeTruthy();
-    for (const h of ['Income', 'Expenses', 'Debt', 'Money staying', 'TRIP']) expect(getByText(h)).toBeTruthy();
-    for (const m of ["Oct '26", "Nov '26", "Dec '26"]) expect(getByText(m)).toBeTruthy();
-    expect(queryByText("Jan '27")).toBeNull();
-    expect(queryByText("Sep '29")).toBeNull();
-    expect(getAllByText('20,000')).toHaveLength(3);
-    expect(getByText('60,000')).toBeTruthy(); // income total: 20k x 3
+    expect(getByText('Month')).toBeTruthy();
+    expect(getAllByText('Total')).toHaveLength(1);
+    // Narrow headers use a few letters; the list under the table has each column's full name.
+    for (const h of ['Inc', 'Exp', 'Stay', 'TRIP']) expect(getAllByText(h).length).toBeGreaterThan(0);
+    for (const h of ['Income', 'Expenses', 'Money staying']) expect(getByText(h)).toBeTruthy();
+    expect(getAllByText('Debt')).toHaveLength(2); // header + list
+    for (const m of ['Oct', 'Nov', 'Dec']) expect(getByText(m)).toBeTruthy();
+    expect(queryByText('Jan')).toBeNull();
+    expect(getAllByText('20k')).toHaveLength(3); // income, compact: 20,000 x 3 months
+    expect(getByText('60k')).toBeTruthy(); // income total: 20k x 3
     expect(getAllByText('–').length).toBeGreaterThan(0); // zero cells read as a dash, not ₱ 0
-    expect(getByText('4,000')).toBeTruthy(); // debt total: loan ends after Nov (Oct + Nov)
-    expect(getAllByText('15,000')).toHaveLength(5); // rent total (5k x 3), plus the Nov cell + total for both Money staying and TRIP: the fund only shows in its own month
+    expect(getByText('4k')).toBeTruthy(); // debt total: loan ends after Nov (Oct + Nov)
+    expect(getAllByText('15k')).toHaveLength(5); // rent total (5k x 3), plus the Nov cell + total for both Money staying and TRIP: the fund only shows in its own month
+  });
+
+  it('tapping a row lists its full peso amounts, including six-digit totals', async () => {
+    const { getByText, getByLabelText, queryByText } = await renderWithTheme(<FullNumbersTable />);
+
+    expect(queryByText('60,000')).toBeNull();
+    await fireEvent.press(getByLabelText("Total '26 full amounts"));
+    expect(getByText("Total '26 · full amounts")).toBeTruthy();
+    expect(getByText('60,000')).toBeTruthy(); // income, in full
+    await fireEvent.press(getByLabelText("Total '26 full amounts"));
+    expect(queryByText('60,000')).toBeNull();
   });
 
   it('the year arrows reach the later years of the 36-month window and stop at its ends', async () => {
@@ -75,17 +89,15 @@ describe('FullNumbersTable (Yearly Cashflow)', () => {
     expect(getByLabelText('Previous year').props.accessibilityState.disabled).toBe(true);
     await fireEvent.press(getByLabelText('Next year'));
     expect(getByText('2027 · amounts in pesos')).toBeTruthy();
-    expect(getByText("Jan '27")).toBeTruthy();
-    expect(getByText("Dec '27")).toBeTruthy();
-    expect(queryByText("Dec '26")).toBeNull();
-    expect(getByText('240,000')).toBeTruthy(); // 2027 income total: 20k x 12
-    expect(getByText("Total '27")).toBeTruthy();
+    expect(getByText('Jan')).toBeTruthy();
+    expect(getByText('Dec')).toBeTruthy();
+    expect(getByText('240k')).toBeTruthy(); // 2027 income total: 20k x 12
 
     await fireEvent.press(getByLabelText('Next year'));
     await fireEvent.press(getByLabelText('Next year'));
     expect(getByText('2029 · amounts in pesos')).toBeTruthy();
-    expect(getByText("Sep '29")).toBeTruthy(); // the window ends in September
-    expect(queryByText("Oct '29")).toBeNull();
+    expect(getByText('Sep')).toBeTruthy(); // the window ends in September
+    expect(queryByText('Oct')).toBeNull();
     expect(getByLabelText('Next year').props.accessibilityState.disabled).toBe(true);
     await fireEvent.press(getByLabelText('Previous year'));
     expect(getByText('2028 · amounts in pesos')).toBeTruthy();
