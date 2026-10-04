@@ -11,6 +11,13 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-04-fund-planner-name-icon',
+    date: 'Oct 4, 2026',
+    items: [
+      'The app is now called Fund Planner, with a new piggy bank icon on a soft pink background.',
+    ],
+  },
+  {
     id: '2026-10-04-checklist-checkbox-total',
     date: 'Oct 4, 2026',
     items: [

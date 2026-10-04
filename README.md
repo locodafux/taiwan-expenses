@@ -1,4 +1,4 @@
-# Taiwan Fund Planner
+# Fund Planner
 
 A couple's shared household finance and fund-allocation planner, built as an Expo/React
 Native app on top of Supabase. Both partners sign in (email/password or Google) to the same
