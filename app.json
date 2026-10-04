@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Taiwan Fund Planner",
+    "name": "Fund Planner",
     "slug": "taiwan-fund-planner",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -14,7 +14,7 @@
       "package": "com.locodafux.taiwanfundplanner",
       "permissions": ["android.permission.REQUEST_INSTALL_PACKAGES"],
       "adaptiveIcon": {
-        "backgroundColor": "#faf4ee",
+        "backgroundColor": "#F7A8C9",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
@@ -30,7 +30,7 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#208AEF",
+          "backgroundColor": "#F7A8C9",
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
         }
