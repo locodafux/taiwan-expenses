@@ -338,14 +338,6 @@ export default function Settings() {
         </View>
 
         <Card>
-          <ListRow onPress={() => router.push('/(app)/breakdown')}>
-            <Icon name="checklist" size={20} color={vars['--ink-2']} />
-            <View className="flex-1">
-              <Text className="font-body text-base text-ink">Breakdown</Text>
-              <Text className="font-body text-xs text-ink-muted">Month-by-month history and projections for every category.</Text>
-            </View>
-            <Icon name="chevronRight" size={16} color={vars['--ink-muted']} />
-          </ListRow>
           <ListRow onPress={() => router.push('/(app)/summary')}>
             <Icon name="tabs" size={20} color={vars['--ink-2']} />
             <View className="flex-1">
