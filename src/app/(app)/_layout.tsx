@@ -23,7 +23,7 @@ export default function AppLayout() {
       <UpdateBanner />
       <WhatsNew />
       {/* Every screen but the tabs is reached from Settings (Income under Your profile, Feedback,
-          Breakdown, Summary of all) and keeps its own back button. */}
+          Summary of all) and keeps its own back button. */}
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(tabs)" />
       </Stack>
