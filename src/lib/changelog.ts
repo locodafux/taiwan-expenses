@@ -19,6 +19,14 @@ export const CHANGELOG: ChangelogEntry[] = [
     ],
   },
   {
+    id: '2026-10-04-complete-by-month-counts',
+    date: 'Oct 4, 2026',
+    items: [
+      'The Checklist no longer says a fund will be short by its deadline when the money arrives during its "Complete by" month (Pinatubo and TAIWAN FUND were wrongly flagged).',
+      'Ticking off paydays no longer changes the short-by warning or the Yearly Cashflow amounts for the next month.',
+    ],
+  },
+  {
     id: '2026-10-04-cashflow-year-view',
     date: 'Oct 4, 2026',
     items: [

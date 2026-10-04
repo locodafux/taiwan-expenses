@@ -101,7 +101,9 @@ export function useMonthlyCells(months: string[]) {
       );
       const rooms = kids.map((k) => {
         if (!k.goal) return Infinity;
-        const checked = Object.values(ledgerTotals).reduce((sum, byCat) => sum + (byCat[k.id] ?? 0), 0);
+        // Months before this one only: this month's full pool is still projected below
+        // (like private.goal_plan), so ticking paydays off must not eat next month's room.
+        const checked = Object.entries(ledgerTotals).reduce((sum, [m, byCat]) => (m < currentMonth ? sum + (byCat[k.id] ?? 0) : sum), 0);
         return Math.max(0, k.goal.target_amount - checked);
       });
       for (const month of forecastMonths) {
