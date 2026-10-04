@@ -3,6 +3,8 @@ import { fireEvent } from '@testing-library/react-native';
 
 import { renderWithTheme } from '@/test/renderWithTheme';
 
+import { FullNumbersTable } from '../FullNumbersTable';
+
 const mockUseHouseholdMembership = jest.fn();
 const mockUseCategories = jest.fn();
 const mockUseCategoryMonthPercents = jest.fn();
@@ -21,8 +23,6 @@ jest.mock('@/lib/queries', () => ({
   useMonthlyLedgerTotals: (...a: unknown[]) => mockUseMonthlyLedgerTotals(...a),
   useFundTotalsForecast: (...a: unknown[]) => mockUseFundTotalsForecast(...a),
 }));
-
-import { FullNumbersTable } from '../FullNumbersTable';
 
 const ok = { isLoading: false, isError: false, refetch: jest.fn() };
 const base = { kind: 'bill', end_month: null, color: null, rule: null };
@@ -59,10 +59,9 @@ describe('FullNumbersTable (Yearly Cashflow)', () => {
     expect(getByText('2026 · amounts in pesos')).toBeTruthy();
     expect(queryByTestId('cashflow-graph')).toBeNull(); // the graph moved to the Fund summary
     for (const h of ['Month', 'Total']) expect(getByText(h)).toBeTruthy();
-    expect(getByText("Oct '26 –")).toBeTruthy(); // the Total starts at the window's first month
     for (const h of ['Income', 'Expenses', 'Debt', 'Money staying', 'TRIP']) expect(getByText(h)).toBeTruthy();
     for (const m of ["Oct '26", "Nov '26"]) expect(getByText(m)).toBeTruthy();
-    expect(getAllByText("Dec '26")).toHaveLength(2); // its month row, plus the Total's range end
+    expect(getByText("Dec '26")).toBeTruthy(); // the Total row carries no month range, just the word Total
     expect(queryByText("Jan '27")).toBeNull();
     expect(queryByText("Sep '29")).toBeNull();
     expect(getAllByText('20,000')).toHaveLength(3);
@@ -81,8 +80,8 @@ describe('FullNumbersTable (Yearly Cashflow)', () => {
     expect(getByText("Jan '27")).toBeTruthy();
     expect(queryByText("Dec '26")).toBeNull();
     expect(getByText("Total")).toBeTruthy();
-    expect(getByText("Oct '26 –")).toBeTruthy();
-    expect(getAllByText("Dec '27")).toHaveLength(2); // its month row, plus the Total's range end
+    expect(queryByText("Oct '26 –")).toBeNull();
+    expect(getByText("Dec '27")).toBeTruthy();
     expect(getByText('300,000')).toBeTruthy(); // continues from 2026: income 20k x 15 months (Oct '26 - Dec '27), not 60k or 240k
     expect(queryByText('60,000')).toBeNull();
     expect(queryByText('240,000')).toBeNull();
@@ -90,7 +89,7 @@ describe('FullNumbersTable (Yearly Cashflow)', () => {
     await fireEvent.press(getByLabelText('Next year'));
     await fireEvent.press(getByLabelText('Next year'));
     expect(getByText('2029 · amounts in pesos')).toBeTruthy();
-    expect(getAllByText("Sep '29")).toHaveLength(2); // the window ends in September: its row, plus the Total's range end
+    expect(getByText("Sep '29")).toBeTruthy(); // the window ends in September
     expect(getByText('720,000')).toBeTruthy(); // the last page totals the whole window: 20k x 36
     expect(queryByText('300,000')).toBeNull();
     expect(queryByText("Oct '29")).toBeNull();
@@ -113,7 +112,7 @@ describe('FullNumbersTable (Yearly Cashflow)', () => {
       expect(queryByText('See every column at once (landscape)')).toBeNull();
       expect(getByText('Yearly Cashflow · 2026 · pesos')).toBeTruthy();
       for (const h of ['Month', 'Income', 'Expenses', 'Debt', 'Money staying', 'TRIP', 'Total']) expect(getByText(h)).toBeTruthy();
-      expect(getByText("Oct '26 –")).toBeTruthy();
+      expect(queryByText("Oct '26 –")).toBeNull();
       expect(getByText('60,000')).toBeTruthy(); // income total, Oct-Dec '26
       expect(getAllByText('15,000')).toHaveLength(5);
       await fireEvent.press(getByLabelText('Next year'));

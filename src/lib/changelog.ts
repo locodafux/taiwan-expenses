@@ -11,6 +11,11 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-04-cashflow-total-label',
+    date: 'Oct 4, 2026',
+    items: ['The Total row in Yearly Cashflow now just says "Total", without the months next to it. The numbers are unchanged.'],
+  },
+  {
     id: '2026-10-04-cashflow-running-total',
     date: 'Oct 4, 2026',
     items: [
