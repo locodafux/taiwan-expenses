@@ -21,7 +21,7 @@ const AMOUNT_COL = 'w-32';
 // the amount rows 1px taller each, so the months drifted out of line with their numbers further down.
 const ROW_H = 'h-10';
 const ROW = `${ROW_H} justify-center`;
-// The overall Total's label takes three short lines, so its row is taller on both sides to stay level.
+// The running Total's label takes three short lines, so its row is taller on both sides to stay level.
 const TOTAL_ROW = 'h-[52px]';
 // Headers get a taller row so a long fund name wraps to two lines instead of being cut off; the Month header uses it too so both sides stay level.
 const HEAD = 'h-12 justify-center';
@@ -80,9 +80,12 @@ export function FullNumbersTable({ onExpand }: { onExpand?: () => void } = {}) {
   const year = picked ?? years.find((y) => y >= Number(currentMonth.slice(0, 4))) ?? years[0];
   const yearIndex = years.indexOf(year);
   const shown = rows.filter((r) => r.month.startsWith(`${year}-`));
-  // The Total row is overall: every month of the loaded window, whichever year the arrows show.
-  const totals = (rows[0]?.cells ?? []).map((_, col) => rows.reduce((sum, r) => sum + r.cells[col], 0));
-  const totalLabel = ['Overall', `${monthLabel(MONTHS[0])} –`, monthLabel(MONTHS[MONTHS.length - 1])];
+  // The Total row runs on from the first month of the window through the last month of the shown year, so each year page
+  // continues the one before it without counting a month twice.
+  const endMonth = shown[shown.length - 1].month;
+  const upTo = rows.filter((r) => r.month <= endMonth);
+  const totals = (rows[0]?.cells ?? []).map((_, col) => upTo.reduce((sum, r) => sum + r.cells[col], 0));
+  const totalLabel = ['Total', `${monthLabel(MONTHS[0])} –`, monthLabel(endMonth)];
 
   if (isError || incomesQuery.isError) {
     return <ErrorState onRetry={() => { refetch(); incomesQuery.refetch(); }} />;
