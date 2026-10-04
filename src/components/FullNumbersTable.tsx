@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, Text, View, useWindowDimensions } from 'react-native';
 
 import { Card, CategoryMark } from '@/components/ui/Card';
 import { ScreenHeader } from '@/components/ui/Heading';
@@ -33,7 +33,7 @@ function monthLabel(month: string) {
 }
 
 // The Dashboard's "Yearly Cashflow" section: the table of income, expenses, debt and every fund, month by month.
-export function FullNumbersTable() {
+export function FullNumbersTable({ onExpand }: { onExpand?: () => void } = {}) {
   const { vars } = useTheme();
   const householdId = useHouseholdMembership().data?.household_id;
   const incomesQuery = useIncomes(householdId);
@@ -92,6 +92,101 @@ export function FullNumbersTable() {
   }
 
   return (
+    <CashflowTable
+      year={year}
+      headers={headers}
+      colors={series.map((s) => s.color)}
+      rows={shown}
+      totals={totals}
+      currentMonth={currentMonth}
+      onPrev={yearIndex > 0 ? () => setPicked(years[yearIndex - 1]) : undefined}
+      onNext={yearIndex < years.length - 1 ? () => setPicked(years[yearIndex + 1]) : undefined}
+      onExpand={onExpand}
+    />
+  );
+}
+
+type TableProps = {
+  year: number;
+  headers: string[];
+  colors: string[]; // one per header after Income
+  rows: { month: string; cells: number[] }[];
+  totals: number[];
+  currentMonth: string;
+  onPrev?: () => void; // undefined = at the end of the window
+  onNext?: () => void;
+  onExpand?: () => void; // Dashboard only: opens the landscape screen
+};
+
+const FOOTNOTE =
+  'Months before today are your real checked history; the rest is projected from your current rules. Debt is bills that have a last payment date; Expenses is the rest. Money staying is all the fund columns added together. Months beyond your next payday assume today\'s income, bills and rules stay the same.';
+
+// Sideways (the Cashflow screen turns the phone landscape): every column shares the width so nothing scrolls sideways;
+// upright it is the wide table with its own sideways scroll, plus a button to the sideways view when onExpand is given.
+export function CashflowTable({ year, headers, colors, rows: shown, totals, currentMonth, onPrev, onNext, onExpand }: TableProps) {
+  const { width, height } = useWindowDimensions();
+  const wide = width > height;
+
+  if (wide) {
+    // 10px type, full names and amounts; headers wrap at spaces only because every column is wide enough for its longest word.
+    const cell = 'flex-1 justify-center px-1';
+    return (
+      <ScrollView className="flex-1" contentContainerClassName="gap-2 pb-4">
+        <View className="flex-row items-center justify-between">
+          <Text className="font-body-semibold text-sm text-ink">
+            Yearly Cashflow · {year} · pesos
+          </Text>
+          <View className="flex-row items-center gap-1">
+            <YearArrow label="Previous year" glyph="‹" disabled={!onPrev} onPress={() => onPrev?.()} />
+            <YearArrow label="Next year" glyph="›" disabled={!onNext} onPress={() => onNext?.()} />
+          </View>
+        </View>
+        <Card className="overflow-hidden">
+          <View className="h-11 flex-row bg-surface-2">
+            <View className="w-16 justify-center px-1">
+              <Text className="font-body-semibold text-[10px] text-ink-muted">Month</Text>
+            </View>
+            {headers.map((h, i) => (
+              <View key={i} className={`${cell} items-end gap-0.5`}>
+                {i > 0 && <CategoryMark color={colors[i - 1]} size={7} />}
+                <Text className="text-right font-body-semibold text-[10px] leading-[12px] text-ink-muted">{h}</Text>
+              </View>
+            ))}
+          </View>
+          {shown.map((r) => (
+            <View
+              key={r.month}
+              className={`h-[22px] flex-row border-t border-gridline ${r.month === currentMonth ? 'bg-accent-soft' : ''}`}
+            >
+              <View className="w-16 justify-center px-1">
+                <Text className={`text-[10px] ${r.month === currentMonth ? 'font-body-bold text-accent' : 'font-body-semibold text-ink'}`}>
+                  {monthLabel(r.month)}
+                </Text>
+              </View>
+              {r.cells.map((v, i) => (
+                <View key={i} className={cell}>
+                  <Text numberOfLines={1} className={`text-right font-mono text-[10px] ${amountTone(v, i)}`}>{num(v)}</Text>
+                </View>
+              ))}
+            </View>
+          ))}
+          <View className="h-[22px] flex-row border-t border-gridline bg-surface-2">
+            <View className="w-16 justify-center px-1">
+              <Text numberOfLines={1} className="font-body-bold text-[10px] text-ink">Total &apos;{String(year).slice(2)}</Text>
+            </View>
+            {totals.map((v, i) => (
+              <View key={i} className={cell}>
+                <Text numberOfLines={1} className="text-right font-mono text-[10px] font-bold text-ink">{num(v)}</Text>
+              </View>
+            ))}
+          </View>
+        </Card>
+        <Text className="font-body text-[10px] leading-[14px] text-ink-muted">{FOOTNOTE}</Text>
+      </ScrollView>
+    );
+  }
+
+  return (
     <View className="gap-4">
       <View className="gap-1">
         <ScreenHeader title="Yearly Cashflow" />
@@ -100,10 +195,15 @@ export function FullNumbersTable() {
             {year} · amounts in pesos
           </Text>
           <View className="flex-row items-center gap-1">
-            <YearArrow label="Previous year" glyph="‹" disabled={yearIndex <= 0} onPress={() => setPicked(years[yearIndex - 1])} />
-            <YearArrow label="Next year" glyph="›" disabled={yearIndex >= years.length - 1} onPress={() => setPicked(years[yearIndex + 1])} />
+            <YearArrow label="Previous year" glyph="‹" disabled={!onPrev} onPress={() => onPrev?.()} />
+            <YearArrow label="Next year" glyph="›" disabled={!onNext} onPress={() => onNext?.()} />
           </View>
         </View>
+        {onExpand && (
+          <Pressable accessibilityRole="button" onPress={onExpand} className="self-start rounded-pill bg-surface-2 px-3 py-1.5">
+            <Text className="font-body-semibold text-xs text-accent">See every column at once (landscape)</Text>
+          </Pressable>
+        )}
       </View>
 
       <Card className="flex-row overflow-hidden">
@@ -133,7 +233,7 @@ export function FullNumbersTable() {
             <View className="flex-row bg-surface-2">
               {headers.map((h, i) => (
                 <View key={i} className={`${AMOUNT_COL} ${HEAD} flex-row items-center justify-end gap-1.5 px-3`}>
-                  {i > 0 && <CategoryMark color={series[i - 1].color} size={8} />}
+                  {i > 0 && <CategoryMark color={colors[i - 1]} size={8} />}
                   <Text numberOfLines={2} className="shrink text-right font-body-semibold text-xs uppercase text-ink-muted">
                     {h}
                   </Text>
@@ -147,9 +247,7 @@ export function FullNumbersTable() {
               >
                 {r.cells.map((v, i) => (
                   <View key={i} className={`${AMOUNT_COL} justify-center px-3`}>
-                    <Text
-                      className={`text-right font-mono text-sm ${Math.round(v) === 0 ? 'text-ink-muted' : i === 0 ? 'font-bold text-ink' : i === 3 ? 'font-body-semibold text-ink' : 'text-ink'}`}
-                    >
+                    <Text className={`text-right font-mono text-sm ${amountTone(v, i)}`}>
                       {num(v)}
                     </Text>
                   </View>
@@ -167,14 +265,14 @@ export function FullNumbersTable() {
         </ScrollView>
       </Card>
 
-      <Text className="font-body text-xs leading-[1.5] text-ink-muted">
-        Months before today are your real checked history; the rest is projected from your current rules. Debt is
-        bills that have a last payment date; Expenses is the rest. Money staying is all the fund columns added
-        together. Months beyond your next payday assume today&apos;s income, bills and rules stay the same.
-      </Text>
+      <Text className="font-body text-xs leading-[1.5] text-ink-muted">{FOOTNOTE}</Text>
     </View>
   );
 }
+
+// Income bold, Money staying semibold, zero muted.
+const amountTone = (v: number, i: number) =>
+  Math.round(v) === 0 ? 'text-ink-muted' : i === 0 ? 'font-bold text-ink' : i === 3 ? 'font-body-semibold text-ink' : 'text-ink';
 
 function YearArrow({ label, glyph, disabled, onPress }: { label: string; glyph: string; disabled: boolean; onPress: () => void }) {
   return (

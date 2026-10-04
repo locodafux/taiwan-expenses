@@ -11,6 +11,13 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-04-cashflow-landscape',
+    date: 'Oct 4, 2026',
+    items: [
+      'Yearly Cashflow has a new "See every column at once" button. It turns your phone sideways and shows Income, Expenses, Debt, Money staying and every fund on one screen with smaller text, so there is no swiping. Go back and the app turns upright again.',
+    ],
+  },
+  {
     id: '2026-10-04-cashflow-earlier-back',
     date: 'Oct 4, 2026',
     items: [
