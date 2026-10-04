@@ -280,7 +280,7 @@ export default function Dashboard() {
           )}
         </View>
 
-        <FullNumbersTable />
+        <FullNumbersTable onExpand={() => router.push('/(app)/cashflow')} />
       </ScrollView>
     </SafeAreaView>
   );

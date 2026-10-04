@@ -1,3 +1,4 @@
+import { Dimensions } from 'react-native';
 import { fireEvent } from '@testing-library/react-native';
 
 import { renderWithTheme } from '@/test/renderWithTheme';
@@ -89,5 +90,29 @@ describe('FullNumbersTable (Yearly Cashflow)', () => {
     expect(getByLabelText('Next year').props.accessibilityState.disabled).toBe(true);
     await fireEvent.press(getByLabelText('Previous year'));
     expect(getByText('2028 · amounts in pesos')).toBeTruthy();
+  });
+
+  it('upright it keeps the sideways-scroll table and offers the landscape view; landscape drops the button and shows the same figures', async () => {
+    const onExpand = jest.fn();
+    const upright = await renderWithTheme(<FullNumbersTable onExpand={onExpand} />);
+    await fireEvent.press(upright.getByText('See every column at once (landscape)'));
+    expect(onExpand).toHaveBeenCalledTimes(1);
+    expect(upright.getByText('Yearly Cashflow')).toBeTruthy();
+    await upright.unmount();
+
+    const spy = jest.spyOn(Dimensions, 'get').mockReturnValue({ width: 844, height: 390, scale: 2, fontScale: 1 });
+    try {
+      const { getByText, getAllByText, queryByText, getByLabelText } = await renderWithTheme(<FullNumbersTable onExpand={onExpand} />);
+      expect(queryByText('See every column at once (landscape)')).toBeNull();
+      expect(getByText('Yearly Cashflow · 2026 · pesos')).toBeTruthy();
+      for (const h of ['Month', 'Income', 'Expenses', 'Debt', 'Money staying', 'TRIP', "Total '26"]) expect(getByText(h)).toBeTruthy();
+      expect(getByText("Oct '26")).toBeTruthy();
+      expect(getByText('60,000')).toBeTruthy(); // income total
+      expect(getAllByText('15,000')).toHaveLength(5);
+      await fireEvent.press(getByLabelText('Next year'));
+      expect(getByText('Yearly Cashflow · 2027 · pesos')).toBeTruthy();
+    } finally {
+      spy.mockRestore();
+    }
   });
 });

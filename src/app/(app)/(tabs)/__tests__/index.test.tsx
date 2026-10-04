@@ -94,6 +94,13 @@ describe('Dashboard', () => {
     expect(getByText("Jul '27")).toBeTruthy();
   });
 
+  it('opens the landscape Yearly Cashflow screen from its button', async () => {
+    const { getByText } = await renderWithTheme(<Dashboard />);
+
+    await fireEvent.press(await waitFor(() => getByText('See every column at once (landscape)')));
+    expect(mockPush).toHaveBeenCalledWith('/(app)/cashflow');
+  });
+
   it('shows categories and funds that start in a later month, with a starts note', async () => {
     mockUseCategories.mockReturnValue(
       okQuery([
