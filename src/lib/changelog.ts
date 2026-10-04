@@ -11,6 +11,13 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-04-cashflow-running-total',
+    date: 'Oct 4, 2026',
+    items: [
+      'The Total row in Yearly Cashflow now keeps adding up as you go forward. The 2026 page totals Oct to Dec \'26, the 2027 page totals Oct \'26 to Dec \'27, and so on, so no month is counted twice.',
+    ],
+  },
+  {
     id: '2026-10-04-cashflow-overall-total',
     date: 'Oct 4, 2026',
     items: [
