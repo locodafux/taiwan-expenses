@@ -32,6 +32,7 @@ import {
   usePaydayPreview,
   useUpdateLedgerAmount,
 } from '@/lib/queries';
+import { checkedLast, paydayTotals } from '@/lib/checklist';
 import { formatFolioDate, formatPeso } from '@/lib/format';
 import {
   APP_START_DATE,
@@ -195,19 +196,12 @@ export default function PaydayChecklist() {
   // Every row shows, ₱0 included: a fund its rule gave nothing this payday is
   // still listed at ₱0, not hidden (a hidden fund read as a missing category).
   // Checked rows sink to the bottom of their group so what's left stays on top.
-  const visible = [...(entries ?? [])].sort(
-    (a, b) => Number(a.status === 'checked') - Number(b.status === 'checked'),
-  );
+  const visible = checkedLast([...(entries ?? [])]);
   // A ₱0 fund is nothing to tick off (bills can never be 0), so it is out of
   // the count, the progress bar and both totals - the same rows
   // usePaydayCompletionHistory leaves out of the streak.
-  const countable = visible.filter((e) => e.amount !== 0);
-  const total = countable.length;
-  const checked = countable.filter((e) => e.status === 'checked').length;
-  const totalAmount = countable.reduce((s, e) => s + e.amount, 0);
-  const checkedAmount = countable
-    .filter((e) => e.status === 'checked')
-    .reduce((s, e) => s + e.amount, 0);
+  const { count: total, checkedCount: checked, total: totalAmount, checkedTotal: checkedAmount } =
+    paydayTotals(visible);
   const takeHome = (incomes ?? [])
     .filter((i) => i.active && i.recurring_day === paydayDay)
     .reduce((s, i) => s + i.amount, 0);
@@ -325,6 +319,16 @@ export default function PaydayChecklist() {
                 )}
               </ChecklistGroup>
             )}
+
+            <View className="flex-row items-baseline justify-between border-t-2 border-baseline pb-1 pt-3">
+              <View>
+                <Text className="font-body-semibold text-base text-ink">Total for this payday</Text>
+                {!isFuture && (
+                  <Text className="font-body text-xs text-ink-muted">{formatPeso(checkedAmount)} checked</Text>
+                )}
+              </View>
+              <Text className="font-mono text-base text-ink">{formatPeso(totalAmount)}</Text>
+            </View>
 
             {carryNotes.map((note) => (
               <View key={note} className="flex-row items-start gap-3 pb-1">

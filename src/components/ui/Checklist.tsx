@@ -14,8 +14,6 @@ import { CategoryMark } from './Card';
 import { SectionLabel } from './Heading';
 import { Icon } from './Icon';
 
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
-
 export function ChecklistRow({
   label,
   amount,
@@ -49,20 +47,22 @@ export function ChecklistRow({
 
   return (
     <View className="flex-row items-center gap-3 border-b border-gridline py-3">
-      <AnimatedPressable
-        onPress={onToggle}
-        hitSlop={13}
-        style={animatedStyle}
-        className={`h-[22px] w-[22px] items-center justify-center rounded-[8px] border-2 ${
-          checked ? 'border-status-good bg-status-good' : 'border-baseline bg-surface'
-        }`}
-      >
-        {checked && (
-          <Animated.View entering={ZoomIn.duration(120)}>
-            <Icon name="check" size={14} strokeWidth={2.6} color="#ffffff" />
-          </Animated.View>
-        )}
-      </AnimatedPressable>
+      <Pressable onPress={onToggle} hitSlop={13}>
+        {/* className lives on a plain View: Animated components drop NativeWind className, which hid the box. */}
+        <Animated.View style={animatedStyle}>
+          <View
+            className={`h-[22px] w-[22px] items-center justify-center rounded-[8px] border-2 ${
+              checked ? 'border-status-good bg-status-good' : 'border-baseline bg-surface'
+            }`}
+          >
+            {checked && (
+              <Animated.View entering={ZoomIn.duration(120)}>
+                <Icon name="check" size={14} strokeWidth={2.6} color="#ffffff" />
+              </Animated.View>
+            )}
+          </View>
+        </Animated.View>
+      </Pressable>
       <CategoryMark color={color} size={8} />
       <Pressable className="flex-1" onPress={onToggle}>
         <Text className={`font-body text-base ${checked ? 'text-ink-muted line-through' : 'text-ink'}`}>
