@@ -16,6 +16,7 @@ import { Icon } from './Icon';
 
 export function ChecklistRow({
   label,
+  note,
   amount,
   color,
   checked,
@@ -24,6 +25,8 @@ export function ChecklistRow({
   onLabelPress,
 }: {
   label: string;
+  // small line under the label, e.g. "+₱ 8,000 carried from Mon, Oct 5"
+  note?: string | null;
   amount: string;
   color: string;
   checked: boolean;
@@ -68,6 +71,7 @@ export function ChecklistRow({
         <Text className={`font-body text-base ${checked ? 'text-ink-muted line-through' : 'text-ink'}`}>
           {label}
         </Text>
+        {note && <Text className="font-body text-xs text-ink-muted">{note}</Text>}
       </Pressable>
       <Pressable onPress={onAmountPress} disabled={!onAmountPress}>
         <Text className={`font-mono text-sm ${checked ? 'text-ink-muted' : 'text-ink'}`}>{amount}</Text>

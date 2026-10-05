@@ -4,7 +4,9 @@
 //   supabase gen types typescript --local > src/lib/database.types.ts
 
 export type CategoryKind = 'bill' | 'fund';
-export type LedgerStatus = 'pending' | 'checked';
+// 'carried': an unticked fund row whose amount was rolled into the next payday's row
+// (20261005000001_fund_rollover.sql); it no longer counts anywhere.
+export type LedgerStatus = 'pending' | 'checked' | 'carried';
 
 export type GroupChildGoal = {
   target_amount: number;
@@ -120,6 +122,9 @@ export type LedgerEntry = {
   status: LedgerStatus;
   // an extra deposit on top of the plan; materialize_payday never touches it
   manual: boolean;
+  // how much of `amount` was rolled in from the previous payday's unticked fund row, and from when
+  carried_amount: number;
+  carried_from: string | null;
   checked_by: string | null;
   checked_at: string | null;
   created_at: string;
@@ -292,7 +297,13 @@ export interface Database {
       };
       preview_payday: {
         Args: { p_household_id: string; p_payday_date: string };
-        Returns: { category_id: string; bill_item_id: string | null; amount: number }[];
+        Returns: {
+          category_id: string;
+          bill_item_id: string | null;
+          amount: number;
+          carried_amount: number;
+          carried_from: string | null;
+        }[];
       };
       create_household_invite: {
         Args: { p_ttl?: string };

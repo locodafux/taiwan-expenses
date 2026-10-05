@@ -234,8 +234,8 @@ export default function Settings() {
             <View className="flex-1">
               <Text className="font-body text-base text-ink">Tick off past paydays automatically</Text>
               <Text className="font-body text-xs leading-[1.55] text-ink-muted">
-                When a new cutoff starts, anything left unticked on the last one is marked done. Applies
-                to both of you.
+                When a new cutoff starts, any bill left unticked on the last one is marked done. Savings
+                left unticked roll over to the next payday instead. Applies to both of you.
               </Text>
             </View>
             <Switch

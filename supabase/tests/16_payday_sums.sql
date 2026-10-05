@@ -57,7 +57,8 @@ declare
 begin
   foreach d in array private.household_paydays_in_month(p_hid, p_month) loop
     perform public.materialize_payday(p_hid, d);
-    select coalesce(sum(amount), 0) into v_got from public.ledger_entries where payday_date = d;
+    -- Net of what fund rollover carried in from the previous payday (unticked here).
+    select coalesce(sum(amount - carried_amount), 0) into v_got from public.ledger_entries where payday_date = d;
     select sum(amount) into v_want from public.incomes
       where household_id = p_hid and active and recurring_day = extract(day from d);
     select v_want
@@ -87,7 +88,7 @@ select pg_temp.check_month(:'hid', '2026-11-01');
 -- The reported payday: ₱9,000 take-home, ₱6,520 of bills, ₱2,480 to Taiwan
 -- (it used to show ₱8,728 in total - ₱272 held back with no row saying so).
 select pg_temp.expect('Sep 30 funds',
-  (select string_agg(c.name || '=' || le.amount::int, ',' order by c.name)
+  (select string_agg(c.name || '=' || (le.amount - le.carried_amount)::int, ',' order by c.name)
    from public.ledger_entries le join public.categories c on c.id = le.category_id
    where le.payday_date = '2026-09-30' and c.kind = 'fund'),
   'EMERGENCY FUND=0,SAVINGS=0,TAIWAN FUND=2480');

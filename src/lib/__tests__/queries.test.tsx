@@ -178,12 +178,13 @@ describe('usePaydayAmounts (dashboard payday preview)', () => {
     jest.clearAllMocks();
   });
 
-  it('groups materialized non-manual ledger amounts by historical payday', async () => {
+  it('groups materialized non-manual ledger amounts by historical payday, net of carried-in fund money', async () => {
     const chain = buildSelectChain({
       data: [
-        { payday_date: '2026-09-05', amount: 18000 },
-        { payday_date: '2026-09-05', amount: 12000 },
-        { payday_date: '2026-09-20', amount: 25000 },
+        { payday_date: '2026-09-05', amount: 18000, carried_amount: 0 },
+        { payday_date: '2026-09-05', amount: 12000, carried_amount: 0 },
+        // 4,000 of this fund row was rolled in from the previous payday, which already counts it.
+        { payday_date: '2026-09-20', amount: 29000, carried_amount: 4000 },
       ],
       error: null,
     });
