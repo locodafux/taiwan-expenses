@@ -11,6 +11,11 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-05-cashflow-compress',
+    date: 'Oct 5, 2026',
+    items: ['Yearly Cashflow is tighter: narrower columns and less padding, so you slide sideways less. Names and amounts are still shown in full.'],
+  },
+  {
     id: '2026-10-04-remove-breakdown',
     date: 'Oct 4, 2026',
     items: ['The Breakdown screen is gone from Settings. Everything else, including Income, is unchanged.'],
