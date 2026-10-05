@@ -1,4 +1,4 @@
-import { fireEvent, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, waitFor } from '@testing-library/react-native';
 
 import { nextPayday, toDateOnly } from '@/lib/payday';
 import { renderWithTheme } from '@/test/renderWithTheme';
@@ -374,6 +374,57 @@ describe('PaydayChecklist', () => {
       const { getByText } = await renderWithTheme(<PaydayChecklist />);
 
       await waitFor(() => expect(getByText('Rent')).toBeTruthy());
+      expect(mockMaterializeMutate).not.toHaveBeenCalled();
+    });
+  });
+  // Reported bug: once a payday's date passed with the app left open, the checklist
+  // kept showing (and materializing) that payday - its next-payday memo only
+  // depended on incomes - and a Review `date` param pinned it even after a restart-free resume.
+  describe('when the shown payday is over', () => {
+    const twoPaydays = [
+      { id: 'inc-1', active: true, recurring_day: 5, amount: 30000 },
+      { id: 'inc-2', active: true, recurring_day: 20, amount: 25000 },
+    ];
+    beforeEach(() => {
+      jest.useFakeTimers({ now: new Date(2026, 9, 5, 23, 59), advanceTimers: true });
+      mockUseIncomes.mockReturnValue(okQuery(twoPaydays));
+    });
+    afterEach(() => jest.useRealTimers());
+
+    const pastMidnight = () =>
+      act(async () => {
+        jest.advanceTimersByTime(2 * 60 * 1000);
+      });
+
+    it('moves to the next payday and materializes it, without a restart', async () => {
+      await renderWithTheme(<PaydayChecklist />);
+      await waitFor(() => expect(mockMaterializeMutate).toHaveBeenCalledWith('2026-10-05'));
+
+      await pastMidnight();
+
+      await waitFor(() => expect(mockMaterializeMutate).toHaveBeenLastCalledWith('2026-10-20'));
+      expect(mockUseLedgerEntriesForPayday).toHaveBeenLastCalledWith('household-1', '2026-10-20');
+    });
+
+    it('follows "next" (the dashboard Review button on the current payday) to the new payday', async () => {
+      mockUseLocalSearchParams.mockReturnValue({ date: 'next' });
+      await renderWithTheme(<PaydayChecklist />);
+      await waitFor(() => expect(mockMaterializeMutate).toHaveBeenCalledWith('2026-10-05'));
+
+      await pastMidnight();
+
+      await waitFor(() => expect(mockMaterializeMutate).toHaveBeenLastCalledWith('2026-10-20'));
+    });
+
+    it('keeps a past payday opened on purpose pinned', async () => {
+      mockUseLocalSearchParams.mockReturnValue({ date: '2026-10-05' });
+      jest.setSystemTime(new Date(2026, 9, 6));
+      await renderWithTheme(<PaydayChecklist />);
+      await act(async () => {
+        jest.advanceTimersByTime(60 * 60 * 1000);
+      });
+
+      expect(mockUseLedgerEntriesForPayday).toHaveBeenLastCalledWith('household-1', '2026-10-05');
       expect(mockMaterializeMutate).not.toHaveBeenCalled();
     });
   });

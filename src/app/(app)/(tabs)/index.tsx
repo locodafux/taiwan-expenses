@@ -28,11 +28,13 @@ import { formatPeso } from '@/lib/format';
 import {
   APP_START_DATE,
   daysUntil,
+  fromDateOnly,
   incomeAmountForPayday,
   paydayAtOffset,
   startsNote,
   toDateOnly,
 } from '@/lib/payday';
+import { useToday } from '@/lib/useToday';
 import { useTheme } from '@/theme/ThemeProvider';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
@@ -110,16 +112,19 @@ export default function Dashboard() {
   const activeDays = useMemo(() => (incomes ?? []).filter((i) => i.active).map((i) => i.recurring_day), [incomes]);
   const [paydayOffset, setPaydayOffset] = useState(0);
 
+  // Re-derives the payday once its day is over (midnight, or app resumed later).
+  const today = useToday();
+
   const payday = useMemo(() => {
     if (activeDays.length === 0) return null;
-    const date = paydayAtOffset(activeDays, paydayOffset);
+    const date = paydayAtOffset(activeDays, paydayOffset, fromDateOnly(today));
     const dateOnly = toDateOnly(date);
-    const actualAmount = dateOnly < toDateOnly(new Date()) ? paydayAmountsQuery.data?.[dateOnly] : undefined;
+    const actualAmount = dateOnly < today ? paydayAmountsQuery.data?.[dateOnly] : undefined;
     const amount = actualAmount ?? incomeAmountForPayday(incomes ?? [], date);
     // Nothing before October 2026 is ever shown, so stepping back stops there.
-    const canGoBack = toDateOnly(paydayAtOffset(activeDays, paydayOffset - 1)) >= APP_START_DATE;
+    const canGoBack = toDateOnly(paydayAtOffset(activeDays, paydayOffset - 1, fromDateOnly(today))) >= APP_START_DATE;
     return { date, amount, daysAway: daysUntil(date), canGoBack };
-  }, [activeDays, incomes, paydayAmountsQuery.data, paydayOffset]);
+  }, [activeDays, incomes, paydayAmountsQuery.data, paydayOffset, today]);
 
   if (isError) {
     return (
@@ -216,7 +221,11 @@ export default function Dashboard() {
             <Button
               size="sm"
               onPress={() =>
-                router.push({ pathname: '/(app)/checklist', params: { date: toDateOnly(payday.date) } })
+                router.push({
+                  pathname: '/(app)/checklist',
+                  // "next" follows the current payday as it rolls over; a fixed date would pin it.
+                  params: { date: paydayOffset === 0 ? 'next' : toDateOnly(payday.date) },
+                })
               }
             >
               Review

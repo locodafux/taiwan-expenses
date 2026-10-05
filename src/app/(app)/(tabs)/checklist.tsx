@@ -36,7 +36,6 @@ import { carriedNote, checkedLast, paydayTotals } from '@/lib/checklist';
 import { formatFolioDate, formatPeso } from '@/lib/format';
 import {
   APP_START_DATE,
-  appToday,
   categoryActiveInMonth,
   completedPaydayStreak,
   fromDateOnly,
@@ -44,6 +43,7 @@ import {
   nextPayday,
   toDateOnly,
 } from '@/lib/payday';
+import { useToday } from '@/lib/useToday';
 import { useTheme } from '@/theme/ThemeProvider';
 
 export default function PaydayChecklist() {
@@ -63,13 +63,16 @@ export default function PaydayChecklist() {
   // The true next payday - the only one materialize_payday ever writes real
   // rows for. A date param further out (dashboard stepper's Review button)
   // asks to look ahead; a date param before it asks to look back at history.
+  // Re-derived when the day changes, so a payday that has passed rolls over.
+  const today = useToday();
   const nextPaydayDate = useMemo(() => {
     const activeDays = (incomes ?? []).filter((i) => i.active).map((i) => i.recurring_day);
     if (activeDays.length === 0) return undefined;
-    return toDateOnly(nextPayday(activeDays));
-  }, [incomes]);
-  // A date param before October 2026 (a stale link) falls back to the next payday.
-  const paydayDate = dateParam && dateParam >= APP_START_DATE ? dateParam : nextPaydayDate;
+    return toDateOnly(nextPayday(activeDays, fromDateOnly(today)));
+  }, [incomes, today]);
+  // A date param before October 2026 (a stale link) falls back to the next payday,
+  // as does the dashboard's "next" (Review on the current payday).
+  const paydayDate = dateParam && dateParam !== 'next' && dateParam >= APP_START_DATE ? dateParam : nextPaydayDate;
   const isCurrent = !!paydayDate && paydayDate === nextPaydayDate;
   const isFuture = !!paydayDate && !!nextPaydayDate && paydayDate > nextPaydayDate;
 
@@ -144,17 +147,17 @@ export default function PaydayChecklist() {
 
   const cutAdvice = useMemo(() => {
     if (!incomes || !bills) return null;
-    const month = toDateOnly(appToday()).slice(0, 7);
+    const month = today.slice(0, 7);
     // Bills of a category outside its start/end months aren't due.
     const rows = leftoverByPaydayInMonth(
       incomes,
       bills.filter((b) => categoryActiveInMonth(b.categories, month)),
-      appToday(),
+      fromDateOnly(today),
     );
     if (rows.length < 2) return null;
     const worst = rows.reduce((a, b) => (b.leftover < a.leftover ? b : a));
     return `If cash gets tight this month, trim the ${worst.day}th payday first — it carries the least cushion.`;
-  }, [incomes, bills]);
+  }, [incomes, bills, today]);
 
   // Goals the months before their deadline can't fully fund: say so rather
   // than quietly under-saving.
