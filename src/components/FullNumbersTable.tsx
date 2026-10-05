@@ -15,8 +15,9 @@ import { useTheme } from '@/theme/ThemeProvider';
 const FIRST_MONTH = '2026-10';
 const MONTHS = Array.from({ length: 36 }, (_, i) => addMonths(FIRST_MONTH, i));
 
-const MONTH_COL = 'w-20';
-const AMOUNT_COL = 'w-32';
+// Tight upright columns: 100px fits the longest header word ("DOWNPAYMENT" at 10px) and a 9-10 digit amount on one line.
+const MONTH_COL = 'w-16';
+const AMOUNT_COL = 'w-[100px]';
 // Fixed row height, border included, on both the month column and the amount rows: a border added on top of an h-10 child made
 // the amount rows 1px taller each, so the months drifted out of line with their numbers further down.
 const ROW_H = 'h-10';
@@ -213,20 +214,20 @@ export function CashflowTable({ year, headers, colors, rows: shown, totals, curr
       <Card className="flex-row overflow-hidden">
         {/* Month column stays put while the amounts scroll sideways. */}
         <View className={`${MONTH_COL} border-r border-gridline`}>
-          <View className={`${HEAD} bg-surface-2 px-3`}>
+          <View className={`${HEAD} bg-surface-2 px-2`}>
             <Text className="font-body-semibold text-xs uppercase text-ink-muted">Month</Text>
           </View>
           {shown.map((r) => (
             <View
               key={r.month}
-              className={`${ROW} border-t border-gridline px-3 ${r.month === currentMonth ? 'bg-accent-soft' : ''}`}
+              className={`${ROW} border-t border-gridline px-2 ${r.month === currentMonth ? 'bg-accent-soft' : ''}`}
             >
               <Text className={`text-sm ${r.month === currentMonth ? 'font-body-bold text-accent' : 'font-body-semibold text-ink'}`}>
                 {monthLabel(r.month)}
               </Text>
             </View>
           ))}
-          <View className={`${ROW} border-t border-gridline bg-surface-2 px-3`}>
+          <View className={`${ROW} border-t border-gridline bg-surface-2 px-2`}>
             <Text className="font-body-bold text-sm text-ink">Total</Text>
           </View>
         </View>
@@ -234,9 +235,9 @@ export function CashflowTable({ year, headers, colors, rows: shown, totals, curr
           <View>
             <View className="flex-row bg-surface-2">
               {headers.map((h, i) => (
-                <View key={i} className={`${AMOUNT_COL} ${HEAD} flex-row items-center justify-end gap-1.5 px-3`}>
+                <View key={i} className={`${AMOUNT_COL} ${HEAD} items-end gap-0.5 px-2`}>
                   {i > 0 && <CategoryMark color={colors[i - 1]} size={8} />}
-                  <Text numberOfLines={2} className="shrink text-right font-body-semibold text-xs uppercase text-ink-muted">
+                  <Text numberOfLines={2} className="text-right font-body-semibold text-[10px] uppercase leading-[12px] text-ink-muted">
                     {h}
                   </Text>
                 </View>
@@ -248,7 +249,7 @@ export function CashflowTable({ year, headers, colors, rows: shown, totals, curr
                 className={`${ROW_H} flex-row border-t border-gridline ${r.month === currentMonth ? 'bg-accent-soft' : ''}`}
               >
                 {r.cells.map((v, i) => (
-                  <View key={i} className={`${AMOUNT_COL} justify-center px-3`}>
+                  <View key={i} className={`${AMOUNT_COL} justify-center px-2`}>
                     <Text className={`text-right font-mono text-sm ${amountTone(v, i)}`}>
                       {num(v)}
                     </Text>
@@ -258,7 +259,7 @@ export function CashflowTable({ year, headers, colors, rows: shown, totals, curr
             ))}
             <View className={`${ROW_H} flex-row border-t border-gridline bg-surface-2`}>
               {totals.map((v, i) => (
-                <View key={i} className={`${AMOUNT_COL} justify-center px-3`}>
+                <View key={i} className={`${AMOUNT_COL} justify-center px-2`}>
                   <Text className="text-right font-mono text-sm font-bold text-ink">{num(v)}</Text>
                 </View>
               ))}
