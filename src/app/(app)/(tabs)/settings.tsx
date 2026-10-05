@@ -346,6 +346,14 @@ export default function Settings() {
             </View>
             <Icon name="chevronRight" size={16} color={vars['--ink-muted']} />
           </ListRow>
+          <ListRow onPress={() => router.push('/(app)/archive')}>
+            <Icon name="check" size={20} color={vars['--ink-2']} />
+            <View className="flex-1">
+              <Text className="font-body text-base text-ink">Payday archive</Text>
+              <Text className="font-body text-xs text-ink-muted">Every bill and fund you&apos;ve ticked off, by payday.</Text>
+            </View>
+            <Icon name="chevronRight" size={16} color={vars['--ink-muted']} />
+          </ListRow>
           <ListRow onPress={() => router.push('/(app)/feedback')}>
             <Icon name="chat" size={20} color={vars['--ink-2']} />
             <View className="flex-1">
