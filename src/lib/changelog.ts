@@ -11,6 +11,11 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-05-payday-rollover',
+    date: 'Oct 5, 2026',
+    items: ['Once a payday is over, the Home card and the Checklist now switch to the next payday on their own, even if the app was left open. You no longer need to restart it.'],
+  },
+  {
     id: '2026-10-05-payday-archive',
     date: 'Oct 5, 2026',
     items: ['New Payday archive in Settings: every bill and fund you have ticked off, grouped by payday with the total for each, newest first.'],

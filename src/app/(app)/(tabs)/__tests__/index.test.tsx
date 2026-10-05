@@ -1,4 +1,4 @@
-import { fireEvent, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, waitFor } from '@testing-library/react-native';
 
 import { nextPayday, paydayAtOffset, toDateOnly } from '@/lib/payday';
 import { renderWithTheme } from '@/test/renderWithTheme';
@@ -154,8 +154,38 @@ describe('Dashboard', () => {
     await fireEvent.press(await waitFor(() => getByText('Review')));
     expect(mockPush).toHaveBeenCalledWith({
       pathname: '/(app)/checklist',
-      params: { date: toDateOnly(nextPayday([5])) },
+      params: { date: 'next' },
     });
+  });
+
+  // Reported bug: left open past a payday's end, the header kept showing that
+  // (now past) payday as "Next payday" until the app restarted - the payday
+  // memo never re-read the date. The path that already worked is a fresh launch.
+  it('moves to the next payday once the shown payday is over, without a restart', async () => {
+    mockUseIncomes.mockReturnValue(
+      okQuery([
+        { id: 'inc-1', active: true, recurring_day: 5, amount: 30000 },
+        { id: 'inc-2', active: true, recurring_day: 20, amount: 25000 },
+      ]),
+    );
+    jest.useFakeTimers({ now: new Date(2026, 9, 5, 23, 59), advanceTimers: true });
+    const { getByText, queryByText } = await renderWithTheme(<Dashboard />);
+    expect(getByText(/^Next payday · 5th · in 0 days/)).toBeTruthy();
+
+    await act(async () => {
+      jest.advanceTimersByTime(2 * 60 * 1000);
+    });
+
+    expect(getByText(/^Next payday · 20th · in 14 days/)).toBeTruthy();
+    expect(queryByText(/^Next payday · 5th/)).toBeNull();
+  });
+
+  // The checklist's own tab stays mounted, so Review on the current payday sends
+  // "next" instead of a fixed date that would pin the checklist to a past payday.
+  it('reviews the current payday as "next" so the checklist follows it past midnight', async () => {
+    const { getByText } = await renderWithTheme(<Dashboard />);
+    await fireEvent.press(await waitFor(() => getByText('Review')));
+    expect(mockPush).toHaveBeenCalledWith({ pathname: '/(app)/checklist', params: { date: 'next' } });
   });
 
   it('reviews the currently-stepped-to payday, not always the next one', async () => {
@@ -209,7 +239,7 @@ describe('Dashboard', () => {
     await fireEvent.press(getByText('Review'));
     expect(mockPush).toHaveBeenLastCalledWith({
       pathname: '/(app)/checklist',
-      params: { date: '2026-10-05' },
+      params: { date: 'next' },
     });
   });
 
