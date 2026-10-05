@@ -11,6 +11,11 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-05-payday-archive',
+    date: 'Oct 5, 2026',
+    items: ['New Payday archive in Settings: every bill and fund you have ticked off, grouped by payday with the total for each, newest first.'],
+  },
+  {
     id: '2026-10-05-fund-rollover',
     date: 'Oct 5, 2026',
     items: [

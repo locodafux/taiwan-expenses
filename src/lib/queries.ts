@@ -566,6 +566,28 @@ export function useLedgerEntriesForPayday(householdId: string | undefined, payda
   });
 }
 
+// Every ticked row up to today, for the Archive screen (grouped per payday
+// by groupArchive). The key sits under 'ledger-entries' so Realtime's
+// household-wide invalidation refreshes it too.
+export function useCheckedLedgerArchive(householdId: string | undefined) {
+  const today = toDateOnly(appToday());
+  return useQuery({
+    queryKey: ['ledger-entries', householdId, 'archive', today],
+    enabled: !!householdId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('ledger_entries')
+        .select('id, payday_date, amount, status, manual, categories(name, kind), bill_items(label)')
+        .eq('household_id', householdId as string)
+        .eq('status', 'checked')
+        .gte('payday_date', APP_START_DATE)
+        .lte('payday_date', today);
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
 export function useMaterializePayday(householdId: string | undefined) {
   const queryClient = useQueryClient();
   return useMutation({
@@ -624,6 +646,7 @@ export function useCheckLedgerEntry(householdId: string | undefined, paydayDate:
       queryClient.invalidateQueries({ queryKey: ['ledger-entries', householdId, paydayDate] });
       queryClient.invalidateQueries({ queryKey: ['category-history'] });
       queryClient.invalidateQueries({ queryKey: ['ledger-payday-status', householdId] });
+      queryClient.invalidateQueries({ queryKey: ['ledger-entries', householdId, 'archive'] });
     },
   });
 }
