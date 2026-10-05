@@ -32,7 +32,7 @@ import {
   usePaydayPreview,
   useUpdateLedgerAmount,
 } from '@/lib/queries';
-import { checkedLast, paydayTotals } from '@/lib/checklist';
+import { carriedNote, checkedLast, paydayTotals } from '@/lib/checklist';
 import { formatFolioDate, formatPeso } from '@/lib/format';
 import {
   APP_START_DATE,
@@ -93,6 +93,8 @@ export default function PaydayChecklist() {
         amount: row.amount,
         status: 'pending' as const,
         manual: false,
+        carried_amount: row.carried_amount,
+        carried_from: row.carried_from,
         categories: cat ? { name: cat.name, color: cat.color, kind: cat.kind } : null,
         bill_items: bill ? { label: bill.label } : null,
       };
@@ -293,10 +295,11 @@ export default function PaydayChecklist() {
             {staying.length > 0 && (
               <ChecklistGroup heading="Money staying" note="Fund contributions kept in the household.">
                 {staying.map((entry) =>
-                  isFuture ? (
+                  isFuture || entry.status === 'carried' ? (
                     <PreviewRow
                       key={entry.id}
                       label={`${entry.categories?.name ?? 'Item'}${entry.manual ? ' · extra' : ''}`}
+                      note={entry.status === 'carried' ? 'Carried to the next payday' : carriedNote(entry)}
                       amount={formatPeso(entry.amount)}
                       color={entry.categories?.color}
                     />
@@ -304,6 +307,7 @@ export default function PaydayChecklist() {
                     <ChecklistRow
                       key={entry.id}
                       label={`${entry.categories?.name ?? 'Item'}${entry.manual ? ' · extra' : ''}`}
+                      note={carriedNote(entry)}
                       amount={formatPeso(entry.amount)}
                       color={entry.categories?.color ?? '#999'}
                       checked={entry.status === 'checked'}
@@ -384,14 +388,27 @@ export default function PaydayChecklist() {
   );
 }
 
-// A preview row for a future payday: same label/amount/colour as a
-// ChecklistRow, but no checkbox and nothing pressable - there's nothing to
-// toggle or edit until that payday is materialized for real.
-function PreviewRow({ label, amount, color }: { label: string; amount: string; color: string | null | undefined }) {
+// A preview row for a future payday (or a fund row already carried forward):
+// same label/amount/colour as a ChecklistRow, but no checkbox and nothing
+// pressable - there's nothing to toggle or edit.
+function PreviewRow({
+  label,
+  note,
+  amount,
+  color,
+}: {
+  label: string;
+  note?: string | null;
+  amount: string;
+  color: string | null | undefined;
+}) {
   return (
     <ListRow>
       <CategoryMark color={color} size={8} />
-      <Text className="flex-1 font-body text-base text-ink">{label}</Text>
+      <View className="flex-1">
+        <Text className="font-body text-base text-ink">{label}</Text>
+        {note && <Text className="font-body text-xs text-ink-muted">{note}</Text>}
+      </View>
       <Text className="font-mono text-sm text-ink-muted">{amount}</Text>
     </ListRow>
   );

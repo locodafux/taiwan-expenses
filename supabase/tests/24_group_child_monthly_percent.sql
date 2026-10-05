@@ -31,12 +31,13 @@ begin
 end;
 $$;
 
--- share of the whole group's payday (parent + children) that one category got
+-- share of the whole group's payday (parent + children) that one category got,
+-- not counting what fund rollover carried in from the previous payday
 create function pg_temp.share(p_cat uuid, p_parent uuid, p_payday date)
 returns numeric language sql as $$
-  select round(100.0 * (select coalesce(sum(amount), 0) from public.ledger_entries
+  select round(100.0 * (select coalesce(sum(amount - carried_amount), 0) from public.ledger_entries
                         where category_id = p_cat and payday_date = p_payday)
-         / nullif((select sum(le.amount) from public.ledger_entries le
+         / nullif((select sum(le.amount - le.carried_amount) from public.ledger_entries le
                    join public.categories c on c.id = le.category_id
                    where le.payday_date = p_payday
                      and (c.id = p_parent or c.rule ->> 'parent_id' = p_parent::text)), 0));
@@ -66,7 +67,7 @@ select pg_temp.expect('Jan: parent keeps 40%', pg_temp.share(:'parent_id', :'par
 
 -- The preview (read-only) applies the same overrides.
 select pg_temp.expect('preview uses the override',
-  (select round(100.0 * sum(p.amount) filter (where p.category_id = :'b_id'::uuid) / sum(p.amount))::text
+  (select round(100.0 * sum(p.amount - p.carried_amount) filter (where p.category_id = :'b_id'::uuid) / sum(p.amount - p.carried_amount))::text
    from public.preview_payday(:'hid', '2026-12-05') p
    where p.category_id in (:'parent_id'::uuid, :'a_id'::uuid, :'b_id'::uuid, :'c_id'::uuid)), '70');
 

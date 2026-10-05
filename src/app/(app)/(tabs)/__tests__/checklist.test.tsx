@@ -106,6 +106,20 @@ describe('PaydayChecklist', () => {
     expect(getByText('1 / 2 items checked')).toBeTruthy();
   });
 
+  it('shows what a fund carried over, and keeps a carried-away row out of the count', async () => {
+    mockUseLedgerEntriesForPayday.mockReturnValue(
+      okQuery([
+        { ...entries[1], status: 'pending', amount: 3000, carried_amount: 1000, carried_from: '2026-10-05' },
+        { ...entries[1], id: 'entry-3', status: 'carried', amount: 700, categories: { ...entries[1].categories, name: 'Trip fund' } },
+      ]),
+    );
+    const { getByText } = await renderWithTheme(<PaydayChecklist />);
+
+    await waitFor(() => expect(getByText(/^\+₱.1,000 carried from .*5/)).toBeTruthy());
+    expect(getByText('Carried to the next payday')).toBeTruthy();
+    expect(getByText('0 / 1 items checked')).toBeTruthy();
+  });
+
   it('warns when a goal cannot be fully funded before its deadline', async () => {
     mockUseCategories.mockReturnValue(okQuery([{ id: 'cat-trip', name: 'Japan trip', kind: 'fund', start_month: '2026-10-01', end_month: null, }]));
     mockUseGoalShortfalls.mockReturnValue(okQuery([{ category_id: 'cat-trip', shortfall: 5000 }]));

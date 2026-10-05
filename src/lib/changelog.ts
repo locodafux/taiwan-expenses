@@ -11,6 +11,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-05-fund-rollover',
+    date: 'Oct 5, 2026',
+    items: [
+      'Savings you did not tick off now roll over: when the next payday starts, the amount left unticked is added to the same fund on the new checklist, with a small note like "+₱ 8,000 carried from Mon, Oct 5". It keeps rolling on until you tick it. Bills are unchanged.',
+      'Because of that, the setting "Tick off past paydays automatically" now only applies to bills.',
+    ],
+  },
+  {
     id: '2026-10-05-cashflow-compress',
     date: 'Oct 5, 2026',
     items: ['Yearly Cashflow is tighter: narrower columns and less padding, so you slide sideways less. Names and amounts are still shown in full.'],

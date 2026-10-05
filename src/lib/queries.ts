@@ -645,6 +645,8 @@ export function usePaydayCompletionHistory(householdId: string | undefined) {
         .from('ledger_entries')
         .select('payday_date, status')
         .neq('amount', 0)
+        // A fund row rolled into the next payday is resolved there, not left open here.
+        .neq('status', 'carried')
         .eq('household_id', householdId as string)
         .gte('payday_date', APP_START_DATE);
       if (error) throw error;
@@ -664,7 +666,7 @@ export function usePaydayAmounts(householdId: string | undefined) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('ledger_entries')
-        .select('payday_date, amount')
+        .select('payday_date, amount, carried_amount')
         .eq('household_id', householdId as string)
         .eq('manual', false)
         .gte('payday_date', APP_START_DATE)
@@ -672,7 +674,8 @@ export function usePaydayAmounts(householdId: string | undefined) {
       if (error) throw error;
       const amounts: Record<string, number> = {};
       for (const row of data) {
-        amounts[row.payday_date] = (amounts[row.payday_date] ?? 0) + row.amount;
+        // Net of fund money carried in from the previous payday, which that payday's own row already counts.
+        amounts[row.payday_date] = (amounts[row.payday_date] ?? 0) + row.amount - row.carried_amount;
       }
       return amounts;
     },

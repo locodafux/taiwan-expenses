@@ -1,7 +1,9 @@
--- Verifies 20260924000030_auto_check_past_paydays.sql: with the household
--- setting on, materialize_payday ticks off past paydays' pending rows,
--- leaves ₱0 rows pending and the current payday alone, and doesn't push
--- "paid" notifications for them; with it off, nothing changes.
+-- Verifies 20260924000030_auto_check_past_paydays.sql (bills only since
+-- 20261005000001_fund_rollover.sql, which rolls unticked funds forward
+-- instead): with the household setting on, materialize_payday ticks off past
+-- paydays' pending bill rows, leaves funds, ₱0 rows and the current payday
+-- alone, and doesn't push "paid" notifications for them; with it off,
+-- nothing is ticked.
 -- Past paydays are in 2020 and the "current" one in 2099, so the test holds
 -- whatever today's date is.
 
@@ -71,9 +73,10 @@ begin
   perform public.materialize_payday(v_household, '2099-01-05');
   select jsonb_object_agg(payday_date || ' ' || category_id, status) into v_summary
   from public.ledger_entries where household_id = v_household and payday_date < '2099-01-01';
+  -- (January's fund row rolled into February's when that was materialized.)
   if (select count(*) from jsonb_each_text(v_summary)) <> 4
-     or exists (select 1 from jsonb_each_text(v_summary) e where e.value <> 'pending') then
-    raise exception 'FAIL: with the setting off past rows must stay pending, saw %', v_summary;
+     or exists (select 1 from jsonb_each_text(v_summary) e where e.value = 'checked') then
+    raise exception 'FAIL: with the setting off nothing may be ticked, saw %', v_summary;
   end if;
 
   -- --- On: past pending rows are ticked, ₱0 and current ones aren't -------
@@ -84,9 +87,14 @@ begin
   perform public.materialize_payday(v_household, '2099-01-05');
 
   if exists (select 1 from public.ledger_entries
-             where household_id = v_household and payday_date < '2099-01-01'
-               and status <> case when amount = 0 then 'pending' else 'checked' end) then
-    raise exception 'FAIL: past pending rows should be checked and ₱0 ones left pending';
+             where household_id = v_household and payday_date < '2099-01-01' and bill_item_id is not null
+               and status <> 'checked') then
+    raise exception 'FAIL: past pending bill rows should be checked';
+  end if;
+  if exists (select 1 from public.ledger_entries
+             where household_id = v_household and payday_date < '2099-01-01' and bill_item_id is null
+               and status = 'checked') then
+    raise exception 'FAIL: past fund rows must not be auto-ticked (they roll forward)';
   end if;
   if exists (select 1 from public.ledger_entries
              where household_id = v_household and payday_date < '2099-01-01' and status = 'checked'
