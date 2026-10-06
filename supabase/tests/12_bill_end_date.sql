@@ -1,5 +1,6 @@
 -- A bill/loan with an end_date (the app's "number of payments" term) stays on
--- the checklist through its last due date and drops off after it.
+-- the checklist through its last due date and drops off after it (once paid:
+-- an unpaid last payment keeps carrying, see 30_carry_unmatched_rollovers.sql).
 
 do $$
 declare
@@ -34,6 +35,8 @@ begin
   perform set_config('request.jwt.claim.sub', v_user_id::text, false);
 
   perform public.materialize_payday(v_household_id, '2027-02-05');
+  update public.ledger_entries set status = 'checked', checked_by = v_user_id, checked_at = now()
+  where bill_item_id = v_loan and payday_date = '2027-02-05';
   perform public.materialize_payday(v_household_id, '2027-03-05');
 
   if not exists (select 1 from public.ledger_entries where bill_item_id = v_loan and payday_date = '2027-02-05') then
