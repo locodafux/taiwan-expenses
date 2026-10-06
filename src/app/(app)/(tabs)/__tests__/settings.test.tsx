@@ -5,13 +5,11 @@ import { renderWithTheme } from '@/test/renderWithTheme';
 
 const mockSignOut = jest.fn();
 const mockDeleteAccount = jest.fn();
-const mockChangePassword = jest.fn();
 jest.mock('@/lib/auth', () => ({
   useAuth: () => ({
     session: { user: { email: 'leo@example.com' } },
     signOut: mockSignOut,
     deleteAccount: mockDeleteAccount,
-    changePassword: mockChangePassword,
   }),
 }));
 
@@ -70,7 +68,6 @@ beforeEach(() => {
     mutateAsync: mockUpdateDisplayNameMutateAsync.mockResolvedValue(undefined),
     isPending: false,
   });
-  mockChangePassword.mockResolvedValue(undefined);
 });
 
 describe('Settings', () => {
@@ -249,34 +246,11 @@ describe('Settings', () => {
     expect(mockUpdateDisplayNameMutateAsync).not.toHaveBeenCalled();
   });
 
-  it('changes the password and clears the field', async () => {
-    const { getByText, getByLabelText } = await renderWithTheme(<Settings />);
+  it('opens the change-password screen from the profile card', async () => {
+    const { getByText } = await renderWithTheme(<Settings />);
 
-    await fireEvent.changeText(await waitFor(() => getByLabelText('New password')), 'supersecret');
-    await fireEvent.press(getByText('Change password'));
+    await fireEvent.press(await waitFor(() => getByText('Change password')));
 
-    await waitFor(() => expect(mockChangePassword).toHaveBeenCalledWith('supersecret'));
-    expect(await waitFor(() => getByText('Password changed.'))).toBeTruthy();
-    expect(getByLabelText('New password').props.value).toBe('');
-  });
-
-  it('rejects a too-short password without calling the server', async () => {
-    const { getByText, getByLabelText } = await renderWithTheme(<Settings />);
-
-    await fireEvent.changeText(await waitFor(() => getByLabelText('New password')), 'short');
-    await fireEvent.press(getByText('Change password'));
-
-    expect(await waitFor(() => getByText('Password must be at least 8 characters'))).toBeTruthy();
-    expect(mockChangePassword).not.toHaveBeenCalled();
-  });
-
-  it('shows the server error when a password change fails', async () => {
-    mockChangePassword.mockRejectedValue(new Error('New password should be different from the old password.'));
-    const { getByText, getByLabelText } = await renderWithTheme(<Settings />);
-
-    await fireEvent.changeText(await waitFor(() => getByLabelText('New password')), 'supersecret');
-    await fireEvent.press(getByText('Change password'));
-
-    expect(await waitFor(() => getByText('New password should be different from the old password.'))).toBeTruthy();
+    expect(mockPush).toHaveBeenCalledWith('/(app)/change-password');
   });
 });
