@@ -11,6 +11,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-06-bill-rollover',
+    date: 'Oct 6, 2026',
+    items: [
+      'Bills you did not tick off now roll over too: when the bill comes round again, the unpaid amount is added to it on the new checklist, with a small note like "+₱ 2,000 carried from Mon, Oct 5". It keeps rolling on until you tick it.',
+      'If "Tick off past paydays automatically" is on, past bills count as paid, so they do not roll over.',
+    ],
+  },
+  {
     id: '2026-10-05-payday-rollover',
     date: 'Oct 5, 2026',
     items: ['Once a payday is over, the Home card and the Checklist now switch to the next payday on their own, even if the app was left open. You no longer need to restart it.'],

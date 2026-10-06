@@ -1,6 +1,6 @@
 -- Verifies 20260924000030_auto_check_past_paydays.sql (bills only since
 -- 20261005000001_fund_rollover.sql, which rolls unticked funds forward
--- instead): with the household setting on, materialize_payday ticks off past
+-- instead; unticked bills roll forward too since 20261006000001_bill_rollover.sql): with the household setting on, materialize_payday ticks off past
 -- paydays' pending bill rows, leaves funds, ₱0 rows and the current payday
 -- alone, and doesn't push "paid" notifications for them; with it off,
 -- nothing is ticked.
@@ -84,6 +84,10 @@ begin
   delete from net.test_requests;
   set role authenticated;
   update public.households set auto_check_past_paydays = true where id = v_household;
+  -- (The off-phase run above rolled the unticked past bills forward and marked
+  -- them 'carried'; put them back to pending so the sweep has something to tick.)
+  update public.ledger_entries set status = 'pending'
+  where household_id = v_household and payday_date < '2099-01-01' and bill_item_id is not null;
   perform public.materialize_payday(v_household, '2099-01-05');
 
   if exists (select 1 from public.ledger_entries

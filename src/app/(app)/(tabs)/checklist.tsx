@@ -268,10 +268,11 @@ export default function PaydayChecklist() {
             {outgoing.length > 0 && (
               <ChecklistGroup heading="Money leaving" note="Bills and debt payments due this payday.">
                 {outgoing.map((entry) =>
-                  isFuture ? (
+                  isFuture || entry.status === 'carried' ? (
                     <PreviewRow
                       key={entry.id}
                       label={entry.bill_items?.label ?? entry.categories?.name ?? 'Item'}
+                      note={entry.status === 'carried' ? 'Carried to the next payday' : carriedNote(entry)}
                       amount={formatPeso(entry.amount)}
                       color={entry.categories?.color}
                     />
@@ -279,6 +280,7 @@ export default function PaydayChecklist() {
                     <ChecklistRow
                       key={entry.id}
                       label={entry.bill_items?.label ?? entry.categories?.name ?? 'Item'}
+                      note={carriedNote(entry)}
                       amount={formatPeso(entry.amount)}
                       color={entry.categories?.color ?? '#999'}
                       checked={entry.status === 'checked'}
@@ -391,7 +393,7 @@ export default function PaydayChecklist() {
   );
 }
 
-// A preview row for a future payday (or a fund row already carried forward):
+// A preview row for a future payday (or a bill/fund row already carried forward):
 // same label/amount/colour as a ChecklistRow, but no checkbox and nothing
 // pressable - there's nothing to toggle or edit.
 function PreviewRow({
