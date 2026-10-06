@@ -11,6 +11,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-05-password-flows',
+    date: 'Oct 5, 2026',
+    items: [
+      'Forgot your password? Tap "Forgot password?" on the sign-in screen and we will email you a link to set a new one.',
+      'Settings → Change password is now its own screen. It asks for your current password first, and for the new one twice.',
+    ],
+  },
+  {
     id: '2026-10-05-payday-rollover',
     date: 'Oct 5, 2026',
     items: ['Once a payday is over, the Home card and the Checklist now switch to the next payday on their own, even if the app was left open. You no longer need to restart it.'],

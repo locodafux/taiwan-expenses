@@ -1,4 +1,10 @@
-import { validateDisplayName, validateEmail, validateInviteCode, validatePassword } from '../validation';
+import {
+  validateDisplayName,
+  validateEmail,
+  validateInviteCode,
+  validatePassword,
+  validatePasswordConfirm,
+} from '../validation';
 
 describe('validateEmail', () => {
   it('rejects empty input', () => {
@@ -39,5 +45,12 @@ describe('validateDisplayName', () => {
   });
   it('accepts a non-empty name', () => {
     expect(validateDisplayName('Ann')).toBeNull();
+  });
+});
+
+describe('validatePasswordConfirm', () => {
+  it('requires the two entries to match', () => {
+    expect(validatePasswordConfirm('supersecret', 'supersecret')).toBeNull();
+    expect(validatePasswordConfirm('supersecret', 'supersecrte')).toBe('Passwords do not match');
   });
 });

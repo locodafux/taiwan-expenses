@@ -5,6 +5,9 @@ import { renderWithTheme } from '@/test/renderWithTheme';
 const mockSignUp = jest.fn();
 const mockSignIn = jest.fn();
 
+const mockPush = jest.fn();
+jest.mock('expo-router', () => ({ useRouter: () => ({ push: mockPush }) }));
+
 jest.mock('@/lib/auth', () => ({
   useAuth: () => ({
     signUp: mockSignUp,
@@ -133,5 +136,15 @@ describe('Onboarding', () => {
     await fireEvent.press(getByText('‹ Back'));
 
     expect(getByText('Join with an invite code')).toBeTruthy();
+  });
+
+  it('links the sign-in step to the forgot-password screen', async () => {
+    const { getByText, queryByText } = await renderWithTheme(<Onboarding />);
+
+    expect(queryByText('Forgot password?')).toBeNull();
+    await fireEvent.press(getByText('I already have an account'));
+    await fireEvent.press(getByText('Forgot password?'));
+
+    expect(mockPush).toHaveBeenCalledWith('/(auth)/forgot-password');
   });
 });
