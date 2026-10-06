@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -14,6 +15,7 @@ const inputClass =
   'mt-2 rounded-md border border-border bg-surface px-4 py-4 font-body text-base text-ink';
 
 export default function Onboarding() {
+  const router = useRouter();
   const [step, setStep] = useState<Step>('welcome');
   const { signUp, signIn } = useAuth();
   const [email, setEmail] = useState('');
@@ -163,6 +165,11 @@ export default function Onboarding() {
               </Text>
             </Pressable>
           </View>
+          {isSignIn && (
+            <Pressable onPress={() => router.push('/(auth)/forgot-password')} hitSlop={13} className="self-start pt-3">
+              <Text className="font-body-semibold text-sm text-accent">Forgot password?</Text>
+            </Pressable>
+          )}
         </View>
         {step === 'create' && (
           <View>

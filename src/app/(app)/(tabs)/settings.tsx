@@ -27,7 +27,7 @@ import {
   useUpdateDisplayName,
   useUpdateHouseholdName,
 } from '@/lib/queries';
-import { validateDisplayName, validatePassword } from '@/lib/validation';
+import { validateDisplayName } from '@/lib/validation';
 import { useTheme } from '@/theme/ThemeProvider';
 
 const THEME_DESCRIPTIONS = {
@@ -39,7 +39,7 @@ const THEME_DESCRIPTIONS = {
 export default function Settings() {
   const { theme, setTheme, vars } = useTheme();
   const router = useRouter();
-  const { session, signOut, deleteAccount, changePassword } = useAuth();
+  const { session, signOut, deleteAccount } = useAuth();
   const membershipQuery = useHouseholdMembership();
   const member = membershipQuery.data;
   const householdQuery = useHousehold(member?.household_id);
@@ -61,9 +61,6 @@ export default function Settings() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [profileName, setProfileName] = useState<string | null>(null);
   const [profileResult, setProfileResult] = useState<{ ok: boolean; message: string } | null>(null);
-  const [newPassword, setNewPassword] = useState('');
-  const [isChangingPassword, setIsChangingPassword] = useState(false);
-  const [passwordResult, setPasswordResult] = useState<{ ok: boolean; message: string } | null>(null);
   const [copied, setCopied] = useState(false);
   const [showDangerZone, setShowDangerZone] = useState(false);
   const [confirmingDeleteAccount, setConfirmingDeleteAccount] = useState(false);
@@ -96,22 +93,6 @@ export default function Settings() {
       setProfileResult({ ok: true, message: 'Name saved.' });
     } catch (e) {
       setProfileResult({ ok: false, message: e instanceof Error ? e.message : 'Could not save name. Try again.' });
-    }
-  }
-
-  async function savePassword() {
-    const err = validatePassword(newPassword);
-    if (err) return setPasswordResult({ ok: false, message: err });
-    setPasswordResult(null);
-    setIsChangingPassword(true);
-    try {
-      await changePassword(newPassword);
-      setNewPassword('');
-      setPasswordResult({ ok: true, message: 'Password changed.' });
-    } catch (e) {
-      setPasswordResult({ ok: false, message: e instanceof Error ? e.message : 'Could not change password.' });
-    } finally {
-      setIsChangingPassword(false);
     }
   }
 
@@ -172,31 +153,13 @@ export default function Settings() {
 
             <Text className="mt-2 font-body text-xs text-ink-muted">Email</Text>
             <Text className="font-body text-base text-ink">{session?.user.email ?? '-'}</Text>
-
-            <Text className="mt-2 font-body text-xs text-ink-muted">New password</Text>
-            <TextField
-              value={newPassword}
-              onChangeText={(t) => {
-                setNewPassword(t);
-                setPasswordResult(null);
-              }}
-              secureTextEntry
-              autoCapitalize="none"
-              autoComplete="new-password"
-              placeholder="At least 8 characters"
-              accessibilityLabel="New password"
-              className="rounded-md border border-border bg-page px-4 py-3 font-body text-base text-ink"
-            />
-            {passwordResult && (
-              <Text className={`font-body text-sm ${passwordResult.ok ? 'text-status-good' : 'text-status-bad'}`}>
-                {passwordResult.message}
-              </Text>
-            )}
-            <Button variant="secondary" loading={isChangingPassword} onPress={savePassword}>
-              Change password
-            </Button>
           </Card>
           <Card className="mt-3">
+            <ListRow onPress={() => router.push('/(app)/change-password')}>
+              <Icon name="sliders" size={20} color={vars['--ink-2']} />
+              <Text className="flex-1 font-body text-base text-ink">Change password</Text>
+              <Icon name="chevronRight" size={16} color={vars['--ink-muted']} />
+            </ListRow>
             <ListRow isLast onPress={() => router.push('/(app)/income')}>
               <Icon name="peso" size={20} color={vars['--ink-2']} />
               <Text className="flex-1 font-body text-base text-ink">Income</Text>
