@@ -1,7 +1,7 @@
 -- Verifies 20261005000001_fund_rollover.sql: when a payday is materialized,
 -- the previous payday's unticked, non-zero fund rows are added to the same
 -- fund (carried_amount/carried_from say how much and from when) and marked
--- 'carried'; bills never carry; a re-run never double-carries; a ticked or ₱0
+-- 'carried' (bills carry too, see 28_bill_rollover.sql); a re-run never double-carries; a ticked or ₱0
 -- row stays put; a carried amount left unticked rolls on again; and
 -- preview_payday shows the carry for the next payday only, writing nothing.
 -- Paydays are in 2020 so the test holds whatever today's date is.
@@ -51,7 +51,7 @@ begin
     raise exception 'FAIL: January fund row should be a plain pending row, got %', to_json(v_row);
   end if;
 
-  -- --- February: January's unticked fund rolls in; its bill does not --------
+  -- --- February: January's unticked fund rolls in --------
   perform public.materialize_payday(v_household, '2020-02-05');
   select * into v_row from public.ledger_entries where category_id = v_fund_cat and payday_date = '2020-02-05';
   if v_row.amount <> 2 * v_base or v_row.carried_amount <> v_base or v_row.carried_from <> '2020-01-05' then
@@ -59,9 +59,6 @@ begin
   end if;
   if (select status from public.ledger_entries where category_id = v_fund_cat and payday_date = '2020-01-05') <> 'carried' then
     raise exception 'FAIL: January fund row should be marked carried';
-  end if;
-  if exists (select 1 from public.ledger_entries where bill_item_id is not null and (status <> 'pending' or carried_amount <> 0)) then
-    raise exception 'FAIL: bill rows must not carry';
   end if;
 
   -- --- Re-running never double-carries --------------------------------------
